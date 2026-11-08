@@ -1,0 +1,138 @@
+// Starts Exile Hub inside Tauri. The dashboard webview runs the app (src/app on TauriPlatform) and
+// exposes window.hub to its own React UI; the overlay webview gets a window.hub that forwards a few
+// calls to the dashboard through events and receives the state the same way.
+import { emitTo, listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
+import { register } from "@tauri-apps/plugin-global-shortcut";
+import { kOverlayInteractKey, kOverlayToggleKey, kStateBroadcastMs } from "../app/constants";
+import { Hub } from "../app/hub";
+import { cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
+import type { HubApi } from "../shared/ipc";
+import type { AppState } from "../shared/types";
+import { TauriPlatform, type AppInfo } from "./tauriPlatform";
+import { errorText } from "./tauriPob";
+import { TauriShell } from "./tauriShell";
+
+/** What the overlay may ask the dashboard for. */
+const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive"]);
+
+interface CallMsg {
+  id: number;
+  method: keyof HubApi;
+  args: unknown[];
+}
+interface ReplyMsg {
+  id: number;
+  result?: unknown;
+  error?: string;
+}
+
+/** window.hub for the dashboard: straight calls into the app, input validated as on Electron's IPC. */
+function localApi(hub: Hub, shell: TauriShell): HubApi {
+  return {
+    getState: async () => hub.state(),
+    onState: (cb) => {
+      shell.stateListeners.add(cb);
+      return () => shell.stateListeners.delete(cb);
+    },
+    setConfig: async (patch) => hub.setConfig(cleanConfigPatch(patch)),
+    pickLog: () => hub.pickLog(),
+    detectLog: async () => {
+      const p = await hub.detectLog();
+      if (p) hub.setConfig({ clientLogPath: p });
+      return p;
+    },
+    routeNext: async () => hub.routeNext(),
+    routePrev: async () => hub.routePrev(),
+    routeReset: async () => hub.routeReset(),
+    routeSync: async () => hub.routeSync(),
+    importPob: (input) => (typeof input === "string" ? hub.importBuild(input) : Promise.resolve({ ok: false, error: "entrada inválida" })),
+    listDisplays: () => hub.listDisplays(),
+    moveDashboard: (id, fs) => hub.moveDashboard(id, fs === true),
+    toggleOverlay: async () => hub.toggleOverlay(),
+    toggleOverlayInteractive: async () => hub.toggleOverlayInteractive(),
+    priceResearch: async (patch) => hub.priceResearch(cleanResearch(patch)),
+    priceOpenTrade: async () => hub.priceOpenTrade(),
+    farmPrices: () => hub.farmPrices(),
+    setStartWithWindows: (on) => hub.setStartWithWindows(on === true),
+    copyDiagReport: () => hub.copyDiagReport(),
+    refreshGemAdvice: async () => hub.refreshGemAdvice(),
+    installUpdate: async () => hub.installUpdate(),
+    openMapTrade: (o) => hub.openMapTrade(cleanMapTradeOptions(o)),
+  };
+}
+
+async function overlayApi(): Promise<HubApi> {
+  let next = 1;
+  const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  await listen<ReplyMsg>("hub-reply", (e) => {
+    const p = pending.get(e.payload.id);
+    if (!p) return;
+    pending.delete(e.payload.id);
+    if (e.payload.error !== undefined) p.reject(new Error(e.payload.error));
+    else p.resolve(e.payload.result);
+  });
+  const call =
+    (method: keyof HubApi) =>
+    (...args: unknown[]) =>
+      new Promise((resolve, reject) => {
+        const id = next++;
+        pending.set(id, { resolve, reject });
+        void emitTo("dashboard", "hub-call", { id, method, args } satisfies CallMsg);
+      });
+  return new Proxy({} as HubApi, {
+    // not a thenable: "await overlayApi()" must not mistake the proxy for a promise
+    get: (_t, prop) =>
+      typeof prop !== "string" || prop === "then"
+        ? undefined
+        : prop === "onState"
+        ? (cb: (s: AppState) => void) => {
+            const un = listen<AppState>("state", (e) => cb(e.payload));
+            return () => void un.then((f) => f());
+          }
+        : call(prop as keyof HubApi),
+  });
+}
+
+export async function installTauriHub(mode: string | null): Promise<void> {
+  if (mode === "overlay") {
+    window.hub = await overlayApi();
+    return;
+  }
+  const info = await invoke<AppInfo>("app_info");
+  const shell = new TauriShell();
+  const hub = await Hub.create(new TauriPlatform(info, shell));
+  shell.ctx = {
+    config: () => hub.config,
+    setConfig: (p) => hub.setConfig(p),
+    toggleOverlay: () => hub.toggleOverlay(),
+    setStartWithWindows: (on) => void hub.setStartWithWindows(on),
+    beforeQuit: () => hub.shutdown(),
+  };
+  const api = localApi(hub, shell);
+  window.hub = api;
+
+  await listen<CallMsg>("hub-call", async (e) => {
+    const { id, method, args } = e.payload;
+    const reply: ReplyMsg = { id };
+    try {
+      if (!OVERLAY_CALLS.has(method)) throw new Error(`not allowed: ${String(method)}`);
+      reply.result = await (api[method] as (...a: unknown[]) => Promise<unknown>)(...args);
+    } catch (err) {
+      reply.error = errorText(err);
+    }
+    void emitTo("overlay", "hub-reply", reply);
+  });
+
+  await shell.init(info.hidden);
+  for (const [key, action] of [
+    [kOverlayToggleKey, () => hub.toggleOverlay()],
+    [kOverlayInteractKey, () => hub.toggleOverlayInteractive()],
+  ] as const) {
+    await register(key, (e) => {
+      if (e.state === "Pressed") action();
+    }).catch((err: unknown) => console.error(`could not register ${key}`, err));
+  }
+  await hub.start();
+  setInterval(() => hub.broadcast(), kStateBroadcastMs);
+}
