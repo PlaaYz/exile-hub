@@ -1,6 +1,6 @@
 {
   "name": "exile-hub",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "All-in-one companion for Path of Exile 1: campaign co-pilot, PoB import, overlay + second-screen dashboard",
   "main": "dist/main/main/main.js",
   "private": true,
@@ -69,7 +69,17 @@
     }
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/cli": "^2.12.4",
+    "@tauri-apps/plugin-autostart": "^2.7.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
+    "@tauri-apps/plugin-global-shortcut": "^2.4.1",
+    "@tauri-apps/plugin-http": "^2.8.3",
+    "@tauri-apps/plugin-notification": "^2.8.0",
+    "@tauri-apps/plugin-opener": "^2.7.2",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.14.1",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
@@ -85,16 +95,6 @@
     "vitest": "^2.1.9"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.12.4",
-    "@tauri-apps/plugin-autostart": "^2.7.0",
-    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
-    "@tauri-apps/plugin-dialog": "^2.8.4",
-    "@tauri-apps/plugin-global-shortcut": "^2.4.1",
-    "@tauri-apps/plugin-http": "^2.8.3",
-    "@tauri-apps/plugin-notification": "^2.8.0",
-    "@tauri-apps/plugin-opener": "^2.7.2",
-    "@tauri-apps/plugin-process": "^2.4.0",
-    "@tauri-apps/plugin-updater": "^2.14.1",
     "electron-updater": "^6.8.11",
     "fflate": "^0.8.3",
     "koffi": "^3.3.7"
