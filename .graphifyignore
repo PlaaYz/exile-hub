@@ -1,0 +1,6 @@
+# keep the graph to the project's own code
+node_modules/
+dist/
+graphify-out/
+data/json/
+package-lock.json
