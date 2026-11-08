@@ -132,6 +132,27 @@ way." (dashboard footer). OAuth apps' User-Agent: "OAuth {clientId}/{version} (c
 Rebuilding the .exe fails/hangs while the owner's portable copy is running (it locks
 release/ExileHub-<v>-portable.exe): ask them to quit it (tray > Sair) first.
 
+Main process layout (2026-11-08 refactor): main.ts = Hub coordinator (settings, play session,
+build, state); env.ts constants/paths/HTTP/icon; config.ts + ipcClean.ts (DEFAULT_CONFIG and a
+table that must list every AppConfig key: renderer input is validated there); ipc.ts handlers;
+diagnostics.ts; logService.ts (tail, full scan, live; bossRuns/passives/maps/sessions trackers);
+priceService.ts; gemAdvice.ts; treeService.ts; windows.ts (dashboard, overlay, tray, login item);
+updater.ts.
+Sessões (core/gameSessions.ts): one session per game start (LOG FILE OPENING, now LogEvent focus
+with `opening`) until "Closing game gracefully"; summary notification when the game closes.
+
+Publishing (public repo https://github.com/PlaaYz/exile-hub, owner chose public on 2026-11-08):
+- The public `main` started as ONE squashed commit (machine paths / character names scrubbed);
+  the full earlier history is the local-only branch `local-history` (never push it).
+- Release: bump package.json version, `npm run dist` (NSIS installer + portable, --publish never),
+  commit + `git push origin main`, then
+  `gh release create v<v> release/ExileHub-Setup-<v>.exe release/ExileHub-Setup-<v>.exe.blockmap release/latest.yml release/ExileHub-<v>-portable.exe`
+  (gh is logged in as PlaaYz; no tokens are handled by hand).
+- The installed app (per-user NSIS, %LOCALAPPDATA%\Programs\exile-hub, desktop shortcut) updates
+  itself via electron-updater from latest.yml; the portable exe and dev runs do not.
+- 0.2.0's updater never checked (initial "disabled" status blocked check()); fixed in 0.2.1, which the
+  owner has installed. Updates from 0.2.1 on are automatic.
+
 The owner decided the loot-filter manager is not needed (they use an online filter that auto-syncs).
 Other ideas offered: build gem plan for leveling (where to get each gem), packaging/tray/autostart.
 
