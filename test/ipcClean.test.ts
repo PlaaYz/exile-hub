@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../src/main/ipcClean";
+import { DEFAULT_CONFIG, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../src/app/ipcClean";
 
 describe("renderer input validation", () => {
   it("accepts every user-facing setting with the right type (gemAdviceEnabled included)", () => {

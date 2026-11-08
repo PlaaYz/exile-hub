@@ -1,15 +1,13 @@
-// Client.txt: the tail at startup, the whole file in the background (boss runs, passives, maps of
-// every session) and the live lines after that. The trackers that need the whole history live here.
-import fs from "node:fs";
-import readline from "node:readline";
+// Client.txt: the tail at startup, the whole file in the background (boss runs, passives, maps and
+// play sessions of the whole history) and the live lines after that.
 import { BossRunTracker } from "../core/bossRuns";
-import { candidateLogPaths, parseLine, type LogEvent } from "../core/clientLog";
+import { parseLine, type LogEvent } from "../core/clientLog";
 import type { DiagKind } from "../core/diag";
 import { GameSessionTracker } from "../core/gameSessions";
 import { MapTracker } from "../core/maps";
 import { PassiveTracker } from "../core/passives";
-import { LogTailer } from "../core/tail";
-import { kBackfillBytes } from "./env";
+import { kBackfillBytes } from "./constants";
+import type { LogFollower, Platform } from "./platform";
 
 export interface LogContext {
   /** a parsed live line, after the trackers saw it */
@@ -31,55 +29,45 @@ export class LogService {
   passives = new PassiveTracker();
   maps = new MapTracker();
   sessions: GameSessionTracker;
-  private tailer: LogTailer | null = null;
+  private follower: LogFollower | null = null;
   error: string | null = null;
   /** live events that arrive while the full scan is still reading the file */
   private queue: LogEvent[] | null = null;
 
-  constructor(private readonly ctx: LogContext) {
+  constructor(
+    private readonly platform: Platform,
+    private readonly ctx: LogContext,
+  ) {
     this.sessions = new GameSessionTracker(ctx.actOf);
   }
 
-  get tailing(): boolean {
-    return this.tailer !== null;
-  }
   get fileSeen(): boolean {
-    return !!this.tailer?.fileSeen;
-  }
-
-  static detect(): string | null {
-    for (const p of candidateLogPaths()) {
-      try {
-        if (fs.statSync(p).isFile()) return p;
-      } catch {
-        /* next */
-      }
-    }
-    return null;
+    return !!this.follower?.fileSeen;
   }
 
   stop(): void {
-    this.tailer?.stop();
-    this.tailer = null;
+    this.follower?.stop();
+    this.follower = null;
   }
 
   /** Starts following `file`; returns the tail lines for the caller's startup backfill. */
-  start(file: string): string[] {
+  async start(file: string): Promise<string[]> {
     this.stop();
     this.error = null;
-    const tail = readTail(file);
+    const tail = await this.platform.readLogTail(file, kBackfillBytes);
     void this.scan(file);
-    this.tailer = new LogTailer(file, (l) => this.onLine(l), {
-      onError: (e) => {
+    this.follower = this.platform.followLog(
+      file,
+      (l) => this.onLine(l),
+      (e) => {
         this.error = e.message;
         this.ctx.broadcast();
       },
-    });
-    this.tailer.start();
+    );
     return tail;
   }
 
-  /** The whole Client.txt (a 27 MB log takes ~0.3 s), read in the background. */
+  /** The whole Client.txt (a 27 MB log takes well under a second), read in the background. */
   private async scan(file: string): Promise<void> {
     const runs = new BossRunTracker();
     const passives = new PassiveTracker();
@@ -87,29 +75,25 @@ export class LogService {
     const sessions = new GameSessionTracker(this.ctx.actOf);
     let lastLevelUp: LogEvent | null = null;
     this.queue = [];
-    try {
-      const size = fs.statSync(file).size;
-      if (size > 0) {
-        const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: "utf8", end: size - 1 }) });
-        for await (const line of rl) {
-          const ev = parseLine(line);
-          if (!ev) continue;
-          runs.feed(ev);
-          passives.feed(ev);
-          maps.feed(ev);
-          sessions.feed(ev);
-          if (ev.type === "levelup") lastLevelUp = ev;
-        }
-      }
-    } catch (e) {
-      console.error("log scan failed", e);
-    }
-    for (const ev of this.queue ?? []) {
+    const feed = (ev: LogEvent) => {
       runs.feed(ev);
       passives.feed(ev);
       maps.feed(ev);
       sessions.feed(ev);
+    };
+    try {
+      await this.platform.scanLog(file, (lines) => {
+        for (const line of lines) {
+          const ev = parseLine(line);
+          if (!ev) continue;
+          feed(ev);
+          if (ev.type === "levelup") lastLevelUp = ev;
+        }
+      });
+    } catch (e) {
+      console.error("log scan failed", e);
     }
+    for (const ev of this.queue ?? []) feed(ev);
     this.queue = null;
     this.bossRuns = runs;
     this.passives = passives;
@@ -143,25 +127,5 @@ export class LogService {
       if (a || b || c || d) this.ctx.broadcast();
     }
     this.ctx.onEvent(ev);
-  }
-}
-
-/** The last kBackfillBytes of the file as lines (the first, probably cut, line dropped). */
-function readTail(file: string): string[] {
-  try {
-    const size = fs.statSync(file).size;
-    const start = Math.max(0, size - kBackfillBytes);
-    const fd = fs.openSync(file, "r");
-    try {
-      const buf = Buffer.alloc(size - start);
-      fs.readSync(fd, buf, 0, buf.length, start);
-      const lines = buf.toString("utf8").split("\n");
-      if (start > 0) lines.shift();
-      return lines;
-    } finally {
-      fs.closeSync(fd);
-    }
-  } catch {
-    return []; // file missing: the tailer will wait for it
   }
 }

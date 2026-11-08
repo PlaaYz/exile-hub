@@ -1,52 +1,15 @@
 // IPC handlers: every renderer request, validated (ipcClean) before it reaches the app.
-import { dialog, ipcMain, type BrowserWindow, type OpenDialogOptions } from "electron";
-import type { MapTradeOptions } from "../core/mapTrade";
-import { CH, type FarmPricesResult, type ImportResult } from "../shared/ipc";
-import type { AppConfig, AppState, DisplayInfo } from "../shared/types";
-import { cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "./ipcClean";
+import { ipcMain } from "electron";
+import type { Hub } from "../app/hub";
+import { cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
+import { CH } from "../shared/ipc";
 
-/** What the IPC layer needs from the app. */
-export interface IpcTarget {
-  state(): AppState;
-  setConfig(patch: Partial<AppConfig>): void;
-  detectLog(): string | null;
-  dashboardWindow(): BrowserWindow | null;
-  routeNext(): void;
-  routePrev(): void;
-  routeReset(): void;
-  routeSync(): boolean;
-  importBuild(input: string): Promise<ImportResult>;
-  listDisplays(): DisplayInfo[];
-  moveDashboard(id: number, fullscreen: boolean): void;
-  toggleOverlay(): void;
-  toggleOverlayInteractive(): void;
-  priceResearch(patch: { statId: string; enabled: boolean; min: number | null }[]): void;
-  priceOpenTrade(): void;
-  openMapTrade(o: MapTradeOptions): Promise<{ ok: boolean; total?: number; missing: string[]; error?: string }>;
-  farmPrices(): Promise<FarmPricesResult>;
-  copyDiagReport(): void;
-  refreshGemAdvice(): void;
-  setStartWithWindows(on: boolean): void;
-  installUpdate(): void;
-}
-
-async function pickLogFile(t: IpcTarget): Promise<void> {
-  const opts: OpenDialogOptions = {
-    title: "Selecione o logs/Client.txt do Path of Exile",
-    properties: ["openFile"],
-    filters: [{ name: "Client.txt", extensions: ["txt"] }],
-  };
-  const parent = t.dashboardWindow();
-  const res = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts);
-  if (!res.canceled && res.filePaths[0]) t.setConfig({ clientLogPath: res.filePaths[0] });
-}
-
-export function registerIpc(t: IpcTarget): void {
+export function registerIpc(t: Hub): void {
   ipcMain.handle(CH.stateGet, () => t.state());
   ipcMain.handle(CH.configSet, (_e, patch: unknown) => t.setConfig(cleanConfigPatch(patch)));
-  ipcMain.handle(CH.logPick, () => pickLogFile(t));
-  ipcMain.handle(CH.logDetect, () => {
-    const p = t.detectLog();
+  ipcMain.handle(CH.logPick, () => t.pickLog());
+  ipcMain.handle(CH.logDetect, async () => {
+    const p = await t.detectLog();
     if (p) t.setConfig({ clientLogPath: p });
     return p;
   });
@@ -59,7 +22,7 @@ export function registerIpc(t: IpcTarget): void {
   );
   ipcMain.handle(CH.displaysList, () => t.listDisplays());
   ipcMain.handle(CH.dashboardMove, (_e, id: unknown, fullscreen: unknown) => {
-    if (typeof id === "number") t.moveDashboard(id, fullscreen === true);
+    return typeof id === "number" ? t.moveDashboard(id, fullscreen === true) : undefined;
   });
   ipcMain.handle(CH.overlayToggle, () => t.toggleOverlay());
   ipcMain.handle(CH.overlayInteractive, () => t.toggleOverlayInteractive());
@@ -71,6 +34,6 @@ export function registerIpc(t: IpcTarget): void {
   ipcMain.handle(CH.gemAdviceRefresh, () => t.refreshGemAdvice());
   ipcMain.handle(CH.updateInstall, () => t.installUpdate());
   ipcMain.handle(CH.appAutostart, (_e, on: unknown) => {
-    if (typeof on === "boolean") t.setStartWithWindows(on);
+    return typeof on === "boolean" ? t.setStartWithWindows(on) : undefined;
   });
 }

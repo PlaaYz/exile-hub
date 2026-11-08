@@ -1,14 +1,17 @@
 // "Best next support gems" for the campaign, computed by Path of Building's engine.
-import { createHash } from "node:crypto";
+// The engine is heavy (~400 MB while loaded): it only starts when there is something to rank and
+// stops after a while without use, outside the campaign or when the option is turned off.
 import { baseClass } from "../core/classes";
 import type { DiagKind } from "../core/diag";
 import { availableSupports, sourceText, type GemInfo, type QuestInfo } from "../core/gemAvailability";
 import { decodePobCode } from "../core/pob";
 import type { Session } from "../core/session";
 import type { AppConfig, AppState, PobBuild } from "../shared/types";
-import { kAdviceDebounceMs, kGemAdviceMaxLevel, kUserAgent, pobVendorDir } from "./env";
-import path from "node:path";
-import { PobEngine } from "./pobEngine";
+import { kAdviceDebounceMs, kGemAdviceMaxLevel } from "./constants";
+import type { Platform } from "./platform";
+
+/** Stop the engine after this long without a ranking. */
+export const kEngineIdleMs = 10 * 60 * 1000;
 
 export interface GemAdviceContext {
   config(): AppConfig;
@@ -20,22 +23,49 @@ export interface GemAdviceContext {
   addDiag(kind: DiagKind, text: string): void;
 }
 
+async function sha1Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * The lowest level at which the build's main link has a usable active skill (from our gem data,
+ * no engine needed); null when unknown.
+ */
+export function mainSkillRequirement(build: PobBuild, gems: Record<string, GemInfo>): { name: string; level: number } | null {
+  const byName = new Map(Object.values(gems).map((g) => [g.name, g]));
+  const groups = build.groups.filter((g) => g.enabled && g.gems.some((x) => x.enabled));
+  const main = [...groups].sort((a, b) => b.gems.length - a.gems.length)[0];
+  if (!main) return null;
+  let best: { name: string; level: number } | null = null;
+  for (const gem of main.gems) {
+    if (!gem.enabled || gem.support) continue;
+    const info = byName.get(gem.name);
+    if (!info || info.is_support) continue;
+    if (!best || info.required_level < best.level) best = { name: gem.name, level: info.required_level };
+  }
+  return best;
+}
+
 export class GemAdviceService {
-  private readonly engine = new PobEngine(pobVendorDir, path.join(__dirname, "pobWorker.js"), kUserAgent);
   private xml: string | null = null;
   private xmlKey: string | null = null;
   state: AppState["gemAdvice"] = { status: "off", message: null, mismatch: null, level: null, act: null, result: null, sources: {}, at: null };
   private key = "";
-  private timer: NodeJS.Timeout | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
 
-  constructor(private readonly ctx: GemAdviceContext) {}
+  constructor(
+    private readonly platform: Platform,
+    private readonly ctx: GemAdviceContext,
+  ) {}
 
   /** The PoB code of the current build (the engine needs its XML). */
-  setBuildCode(code: string): void {
+  async setBuildCode(code: string): Promise<void> {
     try {
       this.xml = decodePobCode(code);
-      this.xmlKey = createHash("sha1").update(this.xml).digest("hex").slice(0, 16);
+      this.xmlKey = (await sha1Hex(this.xml)).slice(0, 16);
     } catch {
       this.xml = null;
       this.xmlKey = null;
@@ -44,7 +74,9 @@ export class GemAdviceService {
   }
 
   stop(): void {
-    this.engine.stop();
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+    this.platform.pob.stop();
   }
 
   private set(patch: Partial<AppState["gemAdvice"]>): void {
@@ -57,6 +89,11 @@ export class GemAdviceService {
     return baseClass(this.ctx.session().className) ?? this.ctx.build()?.className ?? "Scion";
   }
 
+  /** Releases the engine's memory when it is not going to be used. */
+  private idle(): void {
+    if (this.platform.pob.status !== "off") this.stop();
+  }
+
   /**
    * Recompute when the level, the act or the build changed (campaign only). Debounced: zone
    * changes come in bursts; the engine takes ~1-3 s per full ranking.
@@ -65,11 +102,13 @@ export class GemAdviceService {
     const session = this.ctx.session();
     const level = session.characterLevel;
     const act = session.tracker.view().act || 1;
+    const build = this.ctx.build();
     if (!this.ctx.config().gemAdviceEnabled) {
+      this.idle();
       if (this.state.status !== "off") this.set({ status: "off", message: "desligado nas configurações" });
       return;
     }
-    if (!this.ctx.build() || !this.xml) {
+    if (!build || !this.xml) {
       if (this.state.status !== "no-build") this.set({ status: "no-build", message: "importe um build do PoB" });
       return;
     }
@@ -78,9 +117,17 @@ export class GemAdviceService {
       return;
     }
     if (level > kGemAdviceMaxLevel) {
+      this.idle();
       if (this.state.status !== "not-campaign") {
         this.set({ status: "not-campaign", message: `só na campanha (até o nível ${kGemAdviceMaxLevel})`, level, act });
       }
+      return;
+    }
+    // the build's skill is not usable yet: answer without starting the engine
+    const req = mainSkillRequirement(build, this.ctx.gemsData);
+    if (req && level < req.level) {
+      const message = `${req.name} precisa do nível ${req.level}.`;
+      if (this.state.message !== message) this.set({ status: "waiting", message, level, act, result: null });
       return;
     }
     const key = `${this.xmlKey}|${this.playerClass()}|${level}|${act}`;
@@ -109,7 +156,7 @@ export class GemAdviceService {
     this.running = true;
     this.set({ status: "computing", message: `calculando com o motor do PoB (${avail.length} suportes disponíveis)…`, level, act, mismatch });
     try {
-      const r = await this.engine.suggest({
+      const r = await this.platform.pob.suggest({
         xml,
         xmlKey,
         level,
@@ -126,12 +173,18 @@ export class GemAdviceService {
         );
       } else {
         // "skill needs level X" is a normal wait, not an error
-        const status = this.engine.status === "missing-pob" ? "no-pob" : r.soft ? "waiting" : "error";
+        const status = this.platform.pob.status === "missing-pob" ? "no-pob" : r.soft ? "waiting" : "error";
         this.set({ status, message: r.error ?? "erro", level, act, result: null, at: Date.now() });
         this.ctx.addDiag("app", r.soft ? `sugestão de gemas: ${r.error}` : `sugestão de gemas falhou: ${r.error}`);
       }
     } finally {
       this.running = false;
+      // free the engine's memory if nothing asks for it for a while
+      if (this.idleTimer) clearTimeout(this.idleTimer);
+      this.idleTimer = setTimeout(() => {
+        this.platform.pob.stop();
+        this.ctx.addDiag("app", "motor do PoB desligado (sem uso)");
+      }, kEngineIdleMs);
     }
   }
 }

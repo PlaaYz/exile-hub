@@ -1,40 +1,42 @@
 // Passive tree progress: GGG's tree data (cached) compared with the build and the log.
-import fs from "node:fs";
 import { compareTree, pointBudget, pointsIn, slimTree, type PassiveTracker, type PassiveTree } from "../core/passives";
 import type { Session } from "../core/session";
 import type { AppState, PobBuild } from "../shared/types";
-import { httpFetch, kTreeMaxAgeMs, kTreeUrl, kUserAgent, readJson, userFile } from "./env";
+import { kTreeMaxAgeMs, kTreeUrl } from "./constants";
+import type { Platform } from "./platform";
 
 export class TreeService {
   private loading: Promise<PassiveTree | null> | null = null;
   private data: PassiveTree | null = null;
 
-  constructor(private readonly broadcast: () => void) {}
+  constructor(
+    private readonly platform: Platform,
+    private readonly broadcast: () => void,
+  ) {}
 
-  /** GGG's skilltree-export (character tree), slimmed and cached in userData for a week. */
+  /** GGG's skilltree-export (character tree), slimmed and cached for a week. */
   private load(): Promise<PassiveTree | null> {
     if (this.loading) return this.loading;
-    const file = userFile("passive-tree.json");
+    const file = "passive-tree.json";
+    const p = this.platform;
     this.loading = (async () => {
-      try {
-        if (Date.now() - fs.statSync(file).mtimeMs < kTreeMaxAgeMs) return readJson<PassiveTree>(file);
-      } catch {
-        /* no cache */
+      const age = await p.userFileAge(file);
+      if (age !== null && Date.now() - age < kTreeMaxAgeMs) {
+        const text = await p.readUserFile(file);
+        if (text) return JSON.parse(text) as PassiveTree;
       }
       try {
-        const res = await httpFetch(kTreeUrl, { headers: { "User-Agent": kUserAgent } });
+        const res = await p.fetch(kTreeUrl, { headers: { "User-Agent": p.userAgent } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const tree = slimTree((await res.json()) as Parameters<typeof slimTree>[0], "latest");
-        fs.writeFileSync(file, JSON.stringify(tree));
+        await p.writeUserFile(file, JSON.stringify(tree));
         return tree;
       } catch (e) {
         console.error("could not load passive tree", e);
-        try {
-          return readJson<PassiveTree>(file); // stale cache is fine: node ids rarely change
-        } catch {
-          this.loading = null; // try again later
-          return null;
-        }
+        const text = await p.readUserFile(file); // stale cache is fine: node ids rarely change
+        if (text) return JSON.parse(text) as PassiveTree;
+        this.loading = null; // try again later
+        return null;
       }
     })();
     void this.loading.then((t) => {

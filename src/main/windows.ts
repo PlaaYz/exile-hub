@@ -1,42 +1,36 @@
-// The dashboard, the in-game overlay, the tray icon and the Windows integration (login item,
-// monitors). Knows nothing about the game: it asks the Hub through WindowsContext.
+// Electron windows: the dashboard, the in-game overlay, the tray icon and the Windows integration
+// (login item, monitors). The app decides what to show (src/app/hub.ts); this only does it.
 import { app, BrowserWindow, Menu, screen, Tray, type WebPreferences } from "electron";
-import type { DiagKind } from "../core/diag";
+import type { Shell, TrayState } from "../app/platform";
 import { CH } from "../shared/ipc";
 import type { AppConfig, AppState, DisplayInfo } from "../shared/types";
 import { appIcon, isDev, kOverlayMargin, kOverlaySize, preloadPath, rendererIndex } from "./env";
 
 type Mode = "dashboard" | "overlay";
 
+/** What the tray menu and window placement need from the app. */
 export interface WindowsContext {
   config(): AppConfig;
   setConfig(patch: Partial<AppConfig>): void;
-  /** game focus as seen in Client.txt */
-  gameFocused(): boolean;
-  /** "Exile Hub — <zone>" in the tray tooltip */
-  areaName(): string | null;
-  addDiag(kind: DiagKind, text: string): void;
-  broadcast(): void;
+  toggleOverlay(): void;
+  setStartWithWindows(on: boolean): void;
 }
 
-export class Windows {
+export class Windows implements Omit<Shell, "installUpdate"> {
   dashboard: BrowserWindow | null = null;
   overlay: BrowserWindow | null = null;
-  overlayInteractive = false;
   quitting = false;
   private tray: Tray | null = null;
   private trayNotified = false;
+  ctx: WindowsContext | null = null;
 
-  constructor(private readonly ctx: WindowsContext) {}
-
-  /** Sends the app state to every window. */
   send(state: AppState): void {
     for (const w of [this.dashboard, this.overlay]) {
       if (w && !w.isDestroyed()) w.webContents.send(CH.state, state);
     }
   }
 
-  get any(): boolean {
+  get windowsReady(): boolean {
     return !!this.dashboard || !!this.overlay;
   }
 
@@ -82,10 +76,10 @@ export class Windows {
     });
     win.on("closed", () => (this.dashboard = null));
     // Default to the secondary monitor (the game stays on the primary one).
-    const cfg = this.ctx.config();
-    const target = cfg.dashboardDisplayId ?? this.secondaryDisplayId();
-    if (target !== null) this.moveDashboard(target, cfg.dashboardFullscreen, false);
-    if (hidden) win.hide(); // moveDashboard may have shown it (fullscreen)
+    const cfg = this.ctx?.config();
+    const target = cfg?.dashboardDisplayId ?? this.secondaryDisplayId();
+    if (target !== null) this.place(target, cfg?.dashboardFullscreen ?? false);
+    if (hidden) win.hide(); // place() may have shown it (fullscreen)
   }
 
   /** Bring the dashboard back (tray click, second launch, game start). */
@@ -106,7 +100,7 @@ export class Windows {
     return screen.getAllDisplays().find((d) => d.id !== primaryId)?.id ?? null;
   }
 
-  listDisplays(): DisplayInfo[] {
+  async listDisplays(): Promise<DisplayInfo[]> {
     const primaryId = screen.getPrimaryDisplay().id;
     return screen.getAllDisplays().map((d, i) => ({
       id: d.id,
@@ -117,7 +111,11 @@ export class Windows {
     }));
   }
 
-  moveDashboard(displayId: number, fullscreen: boolean, persist = true): void {
+  async moveDashboard(displayId: number, fullscreen: boolean): Promise<void> {
+    this.place(displayId, fullscreen);
+  }
+
+  private place(displayId: number, fullscreen: boolean): void {
     const win = this.dashboard;
     if (!win || win.isDestroyed()) return;
     const d = screen.getAllDisplays().find((x) => x.id === displayId);
@@ -128,7 +126,6 @@ export class Windows {
     const h = Math.min(780, wa.height);
     win.setBounds({ x: wa.x + Math.round((wa.width - w) / 2), y: wa.y + Math.round((wa.height - h) / 2), width: w, height: h });
     if (fullscreen) win.setFullScreen(true);
-    if (persist) this.ctx.setConfig({ dashboardDisplayId: displayId, dashboardFullscreen: fullscreen });
   }
 
   // ---- overlay --------------------------------------------------------------------------
@@ -155,38 +152,20 @@ export class Windows {
     this.overlay = win;
     this.loadRenderer(win, "overlay");
     win.on("closed", () => (this.overlay = null));
-    win.once("ready-to-show", () => this.applyOverlayVisibility());
   }
 
-  applyOverlayVisibility(): void {
+  setOverlayVisible(visible: boolean): void {
     const w = this.overlay;
     if (!w || w.isDestroyed()) return;
-    const cfg = this.ctx.config();
-    // hidden while the game is in the background (alt-tab), except while the user is
-    // interacting with the overlay itself (F10)
-    const followFocus = cfg.overlayHideUnfocused && !this.overlayInteractive;
-    const show = cfg.overlayEnabled && (!followFocus || this.ctx.gameFocused());
-    if (show && !w.isVisible()) {
-      w.showInactive();
-      this.ctx.addDiag("overlay", "overlay visível");
-    } else if (!show && w.isVisible()) {
-      w.hide();
-      this.ctx.addDiag("overlay", `overlay escondido (${!cfg.overlayEnabled ? "desligado (F9)" : "jogo sem foco ou fechado"})`);
-    }
+    if (visible && !w.isVisible()) w.showInactive();
+    else if (!visible && w.isVisible()) w.hide();
   }
 
-  toggleOverlay(): void {
-    this.ctx.setConfig({ overlayEnabled: !this.ctx.config().overlayEnabled });
-  }
-
-  toggleOverlayInteractive(): void {
+  setOverlayInteractive(on: boolean): void {
     const w = this.overlay;
     if (!w || w.isDestroyed()) return;
-    this.overlayInteractive = !this.overlayInteractive;
-    if (this.overlayInteractive) w.setIgnoreMouseEvents(false);
+    if (on) w.setIgnoreMouseEvents(false);
     else w.setIgnoreMouseEvents(true, { forward: true });
-    this.applyOverlayVisibility();
-    this.ctx.broadcast();
   }
 
   // ---- tray ---------------------------------------------------------------------------
@@ -194,7 +173,6 @@ export class Windows {
   createTray(): void {
     this.tray = new Tray(appIcon());
     this.tray.on("click", () => this.showDashboard());
-    this.updateTray();
   }
 
   /** A Windows notification from the tray icon (e.g. the session summary). */
@@ -213,45 +191,43 @@ export class Windows {
     });
   }
 
-  updateTray(): void {
+  updateTray(s: TrayState): void {
     const t = this.tray;
-    if (!t || t.isDestroyed()) return;
-    const cfg = this.ctx.config();
-    const area = this.ctx.areaName();
-    t.setToolTip(`Exile Hub${area ? ` — ${area}` : ""}`);
+    const ctx = this.ctx;
+    if (!t || t.isDestroyed() || !ctx) return;
+    t.setToolTip(s.tooltip);
     t.setContextMenu(
       Menu.buildFromTemplate([
         { label: "Abrir painel", click: () => this.showDashboard() },
         { type: "separator" },
-        { label: "Overlay no jogo (F9)", type: "checkbox", checked: cfg.overlayEnabled, click: () => this.toggleOverlay() },
+        { label: "Overlay no jogo (F9)", type: "checkbox", checked: s.overlayEnabled, click: () => ctx.toggleOverlay() },
         {
           label: "Price check (Ctrl+C no item)",
           type: "checkbox",
-          checked: cfg.priceCheckEnabled,
-          click: () => this.ctx.setConfig({ priceCheckEnabled: !this.ctx.config().priceCheckEnabled }),
+          checked: s.priceCheckEnabled,
+          click: () => ctx.setConfig({ priceCheckEnabled: !ctx.config().priceCheckEnabled }),
         },
         {
           label: "Abrir o painel quando o jogo abrir",
           type: "checkbox",
-          checked: cfg.showDashboardOnGameStart,
-          click: () => this.ctx.setConfig({ showDashboardOnGameStart: !this.ctx.config().showDashboardOnGameStart }),
+          checked: s.showDashboardOnGameStart,
+          click: () => ctx.setConfig({ showDashboardOnGameStart: !ctx.config().showDashboardOnGameStart }),
         },
         {
           label: "Iniciar com o Windows",
           type: "checkbox",
-          checked: this.startWithWindows(),
-          click: () => this.setStartWithWindows(!this.startWithWindows()),
+          checked: s.startWithWindows,
+          click: () => ctx.setStartWithWindows(!s.startWithWindows),
         },
         { type: "separator" },
-        {
-          label: "Sair",
-          click: () => {
-            this.quitting = true;
-            app.quit();
-          },
-        },
+        { label: "Sair", click: () => this.quit() },
       ]),
     );
+  }
+
+  quit(): void {
+    this.quitting = true;
+    app.quit();
   }
 
   // ---- Windows login item -------------------------------------------------------------
@@ -262,13 +238,11 @@ export class Windows {
     return { path: exe, args: app.isPackaged ? ["--hidden"] : [app.getAppPath(), "--hidden"] };
   }
 
-  startWithWindows(): boolean {
+  async startWithWindows(): Promise<boolean> {
     return app.getLoginItemSettings(this.loginItem()).openAtLogin;
   }
 
-  setStartWithWindows(on: boolean): void {
+  async setStartWithWindows(on: boolean): Promise<void> {
     app.setLoginItemSettings({ openAtLogin: on, ...this.loginItem() });
-    this.updateTray();
-    this.ctx.broadcast();
   }
 }

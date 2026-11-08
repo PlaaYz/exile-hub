@@ -7,5 +7,5 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src/core/**/*.ts", "src/main/**/*.ts", "src/shared/**/*.ts"]
+  "include": ["src/core/**/*.ts", "src/app/**/*.ts", "src/main/**/*.ts", "src/shared/**/*.ts"]
 }

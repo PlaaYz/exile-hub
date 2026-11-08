@@ -1,7 +1,5 @@
 // Prices: the clipboard watcher (items -> price check, PoB codes -> build import), leagues,
 // poe.ninja, the trade site (item listings, map searches) and the trade stat list.
-import { clipboard, shell } from "electron";
-import fs from "node:fs";
 import type { DiagKind } from "../core/diag";
 import { farmItemNames } from "../core/farm";
 import { mapModStatIds, mapTradeQuery, tradeSearchUrl, type MapTradeOptions } from "../core/mapTrade";
@@ -13,7 +11,8 @@ import { TradeClient, defaultLeague, fetchLeagues, fetchStats } from "../core/tr
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppConfig, PriceView } from "../shared/types";
-import { httpFetch, kClipboardPollMs, kStatsMaxAgeMs, kUserAgent, readJson, userFile } from "./env";
+import { kClipboardPollMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
+import type { Platform } from "./platform";
 
 export interface PriceContext {
   config(): AppConfig;
@@ -23,21 +22,25 @@ export interface PriceContext {
   onPobText(text: string): void;
 }
 
-const kTradeSite = "https://www.pathofexile.com/trade/";
-
 export class PriceService {
-  readonly ninja = new NinjaClient(httpFetch, kUserAgent);
-  readonly trade = new TradeClient(httpFetch, kUserAgent);
+  readonly ninja: NinjaClient;
+  readonly trade: TradeClient;
   private readonly checker: PriceChecker;
   private statIndex: Promise<StatIndex | null> | null = null;
   leagues: string[] = [];
   private lastClipboard = "";
-  private clipboardTimer: NodeJS.Timeout | null = null;
+  private clipboardTimer: ReturnType<typeof setInterval> | null = null;
+  private polling = false;
   private lastPriceDiag = "";
   /** items priced since the app started (session summaries): one entry per copy, best known value */
   readonly history: { ts: number; name: string; chaos: number | null }[] = [];
 
-  constructor(private readonly ctx: PriceContext) {
+  constructor(
+    private readonly platform: Platform,
+    private readonly ctx: PriceContext,
+  ) {
+    this.ninja = new NinjaClient(platform.fetch, platform.userAgent);
+    this.trade = new TradeClient(platform.fetch, platform.userAgent);
     this.checker = new PriceChecker({
       ninja: this.ninja,
       trade: this.trade,
@@ -60,35 +63,34 @@ export class PriceService {
 
   async loadLeagues(): Promise<void> {
     try {
-      this.leagues = await fetchLeagues(httpFetch, kUserAgent);
+      this.leagues = await fetchLeagues(this.platform.fetch, this.platform.userAgent);
       this.ctx.broadcast();
     } catch (e) {
       console.error("could not load leagues", e);
     }
   }
 
-  /** Trade stat list (~2 MB): cached in userData, refreshed daily. */
+  /** Trade stat list (~2 MB): cached in the user folder, refreshed daily. */
   loadStats(): Promise<StatIndex | null> {
     if (this.statIndex) return this.statIndex;
-    const file = userFile("trade-stats.json");
+    const file = "trade-stats.json";
+    const p = this.platform;
     this.statIndex = (async () => {
-      try {
-        if (Date.now() - fs.statSync(file).mtimeMs < kStatsMaxAgeMs) return new StatIndex(readJson<TradeStatsData>(file));
-      } catch {
-        /* no cache yet */
+      const age = await p.userFileAge(file);
+      if (age !== null && Date.now() - age < kStatsMaxAgeMs) {
+        const text = await p.readUserFile(file);
+        if (text) return new StatIndex(JSON.parse(text) as TradeStatsData);
       }
       try {
-        const data = (await fetchStats(httpFetch, kUserAgent)) as TradeStatsData;
-        fs.writeFileSync(file, JSON.stringify(data));
+        const data = (await fetchStats(p.fetch, p.userAgent)) as TradeStatsData;
+        await p.writeUserFile(file, JSON.stringify(data));
         return new StatIndex(data);
       } catch (e) {
         console.error("could not load trade stats", e);
-        try {
-          return new StatIndex(readJson<TradeStatsData>(file)); // stale cache is better than nothing
-        } catch {
-          this.statIndex = null; // try again on the next item
-          return null;
-        }
+        const text = await p.readUserFile(file); // stale cache is better than nothing
+        if (text) return new StatIndex(JSON.parse(text) as TradeStatsData);
+        this.statIndex = null; // try again on the next item
+        return null;
       }
     })();
     return this.statIndex;
@@ -96,11 +98,11 @@ export class PriceService {
 
   // ---- clipboard ------------------------------------------------------------------
 
-  applyClipboardWatch(): void {
+  async applyClipboardWatch(): Promise<void> {
     const on = this.ctx.config().priceCheckEnabled;
     if (on && !this.clipboardTimer) {
-      this.lastClipboard = clipboard.readText(); // don't price whatever was there before
-      this.clipboardTimer = setInterval(() => this.pollClipboard(), kClipboardPollMs);
+      this.lastClipboard = await this.platform.readClipboard().catch(() => ""); // don't price what was there before
+      this.clipboardTimer = setInterval(() => void this.pollClipboard(), kClipboardPollMs);
     } else if (!on && this.clipboardTimer) {
       clearInterval(this.clipboardTimer);
       this.clipboardTimer = null;
@@ -108,28 +110,36 @@ export class PriceService {
   }
 
   /** Text the app itself put on the clipboard: the watcher must not look at it. */
-  writeClipboard(text: string): void {
+  async writeClipboard(text: string): Promise<void> {
     this.lastClipboard = text;
-    clipboard.writeText(text);
+    await this.platform.writeClipboard(text);
   }
 
-  private pollClipboard(): void {
-    const text = clipboard.readText();
-    if (text === this.lastClipboard) return;
-    this.lastClipboard = text;
-    // only item text copied from the game and Path of Building codes/links are looked at
-    const league = this.league();
-    if (league && this.checker.check(text, league)) {
-      const it = this.checker.view?.item;
-      this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
-      return;
+  private async pollClipboard(): Promise<void> {
+    if (this.polling) return; // a slow read must not stack up
+    this.polling = true;
+    try {
+      const text = await this.platform.readClipboard();
+      if (text === this.lastClipboard) return;
+      this.lastClipboard = text;
+      // only item text copied from the game and Path of Building codes/links are looked at
+      const league = this.league();
+      if (league && this.checker.check(text, league)) {
+        const it = this.checker.view?.item;
+        this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
+        return;
+      }
+      if (looksLikePob(text)) {
+        this.ctx.onPobText(text);
+        return;
+      }
+      if (!league && /^Item Class: /.test(text)) this.ctx.addDiag("clipboard", "item copiado, mas a liga ainda não carregou");
+      // anything else the user copies is none of our business: not even logged
+    } catch {
+      /* clipboard busy (another app has it open): next tick */
+    } finally {
+      this.polling = false;
     }
-    if (looksLikePob(text)) {
-      this.ctx.onPobText(text);
-      return;
-    }
-    if (!league && /^Item Class: /.test(text)) this.ctx.addDiag("clipboard", "item copiado, mas a liga ainda não carregou");
-    // anything else the user copies is none of our business: not even logged
   }
 
   private onPrice(v: PriceView): void {
@@ -162,7 +172,7 @@ export class PriceService {
 
   openItemTrade(): void {
     const url = this.checker.view?.trade?.url;
-    if (url && url.startsWith(kTradeSite)) void shell.openExternal(url);
+    if (url && url.startsWith(kTradeSite)) this.platform.openExternal(url);
   }
 
   /** Live prices for every item in the farm tables (poe.ninja, cached 30 min). */
@@ -203,7 +213,7 @@ export class PriceService {
       url = tradeSearchUrl(league, query);
     }
     if (!url.startsWith(kTradeSite)) return { ok: false, missing, error: "link inválido" };
-    void shell.openExternal(url);
+    this.platform.openExternal(url);
     this.ctx.addDiag("app", `trade de mapas aberto${total !== undefined ? ` (${total} resultados)` : ""}`);
     return { ok: true, total, missing };
   }

@@ -1,17 +1,30 @@
 // Path of Building import: code (url-safe base64 of zlib-deflated XML) -> structured build.
 
-import zlib from "node:zlib";
+// Pure JS (fflate) instead of node:zlib so the same code runs in Node, Electron and a webview.
+import { inflateSync, strFromU8, unzlibSync } from "fflate";
 import type { PobBuild, PobGem, PobSkillGroup } from "../shared/types";
+
+function base64Bytes(b64: string): Uint8Array {
+  const bin = atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, "="));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
 
 export function decodePobCode(code: string): string {
   const b64 = code.trim().replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
   if (!b64) throw new Error("código do PoB vazio");
-  const buf = Buffer.from(b64, "base64");
+  let bytes: Uint8Array;
   try {
-    return zlib.inflateSync(buf).toString("utf8");
+    bytes = base64Bytes(b64);
+  } catch {
+    throw new Error("não é um código do PoB válido (falha ao descompactar)");
+  }
+  try {
+    return strFromU8(unzlibSync(bytes));
   } catch {
     try {
-      return zlib.inflateRawSync(buf).toString("utf8");
+      return strFromU8(inflateSync(bytes));
     } catch {
       throw new Error("não é um código do PoB válido (falha ao descompactar)");
     }
