@@ -161,6 +161,29 @@ UI language: pt-BR, strings written inline in the components (no i18n framework)
 instruction text is translated through `src/shared/routePtBR.ts`; `test/routePtBR.test.ts` fails if
 the route data gains a piece without a translation. `shared/render.ts` (stepText) stays English for tests.
 
+Tauri migration (2026-11-08, in progress; Electron is still the shipped build):
+- src/app/ = the app without Node/Electron (hub.ts, logService, priceService, gemAdvice, treeService,
+  config, ipcClean, diagnostics) behind `Platform`/`Shell` (src/app/platform.ts). Electron implements
+  it in src/main/electronPlatform.ts + windows.ts; Tauri in src/tauri/ (tauriPlatform, tauriShell,
+  tauriPob, boot.ts). On Tauri the app runs in the DASHBOARD webview (main.tsx imports
+  src/tauri/boot when `__TAURI_INTERNALS__` exists); the overlay's window.hub forwards a whitelist of
+  calls through events ("hub-call"/"hub-reply") and receives "state". Background throttling is off via
+  additionalBrowserArgs (clipboard polling must keep running while the dashboard is hidden).
+- src-tauri/ (Rust): files.rs (resources data/ + pob/, user files in the SAME %APPDATA%\exile-hub as
+  Electron, atomic writes), logfile.rs (tail/scan/follow; only files named Client.txt), pob.rs +
+  pob_worker.rs (PoB engine = this exe with --pob-worker, stdin/stdout JSON lines prefixed "EH:").
+  Toolchain: rustup stable MSVC + VS 2022 Build Tools; cargo is in %USERPROFILE%\.cargo\bin (not on
+  PATH in old shells). `npx tauri build --debug --no-bundle` -> src-tauri/target/debug/exile-hub.exe.
+- Never run the Electron app and the Tauri build at the same time: both write the same user files.
+- Debug the webviews with env WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9334.
+- Measured 2026-11-08, 60 s after start, PoB engine off: Tauri release 505 MB working set / 256 MB
+  private (8 procs, exe 6.8 MB); Electron 0.2.1 minus its engine process ~506 MB WS / ~337 MB private
+  (install 273 MB). Electron 0.2.1 also boots the PoB engine at start (+421 MB); the on-demand engine
+  (src/app/gemAdvice.ts) removes that on BOTH builds.
+- Verified on Tauri: log scan (676 maps / 13 boss runs), price check via plugin-http, PoB worker boot
+  (1.8 s), overlay bridge. NOT yet: tray menu clicks, F9/F10, notifications, autostart, installer,
+  signed updater, overlay over the real game.
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.
