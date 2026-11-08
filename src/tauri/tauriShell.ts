@@ -11,6 +11,7 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import type { Shell, TrayState } from "../app/platform";
 import type { AppConfig, AppState, DisplayInfo } from "../shared/types";
+import type { TauriUpdater } from "./tauriUpdater";
 
 const kDashboardSize = { width: 1180, height: 780 };
 const kOverlayMargin = 24;
@@ -183,14 +184,22 @@ export class TauriShell implements Shell {
     else await disable();
   }
 
+  /** Set by boot.ts once the updater exists. */
+  updater: TauriUpdater | null = null;
+
+  /** "Reiniciar e atualizar": save, then run the downloaded installer. */
   installUpdate(): void {
-    // the Tauri updater comes with the installer (not wired yet)
+    if (this.updater?.ready) this.quit();
   }
 
+  /** "Sair": save progress; a downloaded update is installed on the way out. */
   quit(): void {
     void (async () => {
       try {
         await this.ctx?.beforeQuit();
+        if (this.updater?.ready) await this.updater.install();
+      } catch (e) {
+        console.error("quit", e);
       } finally {
         await invoke("app_quit");
       }

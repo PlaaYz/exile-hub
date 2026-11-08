@@ -174,6 +174,14 @@ Tauri migration (2026-11-08, in progress; Electron is still the shipped build):
   pob_worker.rs (PoB engine = this exe with --pob-worker, stdin/stdout JSON lines prefixed "EH:").
   Toolchain: rustup stable MSVC + VS 2022 Build Tools; cargo is in %USERPROFILE%\.cargo\bin (not on
   PATH in old shells). `npx tauri build --debug --no-bundle` -> src-tauri/target/debug/exile-hub.exe.
+- Updates on Tauri: tauri-plugin-updater, latest.json on the GitHub release, signed with the key in
+  %USERPROFILE%\.tauri\exile-hub.key (empty password; NEVER commit it; losing it = Tauri installs can
+  no longer update). Build: env TAURI_SIGNING_PRIVATE_KEY=<that path>, TAURI_SIGNING_PRIVATE_KEY_PASSWORD="",
+  `npx tauri build`, then `node scripts/tauri-release.mjs "notes"` -> release/ExileHub-Setup-<v>.exe(.sig),
+  latest.json (Tauri) and latest.yml (makes Electron 0.2.x installs download the Tauri installer).
+  src-tauri/windows/hooks.nsh: PREINSTALL silently uninstalls the Electron build
+  (%LOCALAPPDATA%\Programs\exile-hub) and moves its autostart entry; POSTINSTALL relaunches on
+  electron-updater's "--force-run". Tauri installs to %LOCALAPPDATA%\Exile Hub, exe "Exile Hub.exe".
 - Never run the Electron app and the Tauri build at the same time: both write the same user files.
 - Debug the webviews with env WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9334.
 - Measured 2026-11-08, 60 s after start, PoB engine off: Tauri release 505 MB working set / 256 MB

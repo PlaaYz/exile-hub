@@ -12,6 +12,7 @@ import type { AppState } from "../shared/types";
 import { TauriPlatform, type AppInfo } from "./tauriPlatform";
 import { errorText } from "./tauriPob";
 import { TauriShell } from "./tauriShell";
+import { TauriUpdater } from "./tauriUpdater";
 
 /** What the overlay may ask the dashboard for. */
 const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive"]);
@@ -134,5 +135,16 @@ export async function installTauriHub(mode: string | null): Promise<void> {
     }).catch((err: unknown) => console.error(`could not register ${key}`, err));
   }
   await hub.start();
+  const updater = new TauriUpdater(
+    info.version,
+    (s) => {
+      hub.updateState = s;
+      hub.broadcast();
+    },
+    (t, b) => shell.notify(t, b),
+  );
+  shell.updater = updater;
+  hub.updateState = updater.state;
+  updater.start(info.packaged);
   setInterval(() => hub.broadcast(), kStateBroadcastMs);
 }
