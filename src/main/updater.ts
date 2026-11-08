@@ -15,6 +15,8 @@ export interface UpdaterContext {
 export class Updater {
   state: AppState["update"] = { status: "disabled", current: app.getVersion(), version: null, progress: null, message: null };
   private timer: NodeJS.Timeout | null = null;
+  /** true once start() decided updates can run (installed, packaged app) */
+  private enabled = false;
 
   constructor(private readonly ctx: UpdaterContext) {}
 
@@ -39,12 +41,13 @@ export class Updater {
       this.ctx.notify("Atualização pronta", `Exile Hub ${i.version} será instalado quando você fechar o app (ou clique em "Reiniciar e atualizar").`);
     });
     autoUpdater.on("error", (e) => this.set({ status: "error", message: e?.message ?? String(e) }));
+    this.enabled = true;
     this.check();
     this.timer = setInterval(() => this.check(), kCheckEveryMs);
   }
 
   check(): void {
-    if (this.state.status === "disabled" || this.state.status === "downloading" || this.state.status === "ready") return;
+    if (!this.enabled || this.state.status === "downloading" || this.state.status === "ready") return;
     autoUpdater.checkForUpdates().catch((e: Error) => this.set({ status: "error", message: e.message }));
   }
 
