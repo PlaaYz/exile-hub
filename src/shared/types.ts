@@ -194,11 +194,16 @@ export interface AppConfig {
   showDashboardOnGameStart: boolean;
   /** rank support gems with Path of Building's engine on level-ups (campaign) */
   gemAdviceEnabled: boolean;
-  /** small passive tree map (next points) on the overlay */
-  overlayTreeMap: boolean;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */
   chatCommandsEnabled: boolean;
   chatCommands: { key: string; text: string }[];
+}
+
+/** League challenges for the panel: the list (null if none could be loaded) and what the player ticked. */
+export interface ChallengesView {
+  list: import("../core/challenges").ChallengeList | null;
+  progress: import("../core/challenges").ChallengeProgress;
+  error: string | null;
 }
 
 /** Main passive tree geometry for the map: [id, x, y, kind 0 small/1 notable/2 keystone/3 start], edges by id. */
@@ -218,7 +223,18 @@ export interface DisplayInfo {
   primary: boolean;
 }
 
-export type Panel = "campaign" | "price" | "maps" | "sessions" | "farm" | "search" | "build" | "timers" | "settings" | "diag";
+export type Panel =
+  | "campaign"
+  | "price"
+  | "maps"
+  | "sessions"
+  | "farm"
+  | "search"
+  | "build"
+  | "challenges"
+  | "timers"
+  | "settings"
+  | "diag";
 
 export interface AppState {
   config: AppConfig;

@@ -15,7 +15,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   overlayHideUnfocused: true,
   showDashboardOnGameStart: true,
   gemAdviceEnabled: true,
-  overlayTreeMap: true,
   chatCommandsEnabled: true,
   chatCommands: DEFAULT_CHAT_COMMANDS,
 };
@@ -37,7 +36,6 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   overlayHideUnfocused: "boolean",
   showDashboardOnGameStart: "boolean",
   gemAdviceEnabled: "boolean",
-  overlayTreeMap: "boolean",
   chatCommandsEnabled: "boolean",
   chatCommands: "chat-commands",
 };
@@ -57,6 +55,12 @@ export function cleanConfigPatch(patch: unknown): Partial<AppConfig> {
     }
   }
   return out as Partial<AppConfig>;
+}
+
+export function cleanChallengeTick(id: unknown, done: unknown, part: unknown): { id: string; done: boolean; part: number | null } | null {
+  if (typeof id !== "string" || id.length === 0 || id.length > 40 || typeof done !== "boolean") return null;
+  if (part !== null && part !== undefined && !(typeof part === "number" && Number.isInteger(part) && part >= 0 && part < 100)) return null;
+  return { id, done, part: typeof part === "number" ? part : null };
 }
 
 export function cleanResearch(patch: unknown): { statId: string; enabled: boolean; min: number | null }[] {

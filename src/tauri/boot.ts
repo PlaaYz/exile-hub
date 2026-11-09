@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { register } from "@tauri-apps/plugin-global-shortcut";
 import { kOverlayInteractKey, kOverlayToggleKey, kStateBroadcastMs } from "../app/constants";
 import { Hub } from "../app/hub";
-import { cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
+import { cleanChallengeTick, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
 import type { HubApi } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { TauriPlatform, type AppInfo } from "./tauriPlatform";
@@ -15,7 +15,7 @@ import { TauriShell } from "./tauriShell";
 import { TauriUpdater } from "./tauriUpdater";
 
 /** What the overlay may ask the dashboard for. */
-const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive", "getTreeLayout"]);
+const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive"]);
 
 interface CallMsg {
   id: number;
@@ -59,6 +59,12 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     copyDiagReport: () => hub.copyDiagReport(),
     refreshGemAdvice: async () => hub.refreshGemAdvice(),
     getTreeLayout: () => hub.getTreeLayout(),
+    getChallenges: () => hub.getChallenges(),
+    refreshChallenges: () => hub.refreshChallenges(),
+    setChallenge: (id, done, part) => {
+      const c = cleanChallengeTick(id, done, part);
+      return c ? hub.setChallenge(c.id, c.done, c.part) : hub.getChallenges();
+    },
     installUpdate: async () => hub.installUpdate(),
     openMapTrade: (o) => hub.openMapTrade(cleanMapTradeOptions(o)),
   };

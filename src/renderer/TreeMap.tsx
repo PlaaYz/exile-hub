@@ -1,11 +1,11 @@
 // The passive tree drawn from GGG's data: the build's nodes, what the character already has and the
-// numbered path of what to take next (like Path of Building). "mini" fits the build, "overlay"
-// zooms on the next steps, "full" is a zoomable/draggable view.
+// numbered path of what to take next (like Path of Building). "mini" fits the build, "full" is a
+// zoomable/draggable view.
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import type { AppState, TreeLayout } from "../shared/types";
 
 type Progress = NonNullable<NonNullable<AppState["tree"]>["progress"]>;
-type Mode = "mini" | "overlay" | "full";
+type Mode = "mini" | "full";
 
 // the geometry is fetched once per window (~3000 nodes) and kept
 let layoutCache: TreeLayout | null = null;
@@ -72,18 +72,12 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
   const next = progress.nextPath;
   const nextIndex = useMemo(() => new Map(next.map((id, i) => [id, i])), [next]);
 
-  // the area to show: the whole build (mini/full) or the next steps and their surroundings (overlay)
+  // the area to show first: the whole build and its class start
   const focus = useMemo<Box | null>(() => {
     if (!geo) return null;
-    const pick = (ids: number[]) => ids.map((id) => geo.pos.get(id)).filter((p): p is { x: number; y: number; k: number } => !!p);
-    if (mode === "overlay") {
-      const anchor = progress.haveIds.length || progress.startId === null ? [] : [progress.startId];
-      const pts = pick([...next.slice(0, 8), ...anchor]);
-      return bbox(pts.length ? pts : pick(progress.buildIds), 700);
-    }
-    const all = pick([...progress.buildIds, ...(progress.startId !== null ? [progress.startId] : [])]);
-    return bbox(all, 400);
-  }, [geo, mode, next, progress.buildIds, progress.haveIds.length, progress.startId]);
+    const ids = [...progress.buildIds, ...(progress.startId !== null ? [progress.startId] : [])];
+    return bbox(ids.map((id) => geo.pos.get(id)).filter((p): p is { x: number; y: number; k: number } => !!p), 400);
+  }, [geo, progress.buildIds, progress.startId]);
 
   const [view, setView] = useState<Box | null>(focus);
   useEffect(() => setView(focus), [focus?.x, focus?.y, focus?.w, focus?.h]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,9 +88,6 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
     return <div className="muted small">{layout ? "" : "Carregando o mapa da árvore…"}</div>;
   }
 
-  // in the overlay, skip far-away edges and nodes (cheaper to draw every second)
-  const inView = (p: { x: number; y: number }) =>
-    mode !== "overlay" || (p.x > view.x - 200 && p.x < view.x + view.w + 200 && p.y > view.y - 200 && p.y < view.y + view.h + 200);
 
   const onWheel = (e: WheelEvent<SVGSVGElement>) => {
     if (mode !== "full" || !svgRef.current) return;
@@ -147,7 +138,6 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
         {layout.edges.map(([a, b, r, sweep]) => {
           const pa = geo.pos.get(a)!;
           const pb = geo.pos.get(b)!;
-          if (!inView(pa) && !inView(pb)) return null;
           if (r) {
             return <path key={`${a}-${b}`} className={edgeClass(a, b)} d={`M${pa.x} ${pa.y}A${r} ${r} 0 0 ${sweep} ${pb.x} ${pb.y}`} />;
           }
@@ -156,7 +146,6 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
       </g>
       <g>
         {layout.nodes.map(([id, x, y, k]) => {
-          if (!inView({ x, y })) return null;
           return (
             <circle key={id} className={`${nodeClass(id)} k${k}`} cx={x} cy={y} r={RADIUS[k]}>
               <title>

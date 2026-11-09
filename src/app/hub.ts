@@ -13,7 +13,8 @@ import type { Lookups } from "../core/route";
 import { gemColors } from "../core/searchRegex";
 import { Session, type ProgressData } from "../core/session";
 import type { FarmPricesResult, ImportResult } from "../shared/ipc";
-import type { AppConfig, AppState, DisplayInfo, PobBuild, TreeLayout } from "../shared/types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, TreeLayout } from "../shared/types";
+import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
 import { kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
 import { Diagnostics } from "./diagnostics";
@@ -49,6 +50,7 @@ export class Hub {
   prices!: PriceService;
   gems!: GemAdviceService;
   private tree!: TreeService;
+  private challenges!: ChallengeService;
 
   private constructor(private readonly p: Platform) {
     this.cfg = new ConfigStore(p);
@@ -115,6 +117,7 @@ export class Hub {
       addDiag,
     });
     this.tree = new TreeService(p, broadcast);
+    this.challenges = new ChallengeService(p);
     p.diag = addDiag;
     await this.loadProgress();
     await this.loadBuild();
@@ -248,6 +251,7 @@ export class Hub {
     }
     this.scheduleSave();
     this.gems.maybeAdvise(); // the log tail may have a newer character than the saved progress
+    if (this.gameRunning) this.p.shell.gameRunningChanged?.(true);
     this.applyOverlayVisibility();
     this.applyCommandKeys();
   }
@@ -298,11 +302,13 @@ export class Hub {
   /** From the log: the game opened (focus after a closing) or closed. */
   private onGameFocus(ev: { focused: boolean; closing?: true }): void {
     if (ev.closing) {
+      if (this.gameRunning) this.p.shell.gameRunningChanged?.(false);
       this.gameRunning = false;
       return;
     }
     if (ev.focused && !this.gameRunning) {
       this.gameRunning = true;
+      this.p.shell.gameRunningChanged?.(true);
       if (this.config.showDashboardOnGameStart) this.p.shell.showDashboard(false);
     }
   }
@@ -455,6 +461,15 @@ export class Hub {
   }
   getTreeLayout(): Promise<TreeLayout | null> {
     return this.tree.layout();
+  }
+  getChallenges(): Promise<ChallengesView> {
+    return this.challenges.get();
+  }
+  refreshChallenges(): Promise<ChallengesView> {
+    return this.challenges.refresh();
+  }
+  setChallenge(id: string, done: boolean, part: number | null): Promise<ChallengesView> {
+    return this.challenges.set(id, done, part);
   }
   refreshGemAdvice(): void {
     this.gems.maybeAdvise(true);

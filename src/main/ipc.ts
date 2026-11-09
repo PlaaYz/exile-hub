@@ -1,7 +1,7 @@
 // IPC handlers: every renderer request, validated (ipcClean) before it reaches the app.
 import { ipcMain } from "electron";
 import type { Hub } from "../app/hub";
-import { cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
+import { cleanChallengeTick, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
 import { CH } from "../shared/ipc";
 
 export function registerIpc(t: Hub): void {
@@ -33,6 +33,12 @@ export function registerIpc(t: Hub): void {
   ipcMain.handle(CH.diagCopy, () => t.copyDiagReport());
   ipcMain.handle(CH.gemAdviceRefresh, () => t.refreshGemAdvice());
   ipcMain.handle(CH.treeLayout, () => t.getTreeLayout());
+  ipcMain.handle(CH.challengesGet, () => t.getChallenges());
+  ipcMain.handle(CH.challengesRefresh, () => t.refreshChallenges());
+  ipcMain.handle(CH.challengeSet, (_e, id: unknown, done: unknown, part: unknown) => {
+    const c = cleanChallengeTick(id, done, part);
+    return c ? t.setChallenge(c.id, c.done, c.part) : t.getChallenges();
+  });
   ipcMain.handle(CH.updateInstall, () => t.installUpdate());
   ipcMain.handle(CH.appAutostart, (_e, on: unknown) => {
     return typeof on === "boolean" ? t.setStartWithWindows(on) : undefined;

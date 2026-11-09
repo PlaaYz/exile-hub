@@ -48,6 +48,8 @@ export interface Shell {
   notify(title: string, body: string): void;
   startWithWindows(): Promise<boolean>;
   setStartWithWindows(on: boolean): Promise<void>;
+  /** the game opened/closed (Client.txt): a shell may prepare or release the overlay window */
+  gameRunningChanged?(running: boolean): void;
   /** quit and install a downloaded update */
   installUpdate(): void;
   quit(): void;

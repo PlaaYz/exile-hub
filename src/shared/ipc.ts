@@ -1,4 +1,4 @@
-import type { AppConfig, AppState, DisplayInfo, TreeLayout } from "./types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, TreeLayout } from "./types";
 
 // NOTE: src/main/preload.ts duplicates these literals (a sandboxed preload cannot import
 // local modules). test/ipc.test.ts fails if they drift apart.
@@ -24,6 +24,9 @@ export const CH = {
   diagCopy: "diag:copy",
   gemAdviceRefresh: "gems:refresh",
   treeLayout: "tree:layout",
+  challengesGet: "challenges:get",
+  challengesRefresh: "challenges:refresh",
+  challengeSet: "challenges:set",
   mapTradeOpen: "maps:trade",
   updateInstall: "update:install",
 } as const;
@@ -64,6 +67,10 @@ export interface HubApi {
   refreshGemAdvice(): Promise<void>;
   /** passive tree geometry for the map; null until GGG's tree data is loaded */
   getTreeLayout(): Promise<TreeLayout | null>;
+  getChallenges(): Promise<ChallengesView>;
+  refreshChallenges(): Promise<ChallengesView>;
+  /** tick a challenge (part = index of a sub-objective, or null for the whole challenge) */
+  setChallenge(id: string, done: boolean, part: number | null): Promise<ChallengesView>;
   installUpdate(): Promise<void>;
   openMapTrade(o: {
     exclude: string[];

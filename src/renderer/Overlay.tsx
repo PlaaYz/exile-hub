@@ -2,7 +2,6 @@ import { fmtMs, useHubState } from "./hooks";
 import { PriceSummary, TierSummary, itemTitle } from "./PriceView";
 import { Frags, StepView } from "./StepView";
 import { MapHint } from "./MapsView";
-import { TreeHint } from "./TreeView";
 import { GemHint } from "./GemAdviceView";
 
 const kOverlayMaxSteps = 9;
@@ -91,7 +90,6 @@ export function OverlayApp() {
       )}
 
       <GemHint advice={state.gemAdvice} />
-      <TreeHint tree={state.tree} map={state.config.overlayTreeMap} />
 
       {nextGems.length > 0 && (
         <div className="ov-gems">

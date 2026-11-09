@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { AppState, DisplayInfo, Panel } from "../shared/types";
 import { fmtMs, useHubState } from "./hooks";
+import { ChallengesPanelBody } from "./ChallengesView";
 import { ChatCommandsSettings } from "./ChatCommandsView";
 import { DiagPanelBody } from "./DiagView";
 import { SearchPanelBody } from "./SearchView";
@@ -20,12 +21,13 @@ const ALL_PANELS: { id: Panel; label: string }[] = [
   { id: "farm", label: "Farm" },
   { id: "search", label: "Buscas" },
   { id: "build", label: "Build" },
+  { id: "challenges", label: "Challenges" },
   { id: "timers", label: "Tempos" },
   { id: "settings", label: "Configurações" },
   { id: "diag", label: "Diagnóstico" },
 ];
 const BUILD_SOURCE = { manual: "colado aqui", clipboard: "pego do clipboard", saved: "restaurado da última sessão" };
-const LS_KEY = "exile-hub.visiblePanels.v7"; // bump when a panel is added so it shows up
+const LS_KEY = "exile-hub.visiblePanels.v8"; // bump when a panel is added so it shows up
 
 function loadVisible(): Panel[] {
   try {
@@ -423,14 +425,6 @@ function SettingsPanel({ state }: { state: AppState }) {
         />
         Esconder o overlay quando o jogo está fechado ou fora de foco (alt-tab)
       </label>
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={state.config.overlayTreeMap}
-          onChange={(e) => void window.hub.setConfig({ overlayTreeMap: e.target.checked })}
-        />
-        Mini árvore passiva no overlay (os próximos pontos numerados)
-      </label>
       <div className="muted">
         F10 deixa o overlay clicável para arrastar ou usar anterior/próximo; aperte de novo para travar. O jogo
         precisa estar em tela cheia em janela (windowed fullscreen) para o overlay aparecer por cima.
@@ -488,6 +482,11 @@ export function DashboardApp() {
         {visible.includes("farm") && <FarmPanel state={state} />}
         {visible.includes("search") && <SearchPanel state={state} />}
         {visible.includes("build") && <BuildPanel state={state} />}
+        {visible.includes("challenges") && (
+          <PanelBox title="Challenges da liga">
+            <ChallengesPanelBody />
+          </PanelBox>
+        )}
         {visible.includes("timers") && <TimersPanel state={state} />}
         {visible.includes("settings") && <SettingsPanel state={state} />}
         {visible.includes("diag") && <DiagPanel state={state} />}

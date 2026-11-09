@@ -15,7 +15,7 @@ import type { TauriUpdater } from "./tauriUpdater";
 
 const kDashboardSize = { width: 1180, height: 780 };
 const kOverlayMargin = 24;
-/** How long a hidden overlay window is kept before it is closed (memory). */
+/** How long the hidden overlay window is kept after the game closed (memory). */
 const kOverlayKeepMs = 5 * 60 * 1000;
 
 /** What the tray menu needs from the app. */
@@ -141,8 +141,6 @@ export class TauriShell implements Shell {
 
   setOverlayVisible(visible: boolean): void {
     this.overlayVisible = visible;
-    if (this.overlayCloseTimer) clearTimeout(this.overlayCloseTimer);
-    this.overlayCloseTimer = null;
     if (visible) {
       void this.ensureOverlay().then(() => {
         if (this.overlayVisible && this.overlay) void invoke("show_inactive", { label: "overlay" });
@@ -150,7 +148,20 @@ export class TauriShell implements Shell {
       return;
     }
     void this.overlay?.hide();
-    // alt-tab comes back soon; a closed game or F9 off for a while frees the window
+  }
+
+  /**
+   * The overlay window lives while the game runs (F9 and alt-tab are instant: creating the webview
+   * takes 1-2 s) and is released when the game closes (~60 MB).
+   */
+  gameRunningChanged(running: boolean): void {
+    if (this.overlayCloseTimer) clearTimeout(this.overlayCloseTimer);
+    this.overlayCloseTimer = null;
+    if (running) {
+      void this.ensureOverlay();
+      return;
+    }
+    // a little grace: a game restart (crash, patch) comes right back
     this.overlayCloseTimer = setTimeout(() => {
       if (this.overlayVisible || !this.overlay) return;
       this.overlay = null;

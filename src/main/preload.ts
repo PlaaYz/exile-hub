@@ -31,6 +31,9 @@ const api: HubApi = {
   copyDiagReport: () => ipcRenderer.invoke("diag:copy"),
   refreshGemAdvice: () => ipcRenderer.invoke("gems:refresh"),
   getTreeLayout: () => ipcRenderer.invoke("tree:layout"),
+  getChallenges: () => ipcRenderer.invoke("challenges:get"),
+  refreshChallenges: () => ipcRenderer.invoke("challenges:refresh"),
+  setChallenge: (id: string, done: boolean, part: number | null) => ipcRenderer.invoke("challenges:set", id, done, part),
   openMapTrade: (o) => ipcRenderer.invoke("maps:trade", o),
   installUpdate: () => ipcRenderer.invoke("update:install"),
 };

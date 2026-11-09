@@ -9,25 +9,6 @@ function pts(n: number | null): string {
   return n === 1 ? "1 ponto" : `${n} pontos`;
 }
 
-/** Overlay: a small map around the next points and their names. */
-export function TreeHint({ tree, map }: { tree: AppState["tree"]; map: boolean }) {
-  const layout = useTreeLayout();
-  const p = tree?.status === "ok" || tree?.status === "inconsistent" ? tree.progress : null;
-  if (!p || p.nextPath.length === 0) return null;
-  const names = nextNames(p, layout, 4);
-  return (
-    <div className="ov-tree">
-      {map && <TreeMap progress={p} mode="overlay" height={150} />}
-      {names.length > 0 && (
-        <div className="ov-gems">
-          árvore, pegue: {names.map((n, i) => `${i + 1}. ${n}`).join(" · ")}
-          {p.nextPath.length > names.length ? " …" : ""}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function TreePanel({ tree }: { tree: Tree }) {
   const [full, setFull] = useState(false);
   const layout = useTreeLayout();
