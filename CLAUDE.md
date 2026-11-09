@@ -144,12 +144,14 @@ with `opening`) until "Closing game gracefully"; summary notification when the g
 Publishing (public repo https://github.com/PlaaYz/exile-hub, owner chose public on 2026-11-08):
 - The public `main` started as ONE squashed commit (machine paths / character names scrubbed);
   the full earlier history is the local-only branch `local-history` (never push it).
-- Release: bump package.json version, `npm run dist` (NSIS installer + portable, --publish never),
-  commit + `git push origin main`, then
-  `gh release create v<v> release/ExileHub-Setup-<v>.exe release/ExileHub-Setup-<v>.exe.blockmap release/latest.yml release/ExileHub-<v>-portable.exe`
-  (gh is logged in as PlaaYz; no tokens are handled by hand).
-- The installed app (per-user NSIS, %LOCALAPPDATA%\Programs\exile-hub, desktop shortcut) updates
-  itself via electron-updater from latest.yml; the portable exe and dev runs do not.
+- Release (since 0.3.0 = Tauri): bump package.json version, signed `npx tauri build`,
+  `node scripts/tauri-release.mjs "notes"`, commit + `git push origin main`, then
+  `gh release create v<v> release/ExileHub-Setup-<v>.exe release/ExileHub-Setup-<v>.exe.sig release/latest.json release/latest.yml`
+  (gh is logged in as PlaaYz; no tokens are handled by hand; gh needs git on PATH:
+  `$env:Path = "C:\Program Files\Git\cmd;$env:Path"`). No portable build any more.
+- Electron releases (<= 0.2.2, `npm run dist`) installed to %LOCALAPPDATA%\Programs\exile-hub and
+  updated via electron-updater from latest.yml; the latest.yml of Tauri releases points them to the
+  Tauri installer.
 - 0.2.0's updater never checked (initial "disabled" status blocked check()); fixed in 0.2.1, which the
   owner has installed. Updates from 0.2.1 on are automatic.
 
@@ -161,7 +163,7 @@ UI language: pt-BR, strings written inline in the components (no i18n framework)
 instruction text is translated through `src/shared/routePtBR.ts`; `test/routePtBR.test.ts` fails if
 the route data gains a piece without a translation. `shared/render.ts` (stepText) stays English for tests.
 
-Tauri migration (2026-11-08, in progress; Electron is still the shipped build):
+Tauri (shipped since 0.3.0, 2026-11-09; the Electron build in src/main still compiles and runs):
 - src/app/ = the app without Node/Electron (hub.ts, logService, priceService, gemAdvice, treeService,
   config, ipcClean, diagnostics) behind `Platform`/`Shell` (src/app/platform.ts). Electron implements
   it in src/main/electronPlatform.ts + windows.ts; Tauri in src/tauri/ (tauriPlatform, tauriShell,
