@@ -14,3 +14,4 @@ export const kTradeSite = "https://www.pathofexile.com/trade/";
 export function readJsonText<T>(text: string): T {
   return JSON.parse(text) as T;
 }
+export const kLeagueRefreshMs = 3600 * 1000; // league list re-read (new league on launch day)

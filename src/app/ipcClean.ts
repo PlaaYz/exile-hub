@@ -18,6 +18,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   chatCommandsEnabled: true,
   chatCommands: DEFAULT_CHAT_COMMANDS,
   overlayPos: null,
+  showDiagTab: false,
+  tradeAlerts: true,
 };
 
 type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands" | "hotkey";
@@ -40,6 +42,8 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   chatCommandsEnabled: "boolean",
   chatCommands: "chat-commands",
   overlayPos: "internal",
+  showDiagTab: "boolean",
+  tradeAlerts: "boolean",
 };
 
 /** Only known keys with the right primitive type. */

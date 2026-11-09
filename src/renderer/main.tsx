@@ -3,9 +3,10 @@ import { createRoot } from "react-dom/client";
 import { DashboardApp } from "./Dashboard";
 import { OverlayApp } from "./Overlay";
 import { PricePopupApp } from "./PricePopup";
+import { TradesApp } from "./Trades";
 
 const mode = new URLSearchParams(window.location.search).get("mode");
-document.body.classList.add(mode === "overlay" ? "mode-overlay" : mode === "price" ? "mode-price" : "mode-dashboard");
+document.body.classList.add(mode === "overlay" ? "mode-overlay" : mode === "price" ? "mode-price" : mode === "trades" ? "mode-trades" : "mode-dashboard");
 
 async function boot(): Promise<void> {
   // on Tauri the app runs here (dashboard) instead of in a main process: start it first
@@ -14,7 +15,9 @@ async function boot(): Promise<void> {
     await installTauriHub(mode);
   }
   createRoot(document.getElementById("root")!).render(
-    <StrictMode>{mode === "overlay" ? <OverlayApp /> : mode === "price" ? <PricePopupApp /> : <DashboardApp />}</StrictMode>,
+    <StrictMode>
+      {mode === "overlay" ? <OverlayApp /> : mode === "price" ? <PricePopupApp /> : mode === "trades" ? <TradesApp /> : <DashboardApp />}
+    </StrictMode>,
   );
 }
 

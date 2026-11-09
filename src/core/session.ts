@@ -277,6 +277,7 @@ export class Session {
       case "passive":
       case "npc":
       case "whisper":
+      case "join":
         return false;
     }
   }

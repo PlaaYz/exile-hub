@@ -11,7 +11,7 @@ import { TradeClient, defaultLeague, fetchLeagues, fetchStatic, fetchStats, stat
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppConfig, PriceSearchPatch, PriceView } from "../shared/types";
-import { kClipboardPollMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
+import { kClipboardPollMs, kLeagueRefreshMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
 import type { Platform } from "./platform";
 
 export interface PriceContext {
@@ -91,14 +91,29 @@ export class PriceService {
     return !!this.clipboardTimer || !!this.unwatch;
   }
 
-  /** League used for prices: the configured one, else the current challenge league. */
+  /**
+   * League used for prices: the configured one while it still exists (a league chosen by hand ends
+   * with its season), else the current challenge league.
+   */
   league(): string | null {
-    return this.ctx.config().league ?? defaultLeague(this.leagues);
+    const chosen = this.ctx.config().league;
+    if (chosen && (!this.leagues.length || this.leagues.includes(chosen))) return chosen;
+    return defaultLeague(this.leagues);
   }
 
+  private leagueTimer: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * The league list, re-read every hour: a new league (e.g. 3.30 on launch day) is picked up while
+   * the app sits in the tray, without a restart.
+   */
   async loadLeagues(): Promise<void> {
+    this.leagueTimer ??= setInterval(() => void this.loadLeagues(), kLeagueRefreshMs);
+    const before = this.league();
     try {
       this.leagues = await fetchLeagues(this.platform.fetch, this.platform.userAgent);
+      const after = this.league();
+      if (before && after && before !== after) this.ctx.addDiag("preço", `liga dos preços agora é ${after} (era ${before})`);
       this.ctx.broadcast();
     } catch (e) {
       console.error("could not load leagues", e);

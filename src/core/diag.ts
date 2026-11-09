@@ -53,7 +53,9 @@ export function describeEvent(ev: LogEvent, campaign: (id: string) => CampaignAr
     case "npc":
       return { kind: "mapa", text: `mecânica: ${ev.mechanic} (${ev.speaker} falou)` };
     case "whisper":
-      return null; // private: only the sender's name is kept, for "/invite {last_whisper}"
+      return ev.offer ? { kind: "comando", text: `pedido de compra: ${ev.offer.item}` } : null; // other whispers stay private
+    case "join":
+      return null;
     case "login":
       return { kind: "personagem", text: "login / seleção de personagem: o personagem pode ter mudado" };
   }

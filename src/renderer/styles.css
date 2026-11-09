@@ -276,3 +276,24 @@ body.mode-price { background: #0e1116; }
 .seller.offline::before { color: #6b7380; }
 
 .listings tr.bait { opacity: 0.55; }
+
+/* poe.ninja 7-day trend */
+.trend { font-size: 12px; white-space: nowrap; }
+.trend svg { vertical-align: middle; }
+.trend.up { color: #6cc46c; } .trend.up polyline { stroke: #6cc46c; }
+.trend.down { color: #e07070; } .trend.down polyline { stroke: #e07070; }
+.trend.flat { color: #8a93a3; } .trend.flat polyline { stroke: #8a93a3; }
+
+/* buy request cards (window over the game) */
+body.mode-trades { background: transparent; }
+.trades { display: flex; flex-direction: column; gap: 6px; padding: 4px; }
+.trade-card { height: 106px; box-sizing: border-box; background: rgba(14, 17, 22, 0.94); border: 1px solid #2a3240; border-left: 3px solid #c9a227; border-radius: 6px; padding: 5px 8px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.trade-card.arrived { border-left-color: #6cc46c; }
+.trade-head { display: flex; align-items: center; gap: 6px; cursor: move; }
+.trade-badge { background: #2d4d2d; color: #9be09b; font-size: 11px; padding: 0 6px; border-radius: 8px; }
+.trade-x { margin-left: auto; background: none; border: none; color: #8a93a3; cursor: pointer; padding: 0 2px; }
+.trade-item { font-weight: 600; color: #e8d9a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trade-meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trade-price { color: #fff; font-weight: 600; }
+.trade-buttons { display: flex; gap: 4px; margin-top: auto; }
+.trade-buttons button { flex: 1; font-size: 12px; padding: 3px 0; }

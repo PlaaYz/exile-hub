@@ -419,6 +419,23 @@ function SettingsPanel({ state }: { state: AppState }) {
         Tela cheia nesse monitor
       </label>
 
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={state.config.tradeAlerts}
+          onChange={(e) => void window.hub.setConfig({ tradeAlerts: e.target.checked })}
+        />
+        Cartões de pedido de compra quando alguém te sussurra pelo site do trade (convidar, trade, obrigado...)
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={state.config.showDiagTab}
+          onChange={(e) => void window.hub.setConfig({ showDiagTab: e.target.checked })}
+        />
+        Mostrar a aba Diagnóstico (o que o app entendeu do log, para relatar problemas)
+      </label>
+
       <h3>Windows</h3>
       <label className="check">
         <input
@@ -495,7 +512,7 @@ export function DashboardApp() {
           {state.characterLevel !== null ? ` · nível ${state.characterLevel}` : ""}
         </div>
         <div className="chips">
-          {ALL_PANELS.map((p) => (
+          {ALL_PANELS.filter((p) => p.id !== "diag" || state.config.showDiagTab).map((p) => (
             <button
               key={p.id}
               className={`chip${visible.includes(p.id) ? " on" : ""}`}
@@ -521,7 +538,7 @@ export function DashboardApp() {
         )}
         {visible.includes("timers") && <TimersPanel state={state} />}
         {visible.includes("settings") && <SettingsPanel state={state} />}
-        {visible.includes("diag") && <DiagPanel state={state} />}
+        {state.config.showDiagTab && visible.includes("diag") && <DiagPanel state={state} />}
       </main>
       <footer className="legal">
         <UpdateBadge u={state.update} />

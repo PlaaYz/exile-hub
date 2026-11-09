@@ -103,7 +103,7 @@ fn set_click_through(app: tauri::AppHandle, label: String, on: bool) -> Result<(
 
 /// Windows created only when needed (overlay, price popup: a webview costs ~60 MB) from their entry in
 /// tauri.conf.json ("create": false), so they get the same browser args as the dashboard.
-const ON_DEMAND: [&str; 2] = ["overlay", "price"];
+const ON_DEMAND: [&str; 3] = ["overlay", "price", "trades"];
 
 #[tauri::command]
 async fn window_open(app: tauri::AppHandle, label: String) -> Result<(), String> {

@@ -1,4 +1,4 @@
-import type { AppConfig, AppState, ChallengesView, DisplayInfo, PriceSearchPatch, TreeLayout } from "./types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, PriceSearchPatch, TradeAction, TreeLayout } from "./types";
 
 // What the windows can ask the app (window.hub). On Tauri the dashboard calls the app directly and the
 // overlay goes through events (src/tauri/boot.ts).
@@ -41,6 +41,8 @@ export interface HubApi {
   copyDiagReport(): Promise<void>;
   /** passive tree geometry for the map; null until GGG's tree data is loaded */
   getTreeLayout(): Promise<TreeLayout | null>;
+  /** a button on a buy request card: chat command to the buyer, or close the card */
+  tradeAction(id: string, action: TradeAction): Promise<void>;
   /** close the price popup and give the keyboard back to the game */
   closePricePopup(): Promise<void>;
   /** pick who is playing (one of state.knownCharacters) */

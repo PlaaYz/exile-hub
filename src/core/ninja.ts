@@ -46,7 +46,7 @@ const ALL_UNIQUE_TYPES = [...new Set(UNIQUE_TYPE_BY_CLASS.map(([, t]) => t))];
 
 export interface ExchangeOverview {
   core?: { rates?: Record<string, number>; primary?: string };
-  lines: { id: string; primaryValue: number; volumePrimaryValue?: number }[];
+  lines: { id: string; primaryValue: number; volumePrimaryValue?: number; sparkline?: Sparkline }[];
   items: { id: string; name: string; category?: string }[];
 }
 
@@ -61,6 +61,28 @@ export interface StashLine {
   chaosValue: number;
   divineValue?: number;
   listingCount?: number;
+  sparkLine?: Sparkline;
+}
+
+/** poe.ninja's last 7 days: % change against a week ago, one point per day (the last one = totalChange). */
+export interface Sparkline {
+  totalChange?: number;
+  data?: (number | null)[];
+}
+
+export interface PriceTrend {
+  /** % change over the last 7 days */
+  change: number;
+  /** daily % changes against a week ago, oldest first */
+  points: number[];
+}
+
+/** A usable 7-day trend, or null when poe.ninja has too few points. */
+export function trendOf(s: Sparkline | undefined): PriceTrend | null {
+  const points = (s?.data ?? []).filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+  if (points.length < 2) return null;
+  const change = typeof s?.totalChange === "number" ? s.totalChange : points[points.length - 1];
+  return { change: Math.round(change * 10) / 10, points };
 }
 
 export interface NinjaPrice {
@@ -70,6 +92,8 @@ export interface NinjaPrice {
   label: string;
   listings: number | null;
   lowConfidence: boolean;
+  /** price over the last 7 days (null when poe.ninja has no history for it) */
+  trend: PriceTrend | null;
 }
 
 interface CacheEntry<T> {
@@ -145,7 +169,7 @@ export class NinjaClient {
         if (!meta) continue;
         const line = ov.lines.find((l) => l.id === meta.id);
         if (!line) continue;
-        return withDiv({ chaos: line.primaryValue, label: meta.name, listings: null, lowConfidence: false });
+        return withDiv({ chaos: line.primaryValue, label: meta.name, listings: null, lowConfidence: false, trend: trendOf(line.sparkline) });
       }
       return null;
     }
@@ -226,6 +250,7 @@ function fromStash(line: StashLine, label: string): Omit<NinjaPrice, "divine"> {
     label,
     listings,
     lowConfidence: listings !== null && listings < kLowConfidenceListings,
+    trend: trendOf(line.sparkLine),
   };
 }
 

@@ -15,6 +15,9 @@ import type { TauriUpdater } from "./tauriUpdater";
 
 const kDashboardSize = { width: 1180, height: 780 };
 const kOverlayMargin = 24;
+/** Buy request cards shown at once, and the height of one (logical px). */
+const kTradeCardsShown = 4;
+const kTradeCardHeight = 118;
 /** How long the hidden overlay window is kept after the game closed (memory). */
 const kOverlayKeepMs = 5 * 60 * 1000;
 
@@ -95,6 +98,7 @@ export class TauriShell implements Shell {
     if (this.drawing) for (const l of this.stateListeners) l(state);
     if (this.overlayVisible && this.overlay) void emitTo("overlay", "state", state);
     if (this.priceVisible) void emitTo("price", "state", state);
+    if (this.tradesVisible) void emitTo("trades", "state", state);
   }
 
   // ---- price popup (Ctrl+D) -------------------------------------------------------------------
@@ -140,6 +144,44 @@ export class TauriShell implements Shell {
   }
 
   /** Hide it and give the keyboard back to the game. */
+  // ---- buy request cards ----------------------------------------------------------------------
+
+  private tradesVisible = false;
+  private tradesReady: Promise<Window | null> | null = null;
+
+  /**
+   * The cards window: on the right of the game's monitor, as tall as the cards; it never takes the
+   * keyboard from the game, so its buttons can type in the game's chat right away.
+   */
+  setTradeCards(count: number): void {
+    if (count === 0) {
+      this.tradesVisible = false;
+      void invoke("window_hide", { label: "trades" }).catch(() => {});
+      return;
+    }
+    void (async () => {
+      this.tradesReady ??= (async () => {
+        await invoke("window_open", { label: "trades" });
+        return Window.getByLabel("trades");
+      })().catch(() => {
+        this.tradesReady = null;
+        return null;
+      });
+      const w = await this.tradesReady;
+      const m = await primaryMonitor();
+      if (!w || !m) return;
+      const s = m.scaleFactor;
+      const wa = m.workArea ?? { position: m.position, size: m.size };
+      const width = Math.round(380 * s);
+      const height = Math.round((Math.min(count, kTradeCardsShown) * kTradeCardHeight + 8) * s);
+      await w.setSize(new PhysicalSize(width, height));
+      await w.setPosition(new PhysicalPosition(wa.position.x + wa.size.width - width - Math.round(24 * s), wa.position.y + Math.round(wa.size.height * 0.18)));
+      this.tradesVisible = true;
+      if (this.lastState) void emitTo("trades", "state", this.lastState);
+      await invoke("window_show", { label: "trades", activate: false });
+    })();
+  }
+
   hidePricePopup(): void {
     if (!this.priceVisible) return;
     this.priceVisible = false;

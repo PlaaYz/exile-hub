@@ -13,7 +13,12 @@ import type { Lookups } from "../core/route";
 import { gemColors } from "../core/searchRegex";
 import { Session, type ProgressData } from "../core/session";
 import type { FarmPricesResult, ImportResult } from "../shared/ipc";
-import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, PriceSearchPatch, TreeLayout } from "../shared/types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, PriceSearchPatch, TradeAction, TradeCard, TreeLayout } from "../shared/types";
+import type { TradeOffer } from "../core/tradeWhisper";
+
+/** Buy request cards kept, and for how long. */
+const kMaxTradeCards = 6;
+const kTradeCardMs = 15 * 60 * 1000;
 import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
 import { kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
@@ -274,6 +279,14 @@ export class Hub {
     }
     if (ev.type === "whisper") {
       this.lastWhisper = ev.from;
+      if (ev.offer) this.addTradeCard(ev.from, ev.offer, ev.ts ?? Date.now());
+      return;
+    }
+    if (ev.type === "join") {
+      // the buyer came to your hideout: their card says so
+      let changed = false;
+      this.trades = this.trades.map((t) => (t.from === ev.name && !t.arrived ? ((changed = true), { ...t, arrived: true }) : t));
+      if (changed) this.broadcast();
       return;
     }
     const s = this.session;
@@ -373,6 +386,53 @@ export class Hub {
 
   priceMore(): Promise<void> {
     return this.prices.more();
+  }
+
+  // ---- buy requests (whispers from the trade site) -------------------------------------------
+
+  private trades: TradeCard[] = [];
+  private tradeSeq = 0;
+
+  private addTradeCard(from: string, offer: TradeOffer, at: number): void {
+    if (!this.config.tradeAlerts) return;
+    // the same buyer asking again for the same item replaces the old card
+    const rest = this.trades.filter((t) => !(t.from === from && t.offer.item === offer.item) && Date.now() - t.at < kTradeCardMs);
+    this.trades = [{ id: String(++this.tradeSeq), from, at, arrived: false, offer }, ...rest].slice(0, kMaxTradeCards);
+    this.diag.add("comando", `pedido de compra de ${from}: ${offer.item}`);
+    this.p.shell.setTradeCards?.(this.trades.length);
+    this.broadcast();
+  }
+
+  /** A card button: one chat line to the buyer (invite, trade, thanks...), or close the card. */
+  async tradeAction(id: string, action: TradeAction): Promise<void> {
+    const card = this.trades.find((t) => t.id === id);
+    if (!card) return;
+    const who = card.from;
+    const text: Record<TradeAction, string | null> = {
+      invite: `/invite ${who}`,
+      trade: `/tradewith ${who}`,
+      thanks: `@${who} ty, gl!`,
+      sold: `@${who} sorry, it's already sold`,
+      kick: `/kick ${who}`,
+      dismiss: null,
+    };
+    const line = text[action];
+    if (line && this.p.sendChat) {
+      try {
+        await this.p.sendChat(line);
+        this.diag.add("comando", line);
+      } catch (e) {
+        this.diag.add("comando", `${line} não enviado: ${e instanceof Error ? e.message : String(e)}`);
+        this.broadcast();
+        return;
+      }
+    }
+    // these end the deal: the card goes away
+    if (action === "thanks" || action === "sold" || action === "kick" || action === "dismiss") {
+      this.trades = this.trades.filter((t) => t.id !== id);
+      this.p.shell.setTradeCards?.(this.trades.length);
+    }
+    this.broadcast();
   }
 
   closePricePopup(): void {
@@ -599,6 +659,7 @@ export class Hub {
       },
       buildLinks: this.buildLinks(),
       endgame: this.session.endgame,
+      trades: this.trades,
       knownCharacters: [...this.log.characters]
         .sort((a, b) => (b[1].ts ?? 0) - (a[1].ts ?? 0))
         .map(([name, c]) => ({ name, className: c.className, level: c.level })),
@@ -615,6 +676,11 @@ export class Hub {
   broadcast(): void {
     // nothing to send before the windows exist
     if (!this.ready || !this.p.shell.windowsReady) return;
+    // buy requests nobody acted on go away after a while
+    if (this.trades.some((t) => Date.now() - t.at >= kTradeCardMs)) {
+      this.trades = this.trades.filter((t) => Date.now() - t.at < kTradeCardMs);
+      this.p.shell.setTradeCards?.(this.trades.length);
+    }
     this.p.shell.send(this.state());
   }
 

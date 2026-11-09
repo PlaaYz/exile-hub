@@ -24,6 +24,7 @@ const OVERLAY_CALLS = new Set<keyof HubApi>([
   "priceOpenTrade",
   "priceMore",
   "closePricePopup",
+  "tradeAction",
 ]);
 
 interface CallMsg {
@@ -71,6 +72,10 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     copyDiagReport: () => hub.copyDiagReport(),
     getTreeLayout: () => hub.getTreeLayout(),
     closePricePopup: async () => hub.closePricePopup(),
+    tradeAction: async (id, action) => {
+      const ok = ["invite", "trade", "thanks", "sold", "kick", "dismiss"];
+      if (typeof id === "string" && id.length < 20 && ok.includes(action)) await hub.tradeAction(id, action);
+    },
     priceMore: () => hub.priceMore(),
     setCharacter: async (name) => {
       if (typeof name === "string" && name.length <= 40) hub.setCharacter(name);
@@ -119,7 +124,7 @@ async function overlayApi(): Promise<HubApi> {
 }
 
 export async function installTauriHub(mode: string | null): Promise<void> {
-  if (mode === "overlay" || mode === "price") {
+  if (mode === "overlay" || mode === "price" || mode === "trades") {
     window.hub = await overlayApi();
     return;
   }

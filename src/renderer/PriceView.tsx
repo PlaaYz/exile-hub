@@ -34,6 +34,28 @@ export function itemTitle(p: PriceView): string {
   return parts.join(" · ");
 }
 
+/** poe.ninja's last 7 days: a tiny line and the % change (rising = green, falling = red). */
+function TrendBadge({ t }: { t: { change: number; points: number[] } }) {
+  const pts = [0, ...t.points]; // a week ago is the 0% baseline
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const w = 56;
+  const h = 14;
+  const d = pts.map((v, i) => `${((i / (pts.length - 1)) * w).toFixed(1)},${(h - ((v - min) / span) * h).toFixed(1)}`).join(" ");
+  const cls = t.change > 2 ? "up" : t.change < -2 ? "down" : "flat";
+  return (
+    <span className={`trend ${cls}`} title="variação no poe.ninja nos últimos 7 dias">
+      {" "}
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <polyline points={d} fill="none" strokeWidth="1.5" />
+      </svg>{" "}
+      {t.change > 0 ? "+" : ""}
+      {t.change}% em 7 dias
+    </span>
+  );
+}
+
 /** Compact lines shared by the overlay card and the dashboard panel. */
 export function PriceSummary({ p }: { p: PriceView }) {
   const cpd = p.chaosPerDivine;
@@ -51,6 +73,7 @@ export function PriceSummary({ p }: { p: PriceView }) {
           <span>
             <b>{fmtChaos(p.ninja.chaos, cpd)}</b>
             {stack ? <span className="muted"> · pilha: {fmtChaos(p.ninja.chaos * stack, cpd)}</span> : null}
+            {p.ninja.trend && <TrendBadge t={p.ninja.trend} />}
             {p.ninja.lowConfidence && <span className="warn-text"> · poucos anúncios, desconfie</span>}
           </span>
         )}

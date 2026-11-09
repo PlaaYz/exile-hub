@@ -61,6 +61,24 @@
         "alwaysOnTop": true,
         "backgroundColor": "#0e1116",
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
+      },
+      {
+        "label": "trades",
+        "create": false,
+        "title": "Exile Hub pedidos",
+        "url": "index.html?mode=trades",
+        "width": 380,
+        "height": 160,
+        "visible": false,
+        "transparent": true,
+        "decorations": false,
+        "resizable": false,
+        "shadow": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "focus": false,
+        "focusable": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
       }
     ],
     "security": {
@@ -70,20 +88,34 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVGODAyNkQ4RjQ4RTJERTIKUldUaUxZNzAyQ2FBNzJJUkM1NXZxZlg0cUxNVGlGeWxnZjB5Vmt2U3NENWdsSXhtNGtYdUxyL3EK",
-      "endpoints": ["https://github.com/PlaaYz/exile-hub/releases/latest/download/latest.json"],
-      "windows": { "installMode": "passive" }
+      "endpoints": [
+        "https://github.com/PlaaYz/exile-hub/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "createUpdaterArtifacts": true,
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
     "resources": {
       "../data/": "data/"
     },
     "windows": {
-      "nsis": { "installMode": "currentUser", "installerHooks": "./windows/hooks.nsh" }
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "./windows/hooks.nsh"
+      }
     }
   }
 }

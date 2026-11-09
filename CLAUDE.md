@@ -233,6 +233,21 @@ Price check round 2 (0.3.8, 2026-11-09, goal: Awakened PoE Trade level):
 - Desktop shortcut: the owner wants it recreated on EVERY install/update (Tauri skips it in /UPDATE
   mode); src-tauri/windows/hooks.nsh POSTINSTALL deletes and recreates $DESKTOP\Exile Hub.lnk.
 
+0.3.9 (2026-11-09):
+- Buy request cards: core/tradeWhisper.ts parses ONLY the trade site's whisper templates (single item
+  with/without stash position, unpriced, bulk "I'd like to buy your N X for my M Y"); other whispers
+  stay unread. LogEvent whisper.offer + LogEvent "join" (": X has joined the area." -> card "chegou").
+  Hub.trades (max 6, 15 min) -> "trades" window (create:false, transparent, focusable:false so its
+  buttons type in the game's chat via sendChat without stealing focus), right side of the primary
+  monitor, sized to the cards. Buttons: /invite, /tradewith, "@x ty, gl!", "@x sorry, it's already
+  sold", /kick, close. Setting tradeAlerts. Never tested with a real whisper (none in the owner's log).
+- poe.ninja 7-day trend (sparkline / sparkLine) on the price check (core/ninja trendOf).
+- League list re-read every hour (new league on launch day without restart); a hand-picked league
+  that no longer exists falls back to automatic.
+- Diagnóstico tab hidden unless config.showDiagTab. Karui Shores (zone data act 11) = endgame.
+- User-Agent contact email: waiting for the owner to create a dedicated address (Claude may not
+  create accounts); then set it in kUserAgent / TauriPlatform.userAgent.
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.

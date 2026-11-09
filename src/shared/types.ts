@@ -187,7 +187,15 @@ export interface PriceView {
   };
   ninjaStatus: FetchStatus;
   ninjaError: string | null;
-  ninja: { chaos: number; divine: number | null; label: string; listings: number | null; lowConfidence: boolean } | null;
+  ninja: {
+    chaos: number;
+    divine: number | null;
+    label: string;
+    listings: number | null;
+    lowConfidence: boolean;
+    /** % change over 7 days and the daily points (poe.ninja) */
+    trend: { change: number; points: number[] } | null;
+  } | null;
   tradeStatus: FetchStatus;
   tradeError: string | null;
   /** `more` = results not fetched yet ("mais resultados") */
@@ -234,6 +242,10 @@ export interface AppConfig {
   overlayHideUnfocused: boolean;
   /** bring the dashboard up (without stealing focus) when the log shows the game starting */
   showDashboardOnGameStart: boolean;
+  /** cards over the game when someone whispers to buy (trade site template) */
+  tradeAlerts: boolean;
+  /** the Diagnóstico tab (hidden by default: it is for reporting problems) */
+  showDiagTab: boolean;
   /** where the player left the overlay (physical pixels); null = top-left of the primary monitor */
   overlayPos: { x: number; y: number } | null;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */
@@ -256,6 +268,18 @@ export interface TreeLayout {
   /** node id -> name (tooltips, the "take next" list) */
   names: Record<number, string>;
 }
+
+/** A buy request from a whisper (core/tradeWhisper), as a card. */
+export interface TradeCard {
+  id: string;
+  from: string;
+  at: number;
+  /** the buyer came into your area (": X has joined the area.") */
+  arrived: boolean;
+  offer: import("../core/tradeWhisper").TradeOffer;
+}
+
+export type TradeAction = "invite" | "trade" | "thanks" | "sold" | "kick" | "dismiss";
 
 export interface DisplayInfo {
   id: number;
@@ -315,6 +339,8 @@ export interface AppState {
   buildLinks: { label: string; gems: string[]; colors: string[] } | null;
   /** playing endgame (maps...): the campaign route is paused and the overlay shows maps */
   endgame: boolean;
+  /** buy requests whispered to you (newest first), shown as cards with invite/trade/thanks buttons */
+  trades: TradeCard[];
   /** the account's characters seen leveling up in the log, most recent first (to pick who is playing) */
   knownCharacters: { name: string; className: string; level: number }[];
   /** chat commands on keys: supported by this build, keys registered now, last whisperer */
