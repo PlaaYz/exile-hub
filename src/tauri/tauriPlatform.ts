@@ -12,6 +12,8 @@ import type { TradeFetch } from "../core/trade";
 import type { TauriShell } from "./tauriShell";
 
 const kHttpTimeoutMs = 15_000;
+/** Project contact for GGG (User-Agent). */
+const kContact = "exilehub.contato@gmail.com";
 
 export interface AppInfo {
   version: string;
@@ -31,7 +33,8 @@ export class TauriPlatform implements Platform {
   ) {
     this.appVersion = info.version;
     this.packaged = info.packaged;
-    this.userAgent = `ExileHub/${info.version} (desktop companion; Windows)`;
+    // GGG asks third-party tools for a contact in the User-Agent (dedicated project address)
+    this.userAgent = `ExileHub/${info.version} (contact: ${kContact})`;
   }
 
   readonly fetch: TradeFetch = (url, init) =>

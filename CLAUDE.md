@@ -34,7 +34,7 @@ trade API (search 5/10s and fetch 12/4s limits, separate RateLimiter each), core
 lines to trade stat ids (list cached in userData/trade-stats.json, 1 day). core/pricecheck ties it
 together; tested with fakes in test/price.test.ts and live against Allflame with hand-written item
 text. NOT verified: a real in-game Ctrl+C (exact text format, transfigured gems, Foulborn uniques).
-User-Agent has no contact email (GGG asks for one; add it if the app is distributed).
+User-Agent carries the project contact (see 0.3.9).
 
 Farm EV tab (2026-11-08): `src/shared/farmData.ts` holds 13 pinnacle/uber boss tables (entry items +
 drops per 100 kills). These are COMMUNITY ESTIMATES (GGG publishes no drop rates), taken from
@@ -245,8 +245,8 @@ Price check round 2 (0.3.8, 2026-11-09, goal: Awakened PoE Trade level):
 - League list re-read every hour (new league on launch day without restart); a hand-picked league
   that no longer exists falls back to automatic.
 - Diagnóstico tab hidden unless config.showDiagTab. Karui Shores (zone data act 11) = endgame.
-- User-Agent contact email: waiting for the owner to create a dedicated address (Claude may not
-  create accounts); then set it in kUserAgent / TauriPlatform.userAgent.
+- User-Agent: "ExileHub/<v> (contact: exilehub.contato@gmail.com)" (project address the owner created
+  for this, 2026-11-09; src/tauri/tauriPlatform.ts kContact).
 
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
