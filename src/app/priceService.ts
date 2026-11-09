@@ -79,18 +79,6 @@ export class PriceService {
     return this.staticIdx;
   }
 
-  /**
-   * poeprices.info's estimate for the current rare, on their own site (its old JSON API now only
-   * redirects to the site, checked 2026-11-09). The copied item text is the only thing sent.
-   */
-  openPrediction(): void {
-    const text = this.checker.text;
-    const league = this.checker.view?.league;
-    if (!text || !league) return;
-    const bin = Array.from(new TextEncoder().encode(text), (b) => String.fromCharCode(b)).join("");
-    this.platform.openExternal(`https://www.poeprices.info/lander?l=${encodeURIComponent(league)}&i=${encodeURIComponent(btoa(bin))}`);
-  }
-
   /** The next 10 listings of the current trade search. */
   more(): Promise<void> {
     return this.checker.more();

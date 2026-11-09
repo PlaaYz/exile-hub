@@ -217,19 +217,6 @@ function SearchEditor({ p }: { p: PriceView }) {
 
 const STATUS_LABEL = { online: "online", afk: "ausente", offline: "offline" };
 
-/** Rares: poeprices.info's machine-learning estimate, opened on their site. */
-function PredictionLine({ p }: { p: PriceView }) {
-  if (p.item.rarity !== "Rare") return null;
-  return (
-    <div className="price-line">
-      <span className="price-src">previsão</span>
-      <button className="link small" onClick={() => void window.hub.priceOpenPrediction()}>
-        ver estimativa no poeprices.info
-      </button>
-    </div>
-  );
-}
-
 /** Bulk exchange offers: price per unit, how many per trade, stock, seller. */
 function BulkTable({ p }: { p: PriceView }) {
   if (p.bulkStatus === "n/a") return null;
@@ -398,7 +385,6 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
           {p.ninja.listings !== null ? ` (${p.ninja.listings} anúncios)` : ""}
         </div>
       )}
-      <PredictionLine p={p} />
       <BulkTable p={p} />
       {p.trade && p.trade.listings.length > 0 && (
         <table className="listings">

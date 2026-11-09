@@ -22,6 +22,11 @@
 ; electron-updater (0.2.x) runs this installer with "--updated /S --force-run" for "Reiniciar e
 ; atualizar": start the new app like the old installer did (Tauri's own flag for this is /R).
 !macro NSIS_HOOK_POSTINSTALL
+  ; the owner wants the desktop shortcut back after EVERY install and update (Tauri's own installer
+  ; skips it in update mode): recreate it, pointing at the installed exe
+  Delete "$DESKTOP\${PRODUCTNAME}.lnk"
+  CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+
   ClearErrors
   ${GetOptions} $CMDLINE "--force-run" $R0
   IfErrors eh_no_force_run

@@ -136,11 +136,6 @@ export class PriceChecker {
     }
   }
 
-  /** The copied text of the current item (opened on poeprices.info for a rare's estimate). */
-  get text(): string | null {
-    return this.current?.text ?? null;
-  }
-
   /** The next 10 listings of the current search. */
   async more(): Promise<void> {
     const cur = this.current;

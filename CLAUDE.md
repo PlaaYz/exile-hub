@@ -229,8 +229,9 @@ Price check round 2 (0.3.8, 2026-11-09, goal: Awakened PoE Trade level):
 - Bulk exchange: /api/trade/exchange (own RateLimiter), ids from /api/trade/data/static
   (userData/trade-static.json, 1 day); offers far below poe.ninja are flagged "suspeito".
 - Listings carry seller/character/online-afk-offline; "Mais resultados" fetches the next 10 ids.
-- poeprices.info's JSON API now redirects to its site (checked 2026-11-09): rares get a button that
-  opens poeprices.info/lander with the item instead.
+- poeprices.info is gone (2026-11-09: API redirects, /lander answers 403): no rare price prediction.
+- Desktop shortcut: the owner wants it recreated on EVERY install/update (Tauri skips it in /UPDATE
+  mode); src-tauri/windows/hooks.nsh POSTINSTALL deletes and recreates $DESKTOP\Exile Hub.lnk.
 
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
