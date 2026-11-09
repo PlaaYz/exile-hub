@@ -2,64 +2,14 @@
   "name": "exile-hub",
   "version": "0.3.7",
   "description": "All-in-one companion for Path of Exile 1: campaign co-pilot, PoB import, overlay + second-screen dashboard",
-  "main": "dist/main/main/main.js",
   "private": true,
   "scripts": {
-    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json",
+    "typecheck": "tsc -p tsconfig.renderer.json",
     "test": "vitest run",
-    "build:main": "tsc -p tsconfig.main.json",
-    "build:renderer": "vite build",
-    "build": "npm run build:main && npm run build:renderer",
-    "start": "npm run build && electron .",
-    "dev:renderer": "vite",
-    "dev": "npm run build:main && cross-env VITE_DEV_URL=http://localhost:5173 electron .",
+    "build": "vite build",
     "icon": "vite-node scripts/make-icon.mjs",
-    "dist": "npm run icon && npm run build && electron-builder --win --publish never",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
-  },
-  "build": {
-    "appId": "dev.exilehub.app",
-    "productName": "Exile Hub",
-    "directories": {
-      "output": "release",
-      "buildResources": "build"
-    },
-    "portable": {
-      "artifactName": "ExileHub-${version}-portable.exe"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "artifactName": "ExileHub-Setup-${version}.exe",
-      "shortcutName": "Exile Hub",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "PlaaYz",
-        "repo": "exile-hub",
-        "releaseType": "release"
-      }
-    ],
-    "files": [
-      "dist/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "data",
-        "to": "data"
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    }
+    "dev": "tauri dev",
+    "dist": "tauri build"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.12.4",
@@ -77,9 +27,6 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.4",
-    "cross-env": "^7.0.3",
-    "electron": "^33.4.11",
-    "electron-builder": "^25.1.8",
     "esbuild": "^0.28.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -88,7 +35,6 @@
     "vitest": "^2.1.9"
   },
   "dependencies": {
-    "electron-updater": "^6.8.11",
     "fflate": "^0.8.3"
   },
   "keywords": [],

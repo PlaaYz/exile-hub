@@ -42,6 +42,5 @@ Bump `version` in package.json, then (with the updater signing key in TAURI_SIGN
     npx tauri dev        # Tauri app with the Vite dev server
     npm run typecheck
     npm test
-    npm start            # the older Electron build (same app code in src/app)
 
 Route data: exile-leveling (MIT), see `data/LICENSE-exile-leveling`.

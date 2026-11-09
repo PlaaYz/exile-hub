@@ -1,35 +1,7 @@
 import type { AppConfig, AppState, ChallengesView, DisplayInfo, TreeLayout } from "./types";
 
-// NOTE: src/main/preload.ts duplicates these literals (a sandboxed preload cannot import
-// local modules). test/ipc.test.ts fails if they drift apart.
-export const CH = {
-  stateGet: "state:get",
-  state: "state",
-  configSet: "config:set",
-  logPick: "log:pick",
-  logDetect: "log:detect",
-  routeNext: "route:next",
-  routePrev: "route:prev",
-  routeReset: "route:reset",
-  routeSync: "route:sync",
-  pobImport: "pob:import",
-  displaysList: "displays:list",
-  dashboardMove: "dashboard:move",
-  overlayToggle: "overlay:toggle",
-  overlayInteractive: "overlay:interactive",
-  priceResearch: "price:research",
-  priceOpenTrade: "price:open-trade",
-  farmPrices: "farm:prices",
-  appAutostart: "app:autostart",
-  diagCopy: "diag:copy",
-  treeLayout: "tree:layout",
-  characterSet: "character:set",
-  challengesGet: "challenges:get",
-  challengesRefresh: "challenges:refresh",
-  challengeSet: "challenges:set",
-  mapTradeOpen: "maps:trade",
-  updateInstall: "update:install",
-} as const;
+// What the windows can ask the app (window.hub). On Tauri the dashboard calls the app directly and the
+// overlay goes through events (src/tauri/boot.ts).
 
 export interface FarmPricesResult {
   league: string | null;

@@ -6,15 +6,17 @@ primary monitor, so the **dashboard defaults to the secondary monitor**; the ove
 optional and stays on the primary. The owner writes in Portuguese (pt-BR).
 
 ## Commands
-- `npm install`, `npm start` (build + run Electron), `npm run typecheck`, `npm test`
-- Build = `tsc -p tsconfig.main.json` (-> dist/main/main/main.js) + `vite build` (-> dist/renderer)
+- `npm install`, `npm run dev` (= `tauri dev`), `npm run typecheck`, `npm test`
+- Build = `npx tauri build` (runs `vite build` -> dist/renderer, then cargo); see "Tauri" below for
+  signing and releases. The Electron build (src/main, electron-builder) was removed on 2026-11-09.
 
 ## Layout
-- `src/core/` pure logic, no Electron: clientLog (Client.txt parser), tail (file tailer), route
-  (exile-leveling DSL parser), tracker, timer, pob (PoB code import), ratelimit, session
-  (area/character/route/timer state fed by Client.txt lines)
-- `src/main/` Electron main + sandboxed preload (channel names duplicated on purpose, guarded by test/ipc.test.ts)
-- `src/renderer/` React dashboard + overlay; `src/shared/` types + IPC contract
+- `src/core/` pure logic (no platform): clientLog (Client.txt parser), route (exile-leveling DSL
+  parser), tracker, timer, pob (PoB code import), ratelimit, session (area/character/route/timer state
+  fed by Client.txt lines), item/trade/ninja/pricecheck (price check)...
+- `src/app/` the app (Hub + services) behind the `Platform` interface; `src/tauri/` its Tauri
+  implementation; `src-tauri/` the Rust side
+- `src/renderer/` React dashboard + overlay; `src/shared/` types + the window.hub contract
 - `data/` exile-leveling route/areas/gems data (MIT, see data/LICENSE-exile-leveling)
 
 ## State
@@ -153,11 +155,10 @@ UI language: pt-BR, strings written inline in the components (no i18n framework)
 instruction text is translated through `src/shared/routePtBR.ts`; `test/routePtBR.test.ts` fails if
 the route data gains a piece without a translation. `shared/render.ts` (stepText) stays English for tests.
 
-Tauri (shipped since 0.3.0, 2026-11-09; the Electron build in src/main still compiles and runs):
-- src/app/ = the app without Node/Electron (hub.ts, logService, priceService, gemAdvice, treeService,
-  config, ipcClean, diagnostics) behind `Platform`/`Shell` (src/app/platform.ts). Electron implements
-  it in src/main/electronPlatform.ts + windows.ts; Tauri in src/tauri/ (tauriPlatform, tauriShell,
-  tauriPob, boot.ts). On Tauri the app runs in the DASHBOARD webview (main.tsx imports
+Tauri (the only build since 2026-11-09; Electron code removed, its history is in git before 0.3.8):
+- src/app/ = the app (hub.ts, logService, priceService, treeService, challengeService, config,
+  ipcClean, diagnostics) behind `Platform`/`Shell` (src/app/platform.ts), implemented in src/tauri/
+  (tauriPlatform, tauriShell, tauriUpdater, boot.ts). On Tauri the app runs in the DASHBOARD webview (main.tsx imports
   src/tauri/boot when `__TAURI_INTERNALS__` exists); the overlay's window.hub forwards a whitelist of
   calls through events ("hub-call"/"hub-reply") and receives "state". Background throttling is off via
   additionalBrowserArgs (clipboard polling must keep running while the dashboard is hidden).

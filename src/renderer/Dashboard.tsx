@@ -280,6 +280,8 @@ function BuildPanel({ state }: { state: AppState }) {
 }
 
 function TimersPanel({ state }: { state: AppState }) {
+  // act timers only mean something in the campaign
+  if (state.endgame) return null;
   const t = state.timers;
   const acts = Object.keys(t.splits)
     .map(Number)

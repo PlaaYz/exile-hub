@@ -1,4 +1,4 @@
-// Writes build/icon.png (256x256) for electron-builder from the same drawing the tray uses.
+// Writes build/icon.png (256x256) from the same drawing the app uses; `npx tauri icon build/icon.png -o src-tauri/icons` makes the app icons.
 // Run through esbuild so it can import the TypeScript source: `npm run icon`.
 import fs from "node:fs";
 import path from "node:path";
