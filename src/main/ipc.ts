@@ -31,8 +31,10 @@ export function registerIpc(t: Hub): void {
   ipcMain.handle(CH.mapTradeOpen, (_e, o: unknown) => t.openMapTrade(cleanMapTradeOptions(o)));
   ipcMain.handle(CH.farmPrices, () => t.farmPrices());
   ipcMain.handle(CH.diagCopy, () => t.copyDiagReport());
-  ipcMain.handle(CH.gemAdviceRefresh, () => t.refreshGemAdvice());
   ipcMain.handle(CH.treeLayout, () => t.getTreeLayout());
+  ipcMain.handle(CH.characterSet, (_e, name: unknown) => {
+    if (typeof name === "string" && name.length <= 40) t.setCharacter(name);
+  });
   ipcMain.handle(CH.challengesGet, () => t.getChallenges());
   ipcMain.handle(CH.challengesRefresh, () => t.refreshChallenges());
   ipcMain.handle(CH.challengeSet, (_e, id: unknown, done: unknown, part: unknown) => {

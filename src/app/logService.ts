@@ -16,15 +16,31 @@ export interface LogContext {
   onRawLine(): void;
   /** a parsed live line, before the trackers (diagnostics describe it first) */
   onParsed(ev: LogEvent): void;
-  /** the full scan finished; lastLevelUp = the newest level-up in the whole log */
-  onScanDone(lastLevelUp: LogEvent | null): void;
+  /**
+   * the full scan finished; playing = who the whole log says is playing at its end (the last
+   * level-up or own-character death since the last login), null when the log cannot tell
+   */
+  onScanDone(playing: string | null): void;
   addDiag(kind: DiagKind, text: string): void;
   broadcast(): void;
   /** campaign act of an area id (null for maps, hideouts...), for the session summaries */
   actOf(areaId: string): number | null;
 }
 
+/** A character of this account: every level-up in the log names one (class and level at that moment). */
+export interface KnownCharacter {
+  className: string;
+  level: number;
+  ts: number | null;
+}
+
+function noteCharacter(m: Map<string, KnownCharacter>, ev: LogEvent): void {
+  if (ev.type === "levelup") m.set(ev.character, { className: ev.className, level: ev.level, ts: ev.ts });
+}
+
 export class LogService {
+  /** the player's own characters, from every level-up in the whole log (other players never level up in it) */
+  characters = new Map<string, KnownCharacter>();
   bossRuns = new BossRunTracker();
   passives = new PassiveTracker();
   maps = new MapTracker();
@@ -73,21 +89,26 @@ export class LogService {
     const passives = new PassiveTracker();
     const maps = new MapTracker();
     const sessions = new GameSessionTracker(this.ctx.actOf);
-    let lastLevelUp: LogEvent | null = null;
+    // who is playing, by the same rules as the live session: a login forgets, a level-up or the
+    // death of one of the account's characters names them
+    let playing: string | null = null;
     this.queue = [];
+    const characters = new Map<string, KnownCharacter>();
     const feed = (ev: LogEvent) => {
       runs.feed(ev);
       passives.feed(ev);
       maps.feed(ev);
       sessions.feed(ev);
+      noteCharacter(characters, ev);
+      if (ev.type === "levelup") playing = ev.character;
+      else if (ev.type === "login") playing = null;
+      else if (ev.type === "death" && characters.has(ev.character)) playing = ev.character;
     };
     try {
       await this.platform.scanLog(file, (lines) => {
         for (const line of lines) {
           const ev = parseLine(line);
-          if (!ev) continue;
-          feed(ev);
-          if (ev.type === "levelup") lastLevelUp = ev;
+          if (ev) feed(ev);
         }
       });
     } catch (e) {
@@ -95,6 +116,8 @@ export class LogService {
     }
     for (const ev of this.queue ?? []) feed(ev);
     this.queue = null;
+    for (const [name, c] of this.characters) characters.set(name, c); // live level-ups during the scan
+    this.characters = characters;
     this.bossRuns = runs;
     this.passives = passives;
     this.maps = maps;
@@ -103,7 +126,7 @@ export class LogService {
       "app",
       `log completo lido: ${maps.runs.length} mapas, ${runs.runs.length} runs de boss, personagens com passivos: ${passives.characters().length}`,
     );
-    this.ctx.onScanDone(lastLevelUp);
+    this.ctx.onScanDone(playing);
     this.ctx.broadcast();
   }
 
@@ -112,6 +135,7 @@ export class LogService {
     const ev = parseLine(line);
     if (!ev) return;
     this.ctx.onParsed(ev);
+    noteCharacter(this.characters, ev);
     if (this.queue) this.queue.push(ev);
     else {
       const bossBefore = this.bossRuns.runs.length;

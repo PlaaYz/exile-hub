@@ -3,7 +3,7 @@
 // user quits from the tray (like electron-updater's autoInstallOnAppQuit).
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import type { AppState } from "../shared/types";
-import { errorText } from "./tauriPob";
+import { errorText } from "./errors";
 
 const kCheckEveryMs = 4 * 3600 * 1000;
 

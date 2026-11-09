@@ -1,6 +1,6 @@
 {
   "name": "exile-hub",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "All-in-one companion for Path of Exile 1: campaign co-pilot, PoB import, overlay + second-screen dashboard",
   "main": "dist/main/main/main.js",
   "private": true,
@@ -52,14 +52,7 @@
       {
         "from": "data",
         "to": "data"
-      },
-      {
-        "from": "vendor/pob",
-        "to": "pob"
       }
-    ],
-    "asarUnpack": [
-      "node_modules/koffi/**"
     ],
     "win": {
       "target": [
@@ -96,8 +89,7 @@
   },
   "dependencies": {
     "electron-updater": "^6.8.11",
-    "fflate": "^0.8.3",
-    "koffi": "^3.3.7"
+    "fflate": "^0.8.3"
   },
   "keywords": [],
   "author": "PlaaYz",

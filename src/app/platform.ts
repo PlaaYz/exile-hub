@@ -3,26 +3,12 @@
 // Everything here is async: in Tauri these calls cross into Rust.
 import type { DiagKind } from "../core/diag";
 import type { TradeFetch } from "../core/trade";
-import type { AppState, DisplayInfo, SuggestResult } from "../shared/types";
+import type { AppState, DisplayInfo } from "../shared/types";
 
 export interface LogFollower {
   stop(): void;
   /** the file exists and is being read */
   readonly fileSeen: boolean;
-}
-
-export interface PobEngineRequest {
-  xml?: string;
-  xmlKey: string;
-  level: number;
-  candidates: { id: string; name: string }[];
-  maxSupports: number;
-}
-
-export interface PobEngineApi {
-  readonly status: "off" | "starting" | "ready" | "missing-pob" | "error";
-  suggest(req: PobEngineRequest): Promise<SuggestResult>;
-  stop(): void;
 }
 
 export interface TrayState {
@@ -100,8 +86,7 @@ export interface Platform {
   /** Types one line in the game's chat (Enter, text, Enter); fails unless the game window is in front. */
   sendChat?(text: string): Promise<void>;
 
-  // ---- engines / windows --------------------------------------------------------------------
-  readonly pob: PobEngineApi;
+  // ---- windows ---------------------------------------------------------------------------------
   readonly shell: Shell;
   /** diagnostics hook for platform-level events */
   diag?: (kind: DiagKind, text: string) => void;

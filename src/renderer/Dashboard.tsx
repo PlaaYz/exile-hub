@@ -7,7 +7,6 @@ import { DiagPanelBody } from "./DiagView";
 import { SearchPanelBody } from "./SearchView";
 import { SessionsPanelBody } from "./SessionsView";
 import { FarmPanelBody } from "./FarmView";
-import { GemAdvicePanel } from "./GemAdviceView";
 import { MapsPanelBody } from "./MapsView";
 import { TreePanel } from "./TreeView";
 import { PricePanelBody } from "./PriceView";
@@ -41,6 +40,32 @@ function loadVisible(): Panel[] {
     /* storage unavailable */
   }
   return ALL_PANELS.map((p) => p.id);
+}
+
+/**
+ * Who is playing. The log names a character only when it levels up or dies, so after a switch the
+ * player can pick it here; the next level-up/death confirms or corrects it on its own.
+ */
+function CharacterPicker({ state }: { state: AppState }) {
+  const list = state.knownCharacters;
+  const current = state.characterName;
+  if (!list.length) return <span>{current ?? "personagem ?"}</span>;
+  return (
+    <select
+      className={`char-pick${current ? "" : " unknown"}`}
+      value={current ?? ""}
+      title="O jogo só informa o personagem quando ele sobe de nível ou morre: escolha aqui se o app não souber"
+      onChange={(e) => e.target.value && void window.hub.setCharacter(e.target.value)}
+    >
+      {!current && <option value="">quem está jogando?</option>}
+      {current && !list.some((c) => c.name === current) && <option value={current}>{current}</option>}
+      {list.map((c) => (
+        <option key={c.name} value={c.name}>
+          {c.name} ({c.className} {c.level})
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function PanelBox({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
@@ -216,7 +241,6 @@ function BuildPanel({ state }: { state: AppState }) {
         </button>
         {msg && <span className={msg.startsWith("Falha ao importar") ? "warn-text" : "muted"}>{msg}</span>}
       </div>
-      <GemAdvicePanel advice={state.gemAdvice} onRefresh={() => void window.hub.refreshGemAdvice()} />
       {state.tree && <TreePanel tree={state.tree} />}
       {b && (
         <>
@@ -397,15 +421,6 @@ function SettingsPanel({ state }: { state: AppState }) {
         Abrir o painel sozinho quando o jogo abrir
       </label>
 
-      <h3>Gemas na campanha</h3>
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={state.config.gemAdviceEnabled}
-          onChange={(e) => void window.hub.setConfig({ gemAdviceEnabled: e.target.checked })}
-        />
-        Sugerir o melhor suporte a cada nível com o motor do Path of Building (precisa do PoB instalado)
-      </label>
       <div className="muted small">Fechar a janela deixa o app na bandeja do Windows; para sair, clique com o botão direito no ícone e escolha Sair.</div>
 
       <h3>Overlay no jogo</h3>
@@ -459,7 +474,8 @@ export function DashboardApp() {
         <div className="status">
           <span className={`dot ${state.logStatus}`} />
           {state.areaName ?? "nenhuma zona ainda"}
-          {state.characterName ? ` · ${state.characterName}` : state.areaName ? " · personagem ainda não identificado" : ""}
+          {" · "}
+          <CharacterPicker state={state} />
           {state.characterLevel !== null ? ` · nível ${state.characterLevel}` : ""}
         </div>
         <div className="chips">

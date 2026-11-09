@@ -2,7 +2,6 @@ import { fmtMs, useHubState } from "./hooks";
 import { PriceSummary, TierSummary, itemTitle } from "./PriceView";
 import { Frags, StepView } from "./StepView";
 import { MapHint } from "./MapsView";
-import { GemHint } from "./GemAdviceView";
 
 const kOverlayMaxSteps = 9;
 const kPriceCardMs = 25_000; // how long a price stays on the overlay after Ctrl+C
@@ -48,12 +47,19 @@ export function OverlayApp() {
   );
 
   function endgameView() {
+    // inside a map the map line above already says where you are
+    const inMap = !!state.maps.current?.inside;
     return (
       <>
-        <div className="ov-head">
-          <span className="ov-area">{state.areaName ?? "aguardando uma zona…"}</span>
-          <span className="ov-meta">endgame</span>
-        </div>
+        {!inMap && (
+          <div className="ov-head">
+            <span className="ov-area">{state.areaName ?? "aguardando uma zona…"}</span>
+            <span className="ov-meta">
+              {state.characterName ?? "endgame"}
+              {state.characterLevel !== null ? ` · nível ${state.characterLevel}` : ""}
+            </span>
+          </div>
+        )}
         {state.logStatus !== "watching" && <div className="ov-warn">Client.txt não conectado — abra o painel</div>}
       </>
     );
@@ -89,7 +95,6 @@ export function OverlayApp() {
         </div>
       )}
 
-      <GemHint advice={state.gemAdvice} />
 
       {nextGems.length > 0 && (
         <div className="ov-gems">

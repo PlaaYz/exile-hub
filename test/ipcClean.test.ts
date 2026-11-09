@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../src/app/ipcClean";
 
 describe("renderer input validation", () => {
-  it("accepts every user-facing setting with the right type (gemAdviceEnabled included)", () => {
-    expect(cleanConfigPatch({ gemAdviceEnabled: false })).toEqual({ gemAdviceEnabled: false });
+  it("accepts every user-facing setting with the right type", () => {
+    expect(cleanConfigPatch({ chatCommandsEnabled: false })).toEqual({ chatCommandsEnabled: false });
+    expect(cleanConfigPatch({ gemAdviceEnabled: false })).toEqual({}); // removed setting: ignored
     expect(cleanConfigPatch({ overlayEnabled: true, league: "Allflame", clientLogPath: null })).toEqual({
       overlayEnabled: true,
       league: "Allflame",

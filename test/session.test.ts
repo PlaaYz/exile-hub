@@ -192,6 +192,21 @@ describe("Session", () => {
     expect(s.characterName).toBe("A");
   });
 
+  it("the death of one of the account's characters names who is playing, with its level from the log", () => {
+    const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
+    const slain = (who: string) => `2026/11/08 12:00:00 1 a [INFO Client 1] : ${who} has been slain.`;
+    const s = new Session(lookups, routes, true);
+    s.known = (n) => (n === "OldMapper" ? { className: "Ascendant", level: 96 } : undefined);
+    s.applyLine(lvlOf("Camp", "Witch", 6));
+    s.applyLine(login);
+    s.applyLine(area("HideoutCourts"));
+    expect(s.characterName).toBeNull();
+    expect(s.applyLine(slain("SomeoneElse"))).toBe(false); // a party member: not one of ours
+    expect(s.characterName).toBeNull();
+    expect(s.applyLine(slain("OldMapper"))).toBe(true);
+    expect(s).toMatchObject({ characterName: "OldMapper", className: "Ascendant", characterLevel: 96 });
+  });
+
   it("parses window focus lines", () => {
     const s = new Session(lookups, routes, true);
     expect(s.applyLine("2026/11/08 12:00:00 1 a [INFO Client 1] [WINDOW] Lost focus")).toBe(false);

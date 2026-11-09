@@ -78,10 +78,11 @@ textarea { resize: vertical; font-family: Consolas, monospace; font-size: 12px; 
 .map-agg-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .map-agg-row { display: flex; justify-content: space-between; gap: 6px; font-variant-numeric: tabular-nums; }
 .big-sm { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ov-map-box { border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 6px; }
 .ov-map {
   display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums;
-  border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 6px;
 }
+.ov-map-stats { font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 2px; }
 .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 14px; }
 .diag-status { display: flex; align-items: baseline; gap: 8px; }
 .diag-status > span:nth-child(2) { font-weight: 600; min-width: 84px; }
@@ -252,3 +253,8 @@ button.primary { border-color: var(--accent); color: var(--accent); font-weight:
 .chal-body { margin: 4px 0 4px 26px; }
 .chal-tips { margin: 4px 0; padding-left: 18px; }
 .chal-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 12px; margin-top: 4px; }
+/* who is playing (header) */
+.char-pick { background: transparent; color: inherit; border: 1px solid transparent; font: inherit; padding: 0 2px; cursor: pointer; }
+.char-pick:hover { border-color: #39424f; }
+.char-pick.unknown { color: #e0c060; border-color: #6b5a2a; }
+.char-pick option { background: #0e1116; color: #ddd; }

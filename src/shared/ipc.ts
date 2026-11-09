@@ -22,8 +22,8 @@ export const CH = {
   farmPrices: "farm:prices",
   appAutostart: "app:autostart",
   diagCopy: "diag:copy",
-  gemAdviceRefresh: "gems:refresh",
   treeLayout: "tree:layout",
+  characterSet: "character:set",
   challengesGet: "challenges:get",
   challengesRefresh: "challenges:refresh",
   challengeSet: "challenges:set",
@@ -64,9 +64,10 @@ export interface HubApi {
   farmPrices(): Promise<FarmPricesResult>;
   setStartWithWindows(on: boolean): Promise<void>;
   copyDiagReport(): Promise<void>;
-  refreshGemAdvice(): Promise<void>;
   /** passive tree geometry for the map; null until GGG's tree data is loaded */
   getTreeLayout(): Promise<TreeLayout | null>;
+  /** pick who is playing (one of state.knownCharacters) */
+  setCharacter(name: string): Promise<void>;
   getChallenges(): Promise<ChallengesView>;
   refreshChallenges(): Promise<ChallengesView>;
   /** tick a challenge (part = index of a sub-objective, or null for the whole challenge) */

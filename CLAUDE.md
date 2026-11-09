@@ -101,20 +101,10 @@ Windows gotcha: electron-builder's winCodeSign 7z has macOS symlinks that need a
 Mode; fixed once by extracting it with 7za `-x!darwin` into
 %LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0.
 
-Support gem advice via Path of Building's engine (2026-11-08): uses the owner's installed PoB
-(%APPDATA%\Path of Building Community; real version in manifest.xml — the registry DisplayVersion
-lags). src/main/luaHost.ts loads PoB's lua51.dll (LuaJIT) with koffi, chdir to the PoB folder, runs
-HeadlessWrapper.lua (MIT, vendor/pob; the version-matched copy is downloaded from the PoB GitHub tag
-and cached in userData, bundled copy as fallback; io.read is stubbed so startup prompts never block)
-and our driver vendor/pob/exilehub.lua (ehSuggest(json) -> json). It runs in an Electron
-utilityProcess (src/main/pobWorker.ts, ~2 s boot, ~1-3 s per ranking). Character is approximated as
-a campaign one: tree reset, items removed except weapons, gem levels from the character level.
-Candidates = core/gemAvailability (exile-leveling quests.json: quest rewards + vendor by class up to
-the current act, required level). exile-leveling support ids "SupportGemX" differ from PoB's
-"SkillGemSupportX": the driver maps them (and falls back to gemForBaseName). Class for availability =
-the class being played (core/classes baseClass of the log's class/ascendancy); UI warns if the build
-is for another class. Only up to level 70. test/pobEngine.test.ts drives the real engine when PoB
-is installed (skipped otherwise). Packaging: vendor/pob -> resources/pob, koffi asarUnpack.
+Support gem advice (Path of Building's engine via LuaJIT, first koffi in an Electron utilityProcess,
+then a Rust worker) was REMOVED in 0.3.7 at the owner's request (2026-11-09: "não faz sentido"):
+luaHost/pobEngine/pobWorker, vendor/pob, src-tauri pob*.rs, koffi and libloading are gone (see git
+history before 0.3.7 if it ever comes back). core/gemAvailability.ts stays only for its GemInfo type.
 
 Map mechanics (2026-11-08): Client.txt NPC dialogue lines ("Niko, Master of the Depths: ...") ->
 LogEvent "npc" (clientLog MECHANIC_NPCS, only known speakers, chat can't spoof), counted once per map
@@ -216,6 +206,14 @@ Tauri (shipped since 0.3.0, 2026-11-09; the Electron build in src/main still com
   cache, bundled fallback): update it each league without an app release (3.30 list still empty).
 - Vendor search: linkSearchCounts(n, r, g, b) (free sockets as \S to fit 50 chars) + chromatic recipe.
 - Stash value: not possible (wealthyexile uses its own approved OAuth client; no public API).
+
+0.3.7 (2026-11-09) who is playing: LogService replays the whole log at startup with the session's
+rules (a level-up names the character, a login forgets it, "X has been slain" of one of the account's
+characters names it) and keeps LogService.characters = every own character with its last class/level.
+Session.known / identify / refreshFromKnown use it; the dashboard header has a picker
+(state.knownCharacters, HubApi.setCharacter) for when the log cannot tell (an old character that
+neither levels nor dies). Overlay map line: session count, average time and maps/hour; the endgame
+head only shows outside maps.
 
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from

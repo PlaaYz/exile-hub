@@ -8,8 +8,6 @@ export const kClipboardPollMs = 300; // price check / PoB import: how often the 
 export const kProgressSaveMs = 3000; // route + timers are written to disk at most this often
 export const kTreeUrl = "https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json";
 export const kTreeMaxAgeMs = 7 * 24 * 3600 * 1000;
-export const kGemAdviceMaxLevel = 70; // campaign only
-export const kAdviceDebounceMs = 1500;
 export const kStatsMaxAgeMs = 24 * 3600 * 1000; // trade stat list cache on disk
 export const kTradeSite = "https://www.pathofexile.com/trade/";
 

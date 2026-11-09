@@ -58,6 +58,11 @@ export class Session {
   private freshRun = false;
   /** a login just happened: the next area tells where that character is */
   private loginPending = false;
+  /**
+   * The account's own characters with their last known class/level (every level-up in the whole
+   * log). Set by the app once the full log is read; other players never level up in this log.
+   */
+  known: (name: string) => { className: string; level: number } | undefined = () => undefined;
 
   constructor(
     private readonly lookups: Lookups,
@@ -113,6 +118,46 @@ export class Session {
     this.tracker.reset();
     this.tracker.setCursor(p.cursor);
     this.timer.resume(p.timer, p.savedAt, now);
+    this.fillFromKnown();
+  }
+
+  /** The log's latest level-up of this character is newer than anything saved: use its level. */
+  private fillFromKnown(): void {
+    const k = this.characterName ? this.known(this.characterName) : undefined;
+    if (!k) return;
+    this.className = k.className;
+    if (this.characterLevel === null || k.level > this.characterLevel) this.characterLevel = k.level;
+  }
+
+  /**
+   * "X has been slain": when X is one of the account's own characters (known from level-ups) and
+   * not the one we think is playing, X is who is playing (a switch the log did not name).
+   */
+  private onDeath(name: string, now: number): boolean {
+    if (name === this.characterName || !this.known(name)) return false;
+    this.identify(name, now);
+    return true;
+  }
+
+  /** This known character is the one playing (its saved progress comes back). */
+  identify(name: string, now: number = Date.now()): void {
+    if (name === this.characterName) return;
+    if (this.characterName) this.characters[this.characterName] = this.snapshot(now);
+    const saved = this.characters[name];
+    if (saved) this.restore(name, saved, now);
+    else {
+      this.characterName = name;
+      this.className = null;
+      this.characterLevel = null;
+      this.fillFromKnown();
+    }
+    this.freshRun = false;
+    this.loginPending = false;
+  }
+
+  /** Called when the whole log was read: the current character's level may be known now. */
+  refreshFromKnown(): void {
+    this.fillFromKnown();
   }
 
   // ---- events -----------------------------------------------------------------
@@ -223,6 +268,7 @@ export class Session {
         this.onLogin(ev.ts ?? now);
         return true;
       case "death":
+        return this.onDeath(ev.character, ev.ts ?? now);
       case "focus":
       case "passive":
       case "npc":
@@ -252,6 +298,7 @@ export class Session {
       } else if (ev.type === "enter") enteredName = ev.name;
       else if (ev.type === "levelup") this.onLevelUp(ev, now);
       else if (ev.type === "login") this.onLogin(now);
+      else if (ev.type === "death") this.onDeath(ev.character, now);
     }
     if (!lastArea) return;
     this.areaId = lastArea;

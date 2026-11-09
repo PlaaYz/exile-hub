@@ -20,35 +20,6 @@ export interface SessionView {
   bestPrice: { name: string; chaos: number } | null;
 }
 
-// ---- support gem advice (Path of Building engine) ------------------------------------
-
-export interface GemStats {
-  dps: number;
-  cost: number;
-  costPerSec: number;
-  regen: number;
-  mana: number;
-  /** seconds of non-stop casting before running out of mana; -1 = regen keeps up */
-  sustain: number;
-}
-export interface GemSingle extends GemStats {
-  id: string;
-  name: string;
-  level: number;
-  gain: number;
-}
-export interface SuggestResult {
-  ok: boolean;
-  error?: string;
-  /** not a failure: e.g. the build's skill needs a higher level */
-  soft?: boolean;
-  skill?: string;
-  skillLevel?: number;
-  base?: GemStats;
-  singles?: GemSingle[];
-  combo?: (GemStats & { id: string; name: string; gain: number })[];
-  ms?: number;
-}
 import type { MapStats } from "../core/maps";
 export type { DiagEntry, MapStats };
 
@@ -192,8 +163,6 @@ export interface AppConfig {
   overlayHideUnfocused: boolean;
   /** bring the dashboard up (without stealing focus) when the log shows the game starting */
   showDashboardOnGameStart: boolean;
-  /** rank support gems with Path of Building's engine on level-ups (campaign) */
-  gemAdviceEnabled: boolean;
   /** where the player left the overlay (physical pixels); null = top-left of the primary monitor */
   overlayPos: { x: number; y: number } | null;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */
@@ -275,21 +244,10 @@ export interface AppState {
   buildLinks: { label: string; gems: string[]; colors: string[] } | null;
   /** playing endgame (maps...): the campaign route is paused and the overlay shows maps */
   endgame: boolean;
+  /** the account's characters seen leveling up in the log, most recent first (to pick who is playing) */
+  knownCharacters: { name: string; className: string; level: number }[];
   /** chat commands on keys: supported by this build, keys registered now, last whisperer */
   chat: { supported: boolean; active: boolean; lastWhisper: string | null };
-  /** "best next support gems" from Path of Building's engine (campaign only) */
-  gemAdvice: {
-    status: "off" | "no-build" | "waiting" | "not-campaign" | "computing" | "ok" | "error" | "no-pob";
-    message: string | null;
-    /** the imported build is for another class than the character being played */
-    mismatch: string | null;
-    level: number | null;
-    act: number | null;
-    result: SuggestResult | null;
-    /** gem id -> where to get it ("recompensa de ... / vendedor ...") */
-    sources: Record<string, string>;
-    at: number | null;
-  };
   /** what the app understood recently (Diagnóstico tab) */
   diag: {
     entries: DiagEntry[];

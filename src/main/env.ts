@@ -12,12 +12,8 @@ export const kUserAgent = `ExileHub/${app.getVersion()} (desktop companion; Wind
 
 export const isDev = !!process.env.VITE_DEV_URL;
 export const dataDir = app.isPackaged ? path.join(process.resourcesPath, "data") : path.resolve(__dirname, "../../../data");
-export const pobVendorDir = app.isPackaged
-  ? path.join(process.resourcesPath, "pob")
-  : path.resolve(__dirname, "../../../vendor/pob");
 export const rendererIndex = path.resolve(__dirname, "../../renderer/index.html");
 export const preloadPath = path.join(__dirname, "preload.js");
-export const pobWorkerPath = path.join(__dirname, "pobWorker.js");
 
 /** A file in the app's userData folder (config, caches, progress). */
 export function userFile(name: string): string {

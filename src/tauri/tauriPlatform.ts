@@ -9,7 +9,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LogFollower, Platform } from "../app/platform";
 import { candidateLogPaths } from "../core/clientLog";
 import type { TradeFetch } from "../core/trade";
-import { TauriPob } from "./tauriPob";
 import type { TauriShell } from "./tauriShell";
 
 const kHttpTimeoutMs = 15_000;
@@ -19,14 +18,12 @@ export interface AppInfo {
   packaged: boolean;
   hidden: boolean;
   userDir: string;
-  pobVendorDir: string;
 }
 
 export class TauriPlatform implements Platform {
   readonly appVersion: string;
   readonly packaged: boolean;
   readonly userAgent: string;
-  readonly pob: TauriPob;
 
   constructor(
     info: AppInfo,
@@ -35,13 +32,6 @@ export class TauriPlatform implements Platform {
     this.appVersion = info.version;
     this.packaged = info.packaged;
     this.userAgent = `ExileHub/${info.version} (desktop companion; Windows)`;
-    this.pob = new TauriPob({
-      userDir: info.userDir,
-      pobVendorDir: info.pobVendorDir,
-      fetchText: (u, ms) => this.fetchText(u, ms),
-      userFileAge: (n) => this.userFileAge(n),
-      writeUserFile: (n, t) => this.writeUserFile(n, t),
-    });
   }
 
   readonly fetch: TradeFetch = (url, init) =>

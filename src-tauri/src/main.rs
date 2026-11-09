@@ -1,14 +1,12 @@
 // Exile Hub on Tauri. The app logic (TypeScript, src/app + src/core) runs in the dashboard webview;
-// this side gives it what a webview cannot do: read Client.txt, user files, run Path of Building's
-// engine in a separate process, show windows without stealing focus.
+// this side gives it what a webview cannot do: read Client.txt, user files, the clipboard watch, chat
+// commands, show windows without stealing focus.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod chat;
 mod clipboard;
 mod files;
 mod logfile;
-mod pob;
-mod pob_worker;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Manager, WindowEvent};
@@ -19,7 +17,6 @@ static QUITTING: AtomicBool = AtomicBool::new(false);
 #[tauri::command]
 fn app_quit(app: tauri::AppHandle) {
     QUITTING.store(true, Ordering::SeqCst);
-    app.state::<pob::PobState>().stop();
     app.exit(0);
 }
 
@@ -133,11 +130,6 @@ fn overlay_close(app: tauri::AppHandle) {
 }
 
 fn main() {
-    // the same exe hosts Path of Building's engine in a child process
-    if std::env::args().any(|a| a == pob::WORKER_ARG) {
-        pob_worker::run();
-        return;
-    }
     tauri::Builder::default()
         // a second launch (desktop shortcut, autostart) just brings the running app forward
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -158,7 +150,6 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .manage(pob::PobState::default())
         .manage(logfile::Followers::default())
         .invoke_handler(tauri::generate_handler![
             app_quit,
@@ -180,10 +171,6 @@ fn main() {
             logfile::log_scan,
             logfile::log_follow,
             logfile::log_unfollow,
-            pob::pob_find,
-            pob::pob_start,
-            pob::pob_call,
-            pob::pob_stop,
         ])
         .on_window_event(|window, event| {
             // closing the dashboard keeps the app in the tray; "Sair" quits

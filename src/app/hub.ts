@@ -6,7 +6,7 @@ import { cleanChatCommands, expandCommand } from "../core/chatCommands";
 import { parseLine, type LogEvent } from "../core/clientLog";
 import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
-import type { GemInfo, QuestInfo } from "../core/gemAvailability";
+import type { GemInfo } from "../core/gemAvailability";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { applyGemLevels, gemLevelTable, importPob, pobSourceUrl } from "../core/pob";
 import type { Lookups } from "../core/route";
@@ -18,7 +18,6 @@ import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
 import { kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
 import { Diagnostics } from "./diagnostics";
-import { GemAdviceService } from "./gemAdvice";
 import { LogService } from "./logService";
 import type { Platform } from "./platform";
 import { PriceService } from "./priceService";
@@ -48,7 +47,6 @@ export class Hub {
   readonly diag = new Diagnostics();
   log!: LogService;
   prices!: PriceService;
-  gems!: GemAdviceService;
   private tree!: TreeService;
   private challenges!: ChallengeService;
 
@@ -76,6 +74,8 @@ export class Hub {
     this.gemLevels = gemLevelTable(this.gemsData);
     await this.cfg.load();
     this.session = new Session(this.lookups, routeTexts, this.config.leagueStart);
+    // the account's characters (every level-up in the whole log), once LogService has read it
+    this.session.known = (name) => this.log?.characters.get(name);
 
     const addDiag = (kind: DiagKind, text: string) => this.diag.add(kind, text);
     const broadcast = () => this.broadcast();
@@ -87,7 +87,7 @@ export class Hub {
         if (d) this.diag.add(d.kind, d.text);
       },
       onRawLine: () => this.diag.lineSeen(),
-      onScanDone: (lastLevelUp) => this.onScanDone(lastLevelUp),
+      onScanDone: (playing) => this.onScanDone(playing),
       addDiag,
       broadcast,
       // campaign zones only ("1_1_2"...), acts 1-10: hideouts and the endgame town do not count
@@ -106,15 +106,6 @@ export class Hub {
           this.diag.add("clipboard", r.ok ? "build importado do clipboard" : `não era um build válido (${r.error})`),
         );
       },
-    });
-    this.gems = new GemAdviceService(p, {
-      config,
-      session: () => this.session,
-      build: () => this.build,
-      gemsData: this.gemsData,
-      quests: this.lookups.quests as Record<string, QuestInfo>,
-      broadcast,
-      addDiag,
     });
     this.tree = new TreeService(p, broadcast);
     this.challenges = new ChallengeService(p);
@@ -150,7 +141,6 @@ export class Hub {
     if (patch.clientLogPath !== undefined && patch.clientLogPath !== prev.clientLogPath) void this.startTail();
     if (patch.overlayEnabled !== undefined || patch.overlayHideUnfocused !== undefined) this.applyOverlayVisibility();
     if (patch.priceCheckEnabled !== undefined) void this.prices.applyClipboardWatch();
-    if (patch.gemAdviceEnabled !== undefined) this.gems.maybeAdvise(true);
     if (patch.chatCommandsEnabled !== undefined || patch.chatCommands !== undefined) this.applyCommandKeys();
     this.updateTray();
     this.broadcast();
@@ -189,7 +179,6 @@ export class Hub {
       const saved = JSON.parse(text) as { code: string; at: number };
       this.build = applyGemLevels(importPob(saved.code), this.gemLevels);
       this.buildInfo = { source: "saved", at: saved.at };
-      await this.gems.setBuildCode(saved.code);
     } catch {
       /* no saved build */
     }
@@ -205,7 +194,6 @@ export class Hub {
       this.build = applyGemLevels(importPob(code), this.gemLevels);
       const at = Date.now();
       this.buildInfo = { source, at };
-      await this.gems.setBuildCode(code);
       await this.p.writeUserFile("build.json", JSON.stringify({ code, at })).catch((e) => console.error("could not save build", e));
       this.broadcast();
       return { ok: true };
@@ -250,19 +238,21 @@ export class Hub {
       }
     }
     this.scheduleSave();
-    this.gems.maybeAdvise(); // the log tail may have a newer character than the saved progress
     if (this.gameRunning) this.p.shell.gameRunningChanged?.(true);
     this.applyOverlayVisibility();
     this.applyCommandKeys();
   }
 
-  private onScanDone(lastLevelUp: LogEvent | null): void {
-    // the end of the log did not say who is playing: assume the last character that leveled up
-    if (!this.session.characterName && lastLevelUp) {
-      this.session.apply(lastLevelUp);
-      this.gems.maybeAdvise();
-      this.scheduleSave();
+  private onScanDone(playing: string | null): void {
+    // the whole log knows every character's level and who played last (the tail alone may not)
+    const before = this.session.characterName;
+    if (playing && playing !== before) this.session.identify(playing);
+    this.session.refreshFromKnown();
+    if (this.session.characterName !== before && this.session.characterName) {
+      this.diag.add("personagem", `personagem atual: ${this.session.characterName}`);
     }
+    this.scheduleSave();
+    this.broadcast();
   }
 
   /** A live Client.txt event (the history trackers already saw it). */
@@ -296,7 +286,6 @@ export class Hub {
     this.scheduleSave();
     this.broadcast();
     if (ev.type === "area") this.updateTray();
-    if (ev.type === "levelup" || ev.type === "area") this.gems.maybeAdvise();
   }
 
   /** From the log: the game opened (focus after a closing) or closed. */
@@ -459,6 +448,15 @@ export class Hub {
   farmPrices(): Promise<FarmPricesResult> {
     return this.prices.farmPrices();
   }
+  /** The player says who is playing (the log only names a character on level-ups and deaths). */
+  setCharacter(name: string): void {
+    if (!this.log.characters.has(name)) return;
+    this.session.identify(name);
+    this.diag.add("personagem", `personagem escolhido no painel: ${name}`);
+    this.scheduleSave();
+    this.broadcast();
+  }
+
   getTreeLayout(): Promise<TreeLayout | null> {
     return this.tree.layout();
   }
@@ -470,9 +468,6 @@ export class Hub {
   }
   setChallenge(id: string, done: boolean, part: number | null): Promise<ChallengesView> {
     return this.challenges.set(id, done, part);
-  }
-  refreshGemAdvice(): void {
-    this.gems.maybeAdvise(true);
   }
   installUpdate(): void {
     this.p.shell.installUpdate();
@@ -553,7 +548,6 @@ export class Hub {
         clipboardWatch: this.prices.watching,
         version: this.p.appVersion,
       },
-      gemAdvice: this.gems.state,
       update: { ...this.updateState, current: this.updateState.current || this.p.appVersion },
       sessions: {
         current: this.log.sessions.current ? sessionView(this.log.sessions.current, this.prices.history) : null,
@@ -564,6 +558,9 @@ export class Hub {
       },
       buildLinks: this.buildLinks(),
       endgame: this.session.endgame,
+      knownCharacters: [...this.log.characters]
+        .sort((a, b) => (b[1].ts ?? 0) - (a[1].ts ?? 0))
+        .map(([name, c]) => ({ name, className: c.className, level: c.level })),
       chat: {
         supported: !!this.p.setCommandKeys && !!this.p.sendChat,
         active: this.commandKeys !== "",
@@ -582,7 +579,6 @@ export class Hub {
 
   async shutdown(): Promise<void> {
     await this.saveProgress();
-    this.gems.stop();
     this.log.stop();
   }
 }

@@ -1,5 +1,5 @@
 // The Platform the app (src/app) runs on inside Electron: Node files, Electron clipboard/dialogs,
-// the PoB engine in a utilityProcess and the windows in windows.ts.
+// and the windows in windows.ts.
 import { app, clipboard, dialog, shell, type OpenDialogOptions } from "electron";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
@@ -8,8 +8,7 @@ import readline from "node:readline";
 import type { LogFollower, Platform, Shell } from "../app/platform";
 import { candidateLogPaths } from "../core/clientLog";
 import { LogTailer } from "../core/tail";
-import { dataDir, httpFetch, kUserAgent, pobVendorDir, pobWorkerPath, userFile } from "./env";
-import { PobEngine } from "./pobEngine";
+import { dataDir, httpFetch, kUserAgent, userFile } from "./env";
 import type { Updater } from "./updater";
 import type { Windows } from "./windows";
 
@@ -20,7 +19,6 @@ export class ElectronPlatform implements Platform {
   readonly packaged = app.isPackaged;
   readonly userAgent = kUserAgent;
   readonly fetch = httpFetch;
-  readonly pob = new PobEngine(pobVendorDir, pobWorkerPath, kUserAgent);
   readonly shell: Shell;
 
   constructor(

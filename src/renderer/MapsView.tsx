@@ -38,20 +38,29 @@ function Aggregate({ title, a }: { title: string; a: MapAggregate | null }) {
 }
 
 /** Overlay line while mapping: current map, its timer and today's count. */
+/** Overlay: the map you are in (or the last one), then this session's count and average time. */
 export function MapHint({ maps }: { maps: MapStats }) {
   const c = maps.current;
-  if (!c) return null;
+  const s = maps.session;
+  if (!c && !s) return null;
   return (
-    <div className="ov-map">
-      <span>
-        <b>{c.name}</b> T{c.tier} · {fmtMs(c.inMapMs)}
-        {c.deaths ? <span className="warn-text"> · {c.deaths}✝</span> : null}
-        {c.mechanics.length ? <span className="f-quest"> · {c.mechanics.join(", ")}</span> : null}
-      </span>
-      <span className="muted">
-        {maps.session ? `sessão ${maps.session.maps}` : ""}
-        {maps.today ? ` · hoje ${maps.today.maps}` : ""}
-      </span>
+    <div className="ov-map-box">
+      {c && (
+        <div className="ov-map">
+          <span>
+            <b>{c.name}</b> T{c.tier} · {fmtMs(c.inMapMs)}
+            {c.deaths ? <span className="warn-text"> · {c.deaths}✝</span> : null}
+            {c.mechanics.length ? <span className="f-quest"> · {c.mechanics.join(", ")}</span> : null}
+          </span>
+        </div>
+      )}
+      {s && (
+        <div className="ov-map-stats muted">
+          sessão: {s.maps} {s.maps === 1 ? "mapa" : "mapas"} · média {fmtMs(s.avgMapMs)}
+          {s.mapsPerHour ? ` · ${s.mapsPerHour.toFixed(1)}/h` : ""}
+          {maps.today && maps.today.maps !== s.maps ? ` · hoje ${maps.today.maps}` : ""}
+        </div>
+      )}
     </div>
   );
 }

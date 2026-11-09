@@ -10,7 +10,7 @@ import { cleanChallengeTick, cleanConfigPatch, cleanMapTradeOptions, cleanResear
 import type { HubApi } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { TauriPlatform, type AppInfo } from "./tauriPlatform";
-import { errorText } from "./tauriPob";
+import { errorText } from "./errors";
 import { TauriShell } from "./tauriShell";
 import { TauriUpdater } from "./tauriUpdater";
 
@@ -57,8 +57,10 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     farmPrices: () => hub.farmPrices(),
     setStartWithWindows: (on) => hub.setStartWithWindows(on === true),
     copyDiagReport: () => hub.copyDiagReport(),
-    refreshGemAdvice: async () => hub.refreshGemAdvice(),
     getTreeLayout: () => hub.getTreeLayout(),
+    setCharacter: async (name) => {
+      if (typeof name === "string" && name.length <= 40) hub.setCharacter(name);
+    },
     getChallenges: () => hub.getChallenges(),
     refreshChallenges: () => hub.refreshChallenges(),
     setChallenge: (id, done, part) => {

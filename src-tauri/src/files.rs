@@ -32,7 +32,6 @@ pub struct AppInfo {
     /// started by Windows at login: stay in the tray
     hidden: bool,
     user_dir: String,
-    pob_vendor_dir: String,
 }
 
 #[tauri::command]
@@ -42,7 +41,6 @@ pub fn app_info(app: AppHandle) -> Result<AppInfo, String> {
         packaged: !cfg!(debug_assertions),
         hidden: std::env::args().any(|a| a == "--hidden"),
         user_dir: user_dir().to_string_lossy().into_owned(),
-        pob_vendor_dir: resources(&app)?.join("pob").to_string_lossy().into_owned(),
     })
 }
 
