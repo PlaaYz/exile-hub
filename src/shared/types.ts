@@ -102,11 +102,48 @@ export type FetchStatus = "idle" | "loading" | "done" | "error" | "n/a";
 
 export interface PriceModFilter {
   text: string;
+  /** explicit, implicit, crafted, fractured, enchant... or "pseudo" (a total the trade site computes) */
   kind: string;
   statId: string;
   value: number | null;
   min: number | null;
+  max?: number | null;
   enabled: boolean;
+}
+
+/** A number filter of the search: on/off, min and max (null = open). */
+export interface PriceRange {
+  enabled: boolean;
+  min: number | null;
+  max: number | null;
+}
+
+/** Everything about the trade search besides the mods; null = does not apply to this item. */
+export interface PriceFilters {
+  /** only sellers online now */
+  online: boolean;
+  /** rares/magic: only this base type (else the whole category, e.g. any helmet) */
+  baseType: boolean;
+  itemLevel: PriceRange | null;
+  quality: PriceRange | null;
+  links: PriceRange | null;
+  gemLevel: PriceRange | null;
+  mapTier: PriceRange | null;
+  corrupted: "any" | "yes" | "no";
+  influences: { name: string; enabled: boolean }[];
+  pdps: PriceRange | null;
+  edps: PriceRange | null;
+  dps: PriceRange | null;
+  armour: PriceRange | null;
+  evasion: PriceRange | null;
+  es: PriceRange | null;
+  ward: PriceRange | null;
+}
+
+/** What the player changed in the search (popup / panel). */
+export interface PriceSearchPatch {
+  mods: { statId: string; enabled: boolean; min: number | null; max: number | null }[];
+  filters: PriceFilters;
 }
 
 export interface PriceListing {
@@ -145,6 +182,20 @@ export interface PriceView {
   /** mod lines that could not be mapped to a trade stat */
   unmatched: string[];
   chaosPerDivine: number | null;
+  filters: PriceFilters;
+  /** computed from the item: weapon DPS and defences, now and at 20% quality */
+  calc: {
+    dps: { pdps: number; edps: number; cdps: number; dps: number; pdpsQ20: number; dpsQ20: number } | null;
+    def: {
+      armour: number | null;
+      evasion: number | null;
+      es: number | null;
+      ward: number | null;
+      armourQ20: number | null;
+      evasionQ20: number | null;
+      esQ20: number | null;
+    } | null;
+  };
 }
 
 // ---- app ----------------------------------------------------------------------

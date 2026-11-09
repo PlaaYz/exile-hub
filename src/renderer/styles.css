@@ -264,3 +264,8 @@ body.mode-price { background: #0e1116; }
 .price-popup { display: flex; flex-direction: column; height: 100vh; border: 1px solid #2a3240; box-sizing: border-box; }
 .price-popup-bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #151a22; cursor: move; user-select: none; }
 .price-popup-body { overflow: auto; padding: 8px 10px; flex: 1; }
+
+/* price search editor */
+.search-flags { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 4px 0 6px; }
+.mod.pseudo .mod-text { color: #e0c060; }
+.calc-line { margin: 4px 0; font-variant-numeric: tabular-nums; }

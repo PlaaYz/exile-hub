@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { register } from "@tauri-apps/plugin-global-shortcut";
 import { kOverlayInteractKey, kOverlayToggleKey, kStateBroadcastMs } from "../app/constants";
 import { Hub } from "../app/hub";
-import { cleanChallengeTick, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../app/ipcClean";
+import { cleanChallengeTick, cleanConfigPatch, cleanMapTradeOptions, cleanSearchPatch } from "../app/ipcClean";
 import type { HubApi } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { TauriPlatform, type AppInfo } from "./tauriPlatform";
@@ -60,7 +60,10 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     moveDashboard: (id, fs) => hub.moveDashboard(id, fs === true),
     toggleOverlay: async () => hub.toggleOverlay(),
     toggleOverlayInteractive: async () => hub.toggleOverlayInteractive(),
-    priceResearch: async (patch) => hub.priceResearch(cleanResearch(patch)),
+    priceResearch: async (patch) => {
+      const p = cleanSearchPatch(patch);
+      if (p) hub.priceResearch(p);
+    },
     priceOpenTrade: async () => hub.priceOpenTrade(),
     farmPrices: () => hub.farmPrices(),
     setStartWithWindows: (on) => hub.setStartWithWindows(on === true),

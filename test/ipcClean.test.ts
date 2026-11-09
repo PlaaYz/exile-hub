@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, cleanConfigPatch, cleanMapTradeOptions, cleanResearch } from "../src/app/ipcClean";
+import { DEFAULT_CONFIG, cleanConfigPatch, cleanMapTradeOptions, cleanSearchPatch } from "../src/app/ipcClean";
 
 describe("renderer input validation", () => {
   it("accepts every user-facing setting with the right type", () => {
@@ -24,8 +24,14 @@ describe("renderer input validation", () => {
   });
 
   it("cleans price re-search and map trade options", () => {
-    expect(cleanResearch([{ statId: "a", enabled: true, min: 3 }, { statId: 1 }, null])).toEqual([{ statId: "a", enabled: true, min: 3 }]);
-    expect(cleanResearch("x")).toEqual([]);
+    const s = cleanSearchPatch({
+      mods: [{ statId: "a", enabled: true, min: 3, max: "x" }, { statId: 1 }, null],
+      filters: { online: false, pdps: { enabled: true, min: 200, max: null }, corrupted: "evil", hacked: 1 },
+    })!;
+    expect(s.mods).toEqual([{ statId: "a", enabled: true, min: 3, max: null }]);
+    expect(s.filters).toMatchObject({ online: false, corrupted: "any", pdps: { enabled: true, min: 200, max: null }, itemLevel: null });
+    expect("hacked" in s.filters).toBe(false);
+    expect(cleanSearchPatch("x")).toBeNull();
     const o = cleanMapTradeOptions({ exclude: ["phys-reflect", "nope"], minQuantity: 70.6, tierMin: 99, rarity: "evil" });
     expect(o).toMatchObject({ exclude: ["phys-reflect"], minQuantity: 71, tierMin: 17, rarity: "any", corrupted: "any" });
   });

@@ -13,7 +13,7 @@ import type { Lookups } from "../core/route";
 import { gemColors } from "../core/searchRegex";
 import { Session, type ProgressData } from "../core/session";
 import type { FarmPricesResult, ImportResult } from "../shared/ipc";
-import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, TreeLayout } from "../shared/types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, PriceSearchPatch, TreeLayout } from "../shared/types";
 import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
 import { kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
@@ -473,7 +473,7 @@ export class Hub {
     await this.p.shell.moveDashboard(id, fullscreen);
     this.setConfig({ dashboardDisplayId: id, dashboardFullscreen: fullscreen });
   }
-  priceResearch(patch: { statId: string; enabled: boolean; min: number | null }[]): void {
+  priceResearch(patch: PriceSearchPatch): void {
     this.prices.research(patch);
   }
   priceOpenTrade(): void {

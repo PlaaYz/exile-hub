@@ -38,7 +38,27 @@ export interface ParsedItem {
   mods: ItemMod[];
   /** prefix / suffix counts when the advanced copy (Ctrl+Alt+C) shows them; null otherwise */
   affixes: { prefix: number; suffix: number; maxPrefix: number; maxSuffix: number } | null;
+  /** weapon / armour properties as shown on the item (current quality) */
+  props: ItemProps;
 }
+
+export interface ItemProps {
+  phys: [number, number] | null;
+  /** each elemental damage range ("Elemental Damage: 10-20, 5-30") */
+  ele: [number, number][];
+  chaos: [number, number] | null;
+  aps: number | null;
+  crit: number | null;
+  armour: number | null;
+  evasion: number | null;
+  es: number | null;
+  ward: number | null;
+}
+
+const range = (s: string): [number, number] | null => {
+  const m = /(\d+)-(\d+)/.exec(s);
+  return m ? [Number(m[1]), Number(m[2])] : null;
+};
 
 const SEP = /^-{8}$/;
 const SUFFIX_KIND: [RegExp, ModKind][] = [
@@ -125,7 +145,9 @@ export function parseItem(text: string): ParsedItem | null {
     influences: [],
     mods: [],
     affixes: null,
+    props: { phys: null, ele: [], chaos: null, aps: null, crit: null, armour: null, evasion: null, es: null, ward: null },
   };
+  const props = item.props;
 
   let ilvlSection = -1;
   sections.forEach((sec, si) => {
@@ -138,6 +160,16 @@ export function parseItem(text: string): ParsedItem | null {
       } else if ((m = /^Level: (\d+)/.exec(l)) && /Gem/.test(rarity) && si === 1) item.gemLevel = Number(m[1]);
       else if ((m = /^Quality(?: \([^)]*\))?: \+(\d+)%/.exec(l))) item.quality = Number(m[1]);
       else if ((m = /^Map Tier: (\d+)/.exec(l))) item.mapTier = Number(m[1]);
+      else if (si === 1 && (m = /^Physical Damage: (.+)$/.exec(l))) props.phys = range(m[1]);
+      else if (si === 1 && (m = /^Elemental Damage: (.+)$/.exec(l))) {
+        props.ele = m[1].split(",").map(range).filter((r): r is [number, number] => r !== null);
+      } else if (si === 1 && (m = /^Chaos Damage: (.+)$/.exec(l))) props.chaos = range(m[1]);
+      else if (si === 1 && (m = /^Attacks per Second: ([\d.]+)/.exec(l))) props.aps = Number(m[1]);
+      else if (si === 1 && (m = /^Critical Strike Chance: ([\d.]+)%/.exec(l))) props.crit = Number(m[1]);
+      else if (si === 1 && (m = /^Armour: (\d+)/.exec(l))) props.armour = Number(m[1]);
+      else if (si === 1 && (m = /^Evasion Rating: (\d+)/.exec(l))) props.evasion = Number(m[1]);
+      else if (si === 1 && (m = /^Energy Shield: (\d+)/.exec(l))) props.es = Number(m[1]);
+      else if (si === 1 && (m = /^Ward: (\d+)/.exec(l))) props.ward = Number(m[1]);
       else if ((m = /^Sockets: (.+)$/.exec(l))) {
         item.sockets = m[1].trim();
         item.links = socketLinks(item.sockets);

@@ -1,10 +1,19 @@
 // Price check orchestration: clipboard text -> parsed item -> poe.ninja estimate + trade listings.
 // No Electron here; main.ts wires the clipboard and broadcasts the view.
 import { parseItem, type ParsedItem } from "./item";
+import { defences, pseudoStats, weaponDps } from "./itemCalc";
 import type { NinjaClient } from "./ninja";
 import type { StatIndex } from "./stats";
-import { buildQuery, defaultMin, hasLocalMods, type StatFilter, type TradeClient } from "./trade";
-import type { PriceModFilter, PriceView } from "../shared/types";
+import { buildQuery, coveredByCalc, defaultFilters, defaultMin, hasLocalMods, type StatFilter, type TradeClient } from "./trade";
+import type { PriceModFilter, PriceSearchPatch, PriceView } from "../shared/types";
+
+/** Totals searched by default (Awakened PoE Trade does the same); the others are offered, off. */
+const PSEUDO_ON = new Set([
+  "pseudo.pseudo_total_elemental_resistance",
+  "pseudo.pseudo_total_life",
+  "pseudo.pseudo_total_energy_shield",
+  "pseudo.pseudo_increased_movement_speed",
+]);
 
 const NO_TRADE_CLASSES = /^(Stackable Currency|Divination Cards|Map Fragments|Delve Stackable Socketable Currency)$/;
 const NO_TRADE_RARITY = /^(Currency|Divination Card)$/;
@@ -39,6 +48,8 @@ export class PriceChecker {
     const item = parseItem(text);
     if (!item) return false;
     const seq = ++this.seq;
+    const dps = weaponDps(item);
+    const def = defences(item);
     const view: PriceView = {
       seq,
       at: (this.d.now ?? Date.now)(),
@@ -66,6 +77,8 @@ export class PriceChecker {
       mods: [],
       unmatched: [],
       chaosPerDivine: null,
+      filters: defaultFilters(item, dps, def),
+      calc: { dps, def },
     };
     this.current = { item, view };
     this.emit();
@@ -74,16 +87,16 @@ export class PriceChecker {
     return true;
   }
 
-  /** Re-run the trade search with the user's mod choices (dashboard). */
-  research(patch: { statId: string; enabled: boolean; min: number | null }[]): void {
+  /** Re-run the trade search with the player's choices (popup / panel): mods and filters. */
+  research(patch: PriceSearchPatch): void {
     const cur = this.current;
     if (!cur || cur.view.tradeStatus === "n/a") return;
-    const byId = new Map(patch.map((p) => [p.statId, p]));
+    const byId = new Map(patch.mods.map((p) => [p.statId, p]));
     const mods = cur.view.mods.map((m) => {
       const p = byId.get(m.statId);
-      return p ? { ...m, enabled: p.enabled, min: p.min } : m;
+      return p ? { ...m, enabled: p.enabled, min: p.min, max: p.max } : m;
     });
-    this.patch(cur.view.seq, { mods, tradeStatus: "loading", tradeError: null });
+    this.patch(cur.view.seq, { mods, filters: patch.filters, tradeStatus: "loading", tradeError: null });
     void this.runTrade(cur.view.seq, cur.view.league);
   }
 
@@ -113,14 +126,25 @@ export class PriceChecker {
   }
 
   private async prepareMods(seq: number, item: ParsedItem): Promise<void> {
-    if (item.rarity !== "Rare" && item.rarity !== "Magic") return;
+    const rareish = item.rarity === "Rare" || item.rarity === "Magic";
+    // uniques are searched by name; their rolls can be added by hand (all mods start off)
+    if (!rareish && item.rarity !== "Unique") return;
     if (item.unidentified) return;
     const index = await this.d.stats().catch(() => null);
     if (!index) return;
+    const filters = this.current?.view.seq === seq ? this.current.view.filters : null;
     const local = hasLocalMods(item.itemClass);
     const mods: PriceModFilter[] = [];
     const unmatched: string[] = [];
     const seen = new Set<string>();
+    // totals the trade site computes (resistances, life...) replace the lines they add up
+    const pseudo = rareish ? pseudoStats(item) : [];
+    const folded = new Set<string>();
+    for (const p of pseudo) {
+      const on = PSEUDO_ON.has(p.statId);
+      if (on) for (const line of p.from) folded.add(line);
+      mods.push({ text: p.text, kind: "pseudo", statId: p.statId, value: p.value, min: defaultMin(p.value), max: null, enabled: on });
+    }
     for (const m of item.mods) {
       const hit = index.match(m, local);
       if (!hit) {
@@ -129,9 +153,14 @@ export class PriceChecker {
       }
       if (seen.has(hit.statId)) continue;
       seen.add(hit.statId);
-      // explicit/fractured carry the value; implicits and crafted mods are opt-in
-      const enabled = hit.kind === "explicit" || hit.kind === "fractured";
-      mods.push({ ...hit, min: defaultMin(hit.value), enabled });
+      // explicit/fractured carry the value; implicits and crafted mods are opt-in; what a total,
+      // the DPS or the defence filter already counts starts off
+      const enabled =
+        rareish &&
+        (hit.kind === "explicit" || hit.kind === "fractured") &&
+        !folded.has(m.text) &&
+        !(filters && coveredByCalc(m.text, filters));
+      mods.push({ ...hit, min: defaultMin(hit.value), max: null, enabled });
     }
     this.patch(seq, { mods, unmatched });
   }
@@ -144,7 +173,7 @@ export class PriceChecker {
       item = { ...item, rarity: "Normal" }; // search by base type
     }
     try {
-      const query = buildQuery(item, cur.view.mods as StatFilter[]);
+      const query = buildQuery(item, cur.view.mods as StatFilter[], cur.view.filters);
       const res = await this.d.trade.search(league, query);
       const rates = await this.d.ninja.currencyRates(league).catch(() => null);
       const listings = res.listings.map((l) => {

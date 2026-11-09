@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { PriceModFilter, PriceView } from "../shared/types";
+import type { PriceFilters, PriceModFilter, PriceRange, PriceView } from "../shared/types";
 
 const CURRENCY_SHORT: Record<string, string> = { chaos: "c", divine: "div", exalted: "ex" };
 
@@ -80,52 +80,160 @@ export function PriceSummary({ p }: { p: PriceView }) {
   );
 }
 
-function ModEditor({ p }: { p: PriceView }) {
-  const [mods, setMods] = useState<PriceModFilter[]>(p.mods);
-  // state is re-sent every second as a new object: only reset local edits when the content changes
-  const modsKey = `${p.seq}|${JSON.stringify(p.mods)}`;
-  useEffect(() => setMods(p.mods), [modsKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!p.mods.length && !p.unmatched.length) return null;
+const numIn = (v: string): number | null => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 
-  const set = (i: number, patch: Partial<PriceModFilter>) =>
-    setMods((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)));
+const KIND_LABEL: Record<string, string> = {
+  pseudo: "total",
+  implicit: "implícito",
+  crafted: "craftado",
+  fractured: "fraturado",
+  enchant: "encantamento",
+};
+
+/** One number filter row: on/off, label, current value, min, max. */
+function RangeRow({
+  label,
+  r,
+  current,
+  onChange,
+}: {
+  label: string;
+  r: PriceRange;
+  current?: string;
+  onChange: (r: PriceRange) => void;
+}) {
+  return (
+    <label className="mod">
+      <input type="checkbox" checked={r.enabled} onChange={(e) => onChange({ ...r, enabled: e.target.checked })} />
+      <span className="mod-text">
+        {label}
+        {current ? <span className="muted"> ({current})</span> : null}
+      </span>
+      <input className="mod-min" type="number" placeholder="mín" value={r.min ?? ""} onChange={(e) => onChange({ ...r, enabled: true, min: numIn(e.target.value) })} />
+      <input className="mod-min" type="number" placeholder="máx" value={r.max ?? ""} onChange={(e) => onChange({ ...r, enabled: true, max: numIn(e.target.value) })} />
+    </label>
+  );
+}
+
+/** The trade search as the player wants it: filters and mods, then "Buscar". */
+function SearchEditor({ p }: { p: PriceView }) {
+  const [mods, setMods] = useState<PriceModFilter[]>(p.mods);
+  const [f, setF] = useState<PriceFilters>(p.filters);
+  // state is re-sent every second as a new object: only reset local edits when the content changes
+  const key = `${p.seq}|${JSON.stringify(p.mods)}|${JSON.stringify(p.filters)}`;
+  useEffect(() => {
+    setMods(p.mods);
+    setF(p.filters);
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (p.tradeStatus === "n/a") return null;
+
+  const setMod = (i: number, patch: Partial<PriceModFilter>) => setMods((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)));
+  const setRange = (k: keyof PriceFilters, r: PriceRange) => setF((x) => ({ ...x, [k]: r }));
+  const d = p.calc.dps;
+  const def = p.calc.def;
+  const rareish = p.item.rarity === "Rare" || p.item.rarity === "Magic";
+  const ranges: [keyof PriceFilters, string, string | undefined][] = [
+    ["pdps", "DPS físico", d ? `${d.pdps}, Q20 ${d.pdpsQ20}` : undefined],
+    ["edps", "DPS elemental", d ? String(d.edps) : undefined],
+    ["dps", "DPS total", d ? `${d.dps}, Q20 ${d.dpsQ20}` : undefined],
+    ["armour", "Armadura", def?.armour ? `${def.armour}, Q20 ${def.armourQ20}` : undefined],
+    ["evasion", "Evasão", def?.evasion ? `${def.evasion}, Q20 ${def.evasionQ20}` : undefined],
+    ["es", "Energy Shield", def?.es ? `${def.es}, Q20 ${def.esQ20}` : undefined],
+    ["ward", "Ward", def?.ward ? String(def.ward) : undefined],
+    ["itemLevel", "Item level", p.item.itemLevel !== null ? String(p.item.itemLevel) : undefined],
+    ["links", "Links", p.item.links ? String(p.item.links) : undefined],
+    ["quality", "Qualidade", p.item.quality ? `${p.item.quality}%` : undefined],
+    ["gemLevel", "Nível da gema", p.item.gemLevel !== null ? String(p.item.gemLevel) : undefined],
+    ["mapTier", "Tier do mapa", undefined],
+  ];
 
   return (
     <>
-      <h3>Modificadores usados na busca</h3>
-      <div className="mods">
-        {mods.map((m, i) => (
-          <label className="mod" key={m.statId}>
-            <input type="checkbox" checked={m.enabled} onChange={(e) => set(i, { enabled: e.target.checked })} />
-            <span className={`mod-text kind-${m.kind}`}>
-              {m.text}
-              {m.kind !== "explicit" ? <span className="muted"> ({m.kind})</span> : null}
-            </span>
+      <h3>Busca no trade</h3>
+      <div className="search-flags">
+        <label className="check small">
+          <input type="checkbox" checked={f.online} onChange={(e) => setF({ ...f, online: e.target.checked })} />
+          só vendedores online
+        </label>
+        {rareish && (
+          <label className="check small">
+            <input type="checkbox" checked={f.baseType} onChange={(e) => setF({ ...f, baseType: e.target.checked })} />
+            só esta base ({p.item.baseType})
+          </label>
+        )}
+        <label className="small">
+          corrompido{" "}
+          <select value={f.corrupted} onChange={(e) => setF({ ...f, corrupted: e.target.value as PriceFilters["corrupted"] })}>
+            <option value="any">tanto faz</option>
+            <option value="no">não</option>
+            <option value="yes">sim</option>
+          </select>
+        </label>
+        {f.influences.map((inf, i) => (
+          <label key={inf.name} className="check small">
             <input
-              className="mod-min"
-              type="number"
-              placeholder="mín"
-              value={m.min ?? ""}
-              onChange={(e) => set(i, { min: e.target.value === "" ? null : Number(e.target.value) })}
+              type="checkbox"
+              checked={inf.enabled}
+              onChange={(e) => setF({ ...f, influences: f.influences.map((x, j) => (j === i ? { ...x, enabled: e.target.checked } : x)) })}
             />
+            {inf.name}
           </label>
         ))}
-        {p.unmatched.length > 0 && (
-          <div className="muted small">Não reconhecidos (fora da busca): {p.unmatched.join(" · ")}</div>
-        )}
+      </div>
+      <div className="mods">
+        {ranges.map(([k, label, current]) => {
+          const r = f[k] as PriceRange | null;
+          return r ? <RangeRow key={k} label={label} r={r} current={current} onChange={(x) => setRange(k, x)} /> : null;
+        })}
+        {mods.map((m, i) => (
+          <label className={`mod${m.kind === "pseudo" ? " pseudo" : ""}`} key={m.statId}>
+            <input type="checkbox" checked={m.enabled} onChange={(e) => setMod(i, { enabled: e.target.checked })} />
+            <span className={`mod-text kind-${m.kind}`}>
+              {m.text}
+              {m.kind !== "explicit" ? <span className="muted"> ({KIND_LABEL[m.kind] ?? m.kind})</span> : null}
+            </span>
+            <input className="mod-min" type="number" placeholder="mín" value={m.min ?? ""} onChange={(e) => setMod(i, { enabled: true, min: numIn(e.target.value) })} />
+            <input className="mod-min" type="number" placeholder="máx" value={m.max ?? ""} onChange={(e) => setMod(i, { enabled: true, max: numIn(e.target.value) })} />
+          </label>
+        ))}
+        {p.unmatched.length > 0 && <div className="muted small">Não reconhecidos (fora da busca): {p.unmatched.join(" · ")}</div>}
       </div>
       <div className="row buttons">
         <button
           disabled={p.tradeStatus === "loading"}
           onClick={() =>
-            void window.hub.priceResearch(mods.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min })))
+            void window.hub.priceResearch({
+              mods: mods.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min, max: m.max ?? null })),
+              filters: f,
+            })
           }
         >
-          Buscar de novo
+          {p.tradeStatus === "loading" ? "Buscando…" : "Buscar"}
         </button>
       </div>
     </>
   );
+}
+
+/** pDPS/eDPS or armour/evasion/ES, now and at 20% quality. */
+function CalcLine({ p }: { p: PriceView }) {
+  const d = p.calc.dps;
+  const def = p.calc.def;
+  if (!d && !def) return null;
+  const parts: string[] = [];
+  if (d) {
+    if (d.pdps) parts.push(`pDPS ${d.pdps}${d.pdpsQ20 !== d.pdps ? ` (Q20 ${d.pdpsQ20})` : ""}`);
+    if (d.edps) parts.push(`eDPS ${d.edps}`);
+    if (d.cdps) parts.push(`caos ${d.cdps}`);
+    parts.push(`total ${d.dps}${d.dpsQ20 !== d.dps ? ` (Q20 ${d.dpsQ20})` : ""}`);
+  }
+  if (def) {
+    if (def.armour) parts.push(`armadura ${def.armour}${def.armourQ20 !== def.armour ? ` (Q20 ${def.armourQ20})` : ""}`);
+    if (def.evasion) parts.push(`evasão ${def.evasion}${def.evasionQ20 !== def.evasion ? ` (Q20 ${def.evasionQ20})` : ""}`);
+    if (def.es) parts.push(`ES ${def.es}${def.esQ20 !== def.es ? ` (Q20 ${def.esQ20})` : ""}`);
+    if (def.ward) parts.push(`ward ${def.ward}`);
+  }
+  return <div className="small calc-line">{parts.join(" · ")}</div>;
 }
 
 const tierClass = (t: number | undefined) => (t === 1 ? "tier t1" : t === 2 ? "tier t2" : "tier");
@@ -217,6 +325,7 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
         {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""}
       </div>
       <PriceSummary p={p} />
+      <CalcLine p={p} />
       <ModTiers p={p} />
       {p.ninja && (
         <div className="muted small">
@@ -242,7 +351,7 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
           <button onClick={() => void window.hub.priceOpenTrade()}>Abrir no site do trade</button>
         </div>
       )}
-      <ModEditor p={p} />
+      <SearchEditor p={p} />
     </>
   );
 }

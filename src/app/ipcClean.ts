@@ -2,7 +2,7 @@
 import { cleanChatCommands, DEFAULT_CHAT_COMMANDS, isValidKey, normaliseKey } from "../core/chatCommands";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { MAP_MODS } from "../core/searchRegex";
-import type { AppConfig } from "../shared/types";
+import type { AppConfig, PriceFilters, PriceRange, PriceSearchPatch } from "../shared/types";
 
 export const DEFAULT_CONFIG: AppConfig = {
   clientLogPath: null,
@@ -66,17 +66,51 @@ export function cleanChallengeTick(id: unknown, done: unknown, part: unknown): {
   return { id, done, part: typeof part === "number" ? part : null };
 }
 
-export function cleanResearch(patch: unknown): { statId: string; enabled: boolean; min: number | null }[] {
-  if (!Array.isArray(patch)) return [];
-  return patch
-    .filter(
-      (p): p is { statId: string; enabled: boolean; min: number | null } =>
-        !!p &&
-        typeof p.statId === "string" &&
-        typeof p.enabled === "boolean" &&
-        (p.min === null || (typeof p.min === "number" && Number.isFinite(p.min))),
-    )
-    .map((p) => ({ statId: p.statId, enabled: p.enabled, min: p.min }));
+const numOrNull = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) && Math.abs(v) < 1e7 ? v : null);
+
+function cleanRange(v: unknown): PriceRange | null {
+  if (!v || typeof v !== "object") return null;
+  const r = v as Record<string, unknown>;
+  return { enabled: r.enabled === true, min: numOrNull(r.min), max: numOrNull(r.max) };
+}
+
+/**
+ * A re-search from a window (popup / panel): mods by stat id with min/max, and the filters with
+ * known keys only. Returns null when it is not a search patch at all.
+ */
+export function cleanSearchPatch(patch: unknown): PriceSearchPatch | null {
+  const p = patch as Record<string, unknown> | null;
+  if (!p || typeof p !== "object" || !Array.isArray(p.mods) || !p.filters || typeof p.filters !== "object") return null;
+  const mods = (p.mods as Record<string, unknown>[])
+    .filter((m) => !!m && typeof m.statId === "string" && m.statId.length < 200 && typeof m.enabled === "boolean")
+    .slice(0, 80)
+    .map((m) => ({ statId: m.statId as string, enabled: m.enabled as boolean, min: numOrNull(m.min), max: numOrNull(m.max) }));
+  const f = p.filters as Record<string, unknown>;
+  const corrupted = f.corrupted === "yes" || f.corrupted === "no" ? f.corrupted : "any";
+  const filters: PriceFilters = {
+    online: f.online !== false,
+    baseType: f.baseType === true,
+    itemLevel: cleanRange(f.itemLevel),
+    quality: cleanRange(f.quality),
+    links: cleanRange(f.links),
+    gemLevel: cleanRange(f.gemLevel),
+    mapTier: cleanRange(f.mapTier),
+    corrupted,
+    influences: Array.isArray(f.influences)
+      ? (f.influences as Record<string, unknown>[])
+          .filter((i) => !!i && typeof i.name === "string" && i.name.length < 30)
+          .slice(0, 8)
+          .map((i) => ({ name: i.name as string, enabled: i.enabled === true }))
+      : [],
+    pdps: cleanRange(f.pdps),
+    edps: cleanRange(f.edps),
+    dps: cleanRange(f.dps),
+    armour: cleanRange(f.armour),
+    evasion: cleanRange(f.evasion),
+    es: cleanRange(f.es),
+    ward: cleanRange(f.ward),
+  };
+  return { mods, filters };
 }
 
 /** Renderer input for the map trade search: known keys, sane numbers, known mod ids only. */

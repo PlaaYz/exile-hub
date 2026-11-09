@@ -1,6 +1,8 @@
 // Official trade API (www.pathofexile.com/api/trade): search + fetch, each behind its own
 // rate limiter fed by the X-Rate-Limit-* headers GGG sends back.
+import type { PriceFilters, PriceRange } from "../shared/types";
 import type { ParsedItem } from "./item";
+import type { Defences, WeaponDps } from "./itemCalc";
 import { RateLimiter } from "./ratelimit";
 import type { MatchedMod } from "./stats";
 
@@ -21,6 +23,7 @@ export type TradeFetch = (
 export interface StatFilter extends MatchedMod {
   enabled: boolean;
   min: number | null;
+  max?: number | null;
 }
 
 export interface TradeListing {
@@ -88,37 +91,112 @@ export function defaultMin(value: number | null, tolerance = 0.1): number | null
   return value >= 10 ? Math.floor(m) : Math.floor(m * 10) / 10;
 }
 
-export function buildQuery(item: ParsedItem, stats: StatFilter[]): object {
+const range = (min: number | null, max: number | null) => ({ ...(min !== null ? { min } : {}), ...(max !== null ? { max } : {}) });
+
+/** "90% of what the item has", rounded the way people type it. */
+const near = (v: number | null): number | null => (v === null || v <= 0 ? null : v >= 10 ? Math.floor(v * 0.9) : Math.floor(v * 9) / 10);
+
+const INFLUENCE_FILTER: Record<string, string> = {
+  Shaper: "shaper_item",
+  Elder: "elder_item",
+  Crusader: "crusader_item",
+  Redeemer: "redeemer_item",
+  Hunter: "hunter_item",
+  Warlord: "warlord_item",
+};
+
+/**
+ * The filters a search starts with, close to Awakened PoE Trade's: what makes the item what it is
+ * (gem level, map tier, links, unique corruption) on; rares by category, weapons by DPS and armour
+ * by its defence when they are rare/magic.
+ */
+export function defaultFilters(item: ParsedItem, dps: WeaponDps | null, def: Defences | null): PriceFilters {
+  const rareish = item.rarity === "Rare" || item.rarity === "Magic";
+  const gem = /Gem/.test(item.rarity);
+  const r = (enabled: boolean, min: number | null, max: number | null = null): PriceRange => ({ enabled, min, max });
+  const f: PriceFilters = {
+    online: true,
+    baseType: false,
+    itemLevel: item.itemLevel !== null && !gem ? r(item.rarity === "Normal" && item.itemLevel >= 82, item.itemLevel) : null,
+    quality: item.quality > 0 ? r(gem, item.quality) : gem ? r(false, null) : null,
+    links: item.sockets ? r(item.links >= 5, item.links >= 5 ? item.links : null) : null,
+    gemLevel: gem ? r(true, item.gemLevel ?? 1) : null,
+    mapTier: item.mapTier !== null ? r(true, item.mapTier, item.mapTier) : null,
+    corrupted: item.rarity === "Unique" || gem ? (item.corrupted ? "yes" : "no") : "any",
+    influences: item.influences.filter((i) => INFLUENCE_FILTER[i]).map((name) => ({ name, enabled: true })),
+    pdps: null,
+    edps: null,
+    dps: null,
+    armour: null,
+    evasion: null,
+    es: null,
+    ward: null,
+  };
+  if (dps && rareish) {
+    f.pdps = r(dps.pdps > 0 && dps.pdps >= dps.edps, near(dps.pdps));
+    f.edps = r(dps.edps > dps.pdps, near(dps.edps));
+    f.dps = r(false, near(dps.dps));
+  }
+  if (def && rareish) {
+    if (def.armour) f.armour = r(true, near(def.armour));
+    if (def.evasion) f.evasion = r(true, near(def.evasion));
+    if (def.es) f.es = r(true, near(def.es));
+    if (def.ward) f.ward = r(true, near(def.ward));
+  }
+  return f;
+}
+
+/** Local damage/defence lines a DPS or defence filter already accounts for (their own filters start off). */
+export function coveredByCalc(text: string, f: PriceFilters): boolean {
+  const dpsOn = !!(f.pdps?.enabled || f.edps?.enabled || f.dps?.enabled);
+  if (dpsOn && /^Adds \d+ to \d+ (Physical|Fire|Cold|Lightning|Chaos) Damage$|^\d+% increased (Physical Damage|Attack Speed)$/.test(text)) {
+    return true;
+  }
+  const defOn = !!(f.armour?.enabled || f.evasion?.enabled || f.es?.enabled || f.ward?.enabled);
+  return defOn && /^\+\d+ to (Armour|Evasion Rating|maximum Energy Shield|Ward)$|^\d+% increased (Armour|Evasion|Energy Shield)/.test(text);
+}
+
+export function buildQuery(item: ParsedItem, stats: StatFilter[], f: PriceFilters): object {
   const filters: Record<string, { filters: Record<string, unknown> }> = {};
   const add = (group: string, key: string, v: unknown) => {
     (filters[group] ??= { filters: {} }).filters[key] = v;
   };
-  const query: Record<string, unknown> = { status: { option: "online" } };
+  const addRange = (group: string, key: string, r: PriceRange | null) => {
+    if (r?.enabled && (r.min !== null || r.max !== null)) add(group, key, range(r.min, r.max));
+  };
+  const query: Record<string, unknown> = { status: { option: f.online ? "online" : "any" } };
 
   if (item.rarity === "Unique" && item.name) {
     query.name = item.name;
     query.type = item.baseType;
   } else if (/Gem/.test(item.rarity)) {
     query.type = item.baseType;
-    add("misc_filters", "gem_level", { min: item.gemLevel ?? 1 });
-    if (item.quality) add("misc_filters", "quality", { min: item.quality });
   } else if (item.rarity === "Rare" || item.rarity === "Magic") {
     const cat = tradeCategory(item.itemClass);
-    if (cat) add("type_filters", "category", { option: cat });
+    if (cat && !f.baseType) add("type_filters", "category", { option: cat });
     else query.type = item.baseType;
     add("type_filters", "rarity", { option: "nonunique" });
   } else {
     query.type = item.baseType;
   }
-  if (item.mapTier !== null) add("map_filters", "map_tier", { min: item.mapTier, max: item.mapTier });
-  if (item.links >= 5) add("socket_filters", "links", { min: item.links });
-  if (item.rarity === "Unique" || /Gem/.test(item.rarity)) {
-    add("misc_filters", "corrupted", { option: item.corrupted ? "true" : "false" });
-  }
+  addRange("misc_filters", "ilvl", f.itemLevel);
+  addRange("misc_filters", "quality", f.quality);
+  addRange("misc_filters", "gem_level", f.gemLevel);
+  addRange("map_filters", "map_tier", f.mapTier);
+  addRange("socket_filters", "links", f.links);
+  if (f.corrupted !== "any") add("misc_filters", "corrupted", { option: f.corrupted === "yes" ? "true" : "false" });
+  for (const i of f.influences) if (i.enabled && INFLUENCE_FILTER[i.name]) add("misc_filters", INFLUENCE_FILTER[i.name], { option: "true" });
+  addRange("weapon_filters", "pdps", f.pdps);
+  addRange("weapon_filters", "edps", f.edps);
+  addRange("weapon_filters", "dps", f.dps);
+  addRange("armour_filters", "ar", f.armour);
+  addRange("armour_filters", "ev", f.evasion);
+  addRange("armour_filters", "es", f.es);
+  addRange("armour_filters", "ward", f.ward);
 
   const statFilters = stats
     .filter((s) => s.enabled)
-    .map((s) => ({ id: s.statId, value: s.min === null ? {} : { min: s.min }, disabled: false }));
+    .map((s) => ({ id: s.statId, value: range(s.min, s.max ?? null), disabled: false }));
   query.stats = [{ type: "and", filters: statFilters }];
   if (Object.keys(filters).length) query.filters = filters;
   return { query, sort: { price: "asc" } };

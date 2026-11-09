@@ -10,7 +10,7 @@ import { StatIndex, type TradeStatsData } from "../core/stats";
 import { TradeClient, defaultLeague, fetchLeagues, fetchStats } from "../core/trade";
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
-import type { AppConfig, PriceView } from "../shared/types";
+import type { AppConfig, PriceSearchPatch, PriceView } from "../shared/types";
 import { kClipboardPollMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
 import type { Platform } from "./platform";
 
@@ -204,7 +204,7 @@ export class PriceService {
     this.ctx.broadcast();
   }
 
-  research(patch: { statId: string; enabled: boolean; min: number | null }[]): void {
+  research(patch: PriceSearchPatch): void {
     this.checker.research(patch);
   }
 

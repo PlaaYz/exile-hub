@@ -3,7 +3,7 @@ import { parseItem } from "../src/core/item";
 import { NinjaClient, pickGem, pickUnique, type FetchFn, type StashLine } from "../src/core/ninja";
 import { PriceChecker, median } from "../src/core/pricecheck";
 import { StatIndex, template } from "../src/core/stats";
-import { TradeClient, buildQuery, defaultLeague, defaultMin, type TradeFetch } from "../src/core/trade";
+import { TradeClient, buildQuery, defaultFilters, defaultLeague, defaultMin, type TradeFetch } from "../src/core/trade";
 import type { PriceView } from "../src/shared/types";
 
 const sep = "--------";
@@ -93,17 +93,23 @@ describe("ninja picking", () => {
 
 describe("trade query", () => {
   it("builds a rare search by category with enabled stat filters", () => {
-    const q = buildQuery(parseItem(ring)!, [
-      { text: "", kind: "explicit", statId: "explicit.life", value: 68, min: 61, enabled: true },
-      { text: "", kind: "implicit", statId: "implicit.firelight", value: 12, min: 10, enabled: false },
-    ]) as any;
+    const item = parseItem(ring)!;
+    const q = buildQuery(
+      item,
+      [
+        { text: "", kind: "explicit", statId: "explicit.life", value: 68, min: 61, enabled: true },
+        { text: "", kind: "implicit", statId: "implicit.firelight", value: 12, min: 10, enabled: false },
+      ],
+      defaultFilters(item, null, null),
+    ) as any;
     expect(q.query.filters.type_filters.filters).toEqual({ category: { option: "accessory.ring" }, rarity: { option: "nonunique" } });
     expect(q.query.stats[0].filters).toEqual([{ id: "explicit.life", value: { min: 61 }, disabled: false }]);
     expect(q.sort).toEqual({ price: "asc" });
   });
 
   it("searches uniques by name/base with links and corruption", () => {
-    const q = buildQuery(parseItem(tabula)!, []) as any;
+    const item = parseItem(tabula)!;
+    const q = buildQuery(item, [], defaultFilters(item, null, null)) as any;
     expect(q.query).toMatchObject({ name: "Tabula Rasa", type: "Simple Robe" });
     expect(q.query.filters.socket_filters.filters.links).toEqual({ min: 6 });
     expect(q.query.filters.misc_filters.filters.corrupted).toEqual({ option: "false" });
@@ -228,17 +234,24 @@ describe("PriceChecker", () => {
     pc.check(ring, "Allflame");
     await settle();
     const v = pc.view!;
+    // resistances and life go in as the trade site's totals (the lines they add up start off)
     expect(v.mods.map((m) => [m.statId, m.enabled, m.min])).toEqual([
+      ["pseudo.pseudo_total_elemental_resistance", true, 57],
+      ["pseudo.pseudo_total_life", true, 61],
       ["implicit.firelight", false, 10],
-      ["explicit.life", true, 61],
-      ["explicit.cold", true, 36],
+      ["explicit.life", false, 61],
+      ["explicit.cold", false, 36],
     ]);
     expect(v.unmatched).toEqual(["Some mod the trade site does not know"]);
-    expect(t.bodies[0].query.stats[0].filters.map((f: any) => f.id)).toEqual(["explicit.life", "explicit.cold"]);
+    expect(t.bodies[0].query.stats[0].filters.map((f: any) => f.id)).toEqual(["pseudo.pseudo_total_elemental_resistance", "pseudo.pseudo_total_life"]);
 
-    pc.research([{ statId: "explicit.cold", enabled: false, min: null }, { statId: "explicit.life", enabled: true, min: 50 }]);
+    pc.research({
+      mods: v.mods.map((m) => ({ statId: m.statId, enabled: m.statId === "explicit.life", min: m.statId === "explicit.life" ? 50 : m.min, max: m.statId === "explicit.life" ? 80 : null })),
+      filters: { ...v.filters, online: false },
+    });
     await settle();
-    expect(t.bodies[1].query.stats[0].filters).toEqual([{ id: "explicit.life", value: { min: 50 }, disabled: false }]);
+    expect(t.bodies[1].query.stats[0].filters).toEqual([{ id: "explicit.life", value: { min: 50, max: 80 }, disabled: false }]);
+    expect(t.bodies[1].query.status).toEqual({ option: "any" });
   });
 
   it("drops results of an item that was replaced by a newer copy", async () => {

@@ -1,4 +1,4 @@
-import type { AppConfig, AppState, ChallengesView, DisplayInfo, TreeLayout } from "./types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, PriceSearchPatch, TreeLayout } from "./types";
 
 // What the windows can ask the app (window.hub). On Tauri the dashboard calls the app directly and the
 // overlay goes through events (src/tauri/boot.ts).
@@ -31,7 +31,8 @@ export interface HubApi {
   moveDashboard(displayId: number, fullscreen: boolean): Promise<void>;
   toggleOverlay(): Promise<void>;
   toggleOverlayInteractive(): Promise<void>;
-  priceResearch(patch: { statId: string; enabled: boolean; min: number | null }[]): Promise<void>;
+  /** re-run the trade search with these mods and filters */
+  priceResearch(patch: PriceSearchPatch): Promise<void>;
   priceOpenTrade(): Promise<void>;
   farmPrices(): Promise<FarmPricesResult>;
   setStartWithWindows(on: boolean): Promise<void>;
