@@ -19,6 +19,8 @@ export interface CharacterProgress {
   timer: TimerState;
   /** when this snapshot was taken: the timer is paused from then until the character is back */
   savedAt: number;
+  /** the area the character was in: it logs back in there (used to tell who logged in) */
+  lastArea?: string;
 }
 
 export interface ProgressData {
@@ -52,6 +54,8 @@ export class Session {
   private characters: Record<string, CharacterProgress> = {};
   /** set when a new run started and its character is not known yet (no level-up so far) */
   private freshRun = false;
+  /** a login just happened: the next area tells where that character is */
+  private loginPending = false;
 
   constructor(
     private readonly lookups: Lookups,
@@ -83,6 +87,7 @@ export class Session {
       cursor: this.tracker.cursor,
       timer: this.timer.getState(),
       savedAt: now,
+      lastArea: this.areaId ?? undefined,
     };
   }
 
@@ -110,16 +115,37 @@ export class Session {
 
   // ---- events -----------------------------------------------------------------
 
+  /**
+   * Login server connection: game start or back to character select. Whoever logs in is unknown
+   * until a level-up names them; the first area may already tell (see onFirstAreaAfterLogin).
+   */
+  private onLogin(now: number): void {
+    if (this.characterName) this.characters[this.characterName] = this.snapshot(now);
+    this.characterName = null;
+    this.className = null;
+    this.characterLevel = null;
+    this.freshRun = false;
+    this.loginPending = true;
+  }
+
+  /** A character logs in where it logged out: if only one known character was in this area, it is them. */
+  private onFirstAreaAfterLogin(areaId: string, now: number): void {
+    this.loginPending = false;
+    const here = Object.entries(this.characters).filter(([, p]) => p.lastArea === areaId);
+    if (here.length === 1) this.restore(here[0][0], here[0][1], now);
+  }
+
   private onLevelUp(ev: { character: string; className: string; level: number }, now: number): void {
     if (ev.character !== this.characterName) {
       const prev = this.characterName;
       if (prev) this.characters[prev] = this.snapshot(now);
       const saved = this.characters[ev.character];
-      if (this.freshRun || !prev) {
-        // the run in progress belongs to this character (a new run that just started, or the
-        // first character seen since the app started): keep it
+      if (this.freshRun) {
+        // the run in progress belongs to this character (a new run that just started): keep it
       } else if (saved) {
         this.restore(ev.character, saved, now);
+      } else if (!prev) {
+        // the first character seen (app start, or after a login we could not attribute): keep the route
       } else if (ev.level <= 2 && this.tracker.cursor > kNewRunMinCursor) {
         this.reset(); // a brand new character we did not see entering the game
       }
@@ -151,6 +177,7 @@ export class Session {
           this.onNewRun(ts);
         }
         this.areaId = ev.areaId;
+        if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, ts);
         const info = this.lookups.areas[ev.areaId];
         this.areaName = info?.name ?? ev.areaId;
         // hideouts/towns say nothing about which kind of character is playing
@@ -167,6 +194,9 @@ export class Session {
         return true;
       case "levelup":
         this.onLevelUp(ev, ev.ts ?? now);
+        return true;
+      case "login":
+        this.onLogin(ev.ts ?? now);
         return true;
       case "death":
       case "focus":
@@ -192,8 +222,10 @@ export class Session {
       if (ev.type === "area") {
         lastArea = ev.areaId;
         enteredName = null;
+        if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, now);
       } else if (ev.type === "enter") enteredName = ev.name;
       else if (ev.type === "levelup") this.onLevelUp(ev, now);
+      else if (ev.type === "login") this.onLogin(now);
     }
     if (!lastArea) return;
     this.areaId = lastArea;

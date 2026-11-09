@@ -12,7 +12,12 @@ export type LogEvent =
   | { type: "focus"; focused: boolean; ts: number | null; closing?: true; /** a new game process started */ opening?: true }
   | { type: "npc"; speaker: string; mechanic: string; ts: number | null }
   /** a whisper received ("@From [<GUILD>] Name: ..."); the message itself is not kept */
-  | { type: "whisper"; from: string; ts: number | null };
+  | { type: "whisper"; from: string; ts: number | null }
+  /**
+   * the client connected to the login server: game start or back to character select. The next
+   * area is where the (possibly other) character logged in; the log never names it.
+   */
+  | { type: "login"; ts: number | null };
 
 /**
  * League-mechanic NPCs whose dialogue shows up in Client.txt when they appear in a zone
@@ -35,6 +40,7 @@ export const MECHANIC_NPCS: Record<string, string> = {
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const NPC_RE = new RegExp(`\\[INFO Client \\d+\\] (${Object.keys(MECHANIC_NPCS).map(escapeRe).join("|")}): `);
 
+const LOGIN_RE = /\[INFO Client \d+\] Async connecting to \S*login\.pathofexile\.com/;
 // character names have no spaces or colons; a guild tag may come first
 const WHISPER_RE = /\[INFO Client \d+\] @From (?:<[^>]*> )?([^\s:<>]+): /;
 const TS_RE =/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})/;
@@ -90,6 +96,8 @@ export function parseLine(rawLine: string): LogEvent | null {
 
   m = WHISPER_RE.exec(line);
   if (m) return { type: "whisper", from: m[1], ts };
+
+  if (LOGIN_RE.test(line)) return { type: "login", ts };
 
   return null;
 }

@@ -23,19 +23,61 @@ fn app_quit(app: tauri::AppHandle) {
     app.exit(0);
 }
 
-/// Shows a window without activating it (the game keeps the keyboard).
-#[tauri::command]
-fn show_inactive(app: tauri::AppHandle, label: String) -> Result<(), String> {
-    let w = app.get_webview_window(&label).ok_or("no such window")?;
+/// How a window is shown or hidden. Every show/hide of our windows goes through here (straight to
+/// Windows): mixing it with Tauri's own show()/hide() breaks, because Tauri keeps its own "visible"
+/// flag, does not see a window shown here and then skips the hide (the overlay never went away).
+#[derive(Clone, Copy)]
+enum Show {
+    Hide,
+    /// visible, the game keeps the keyboard
+    NoActivate,
+    /// visible and in front (tray click, second launch)
+    Activate,
+}
+
+fn set_shown(w: &tauri::Window, how: Show) -> Result<(), String> {
     #[cfg(windows)]
     {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
-        let hwnd = w.hwnd().map_err(|e| e.to_string())?;
-        unsafe { ShowWindow(hwnd.0 as _, SW_SHOWNOACTIVATE) };
+        use windows_sys::Win32::UI::WindowsAndMessaging::{IsIconic, ShowWindow, SW_HIDE, SW_RESTORE, SW_SHOW, SW_SHOWNOACTIVATE};
+        let hwnd = w.hwnd().map_err(|e| e.to_string())?.0 as _;
+        unsafe {
+            match how {
+                Show::Hide => {
+                    ShowWindow(hwnd, SW_HIDE);
+                }
+                Show::NoActivate => {
+                    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                }
+                Show::Activate => {
+                    ShowWindow(hwnd, if IsIconic(hwnd) != 0 { SW_RESTORE } else { SW_SHOW });
+                }
+            }
+        }
+        if let Show::Activate = how {
+            let _ = w.set_focus();
+        }
     }
     #[cfg(not(windows))]
-    w.show().map_err(|e| e.to_string())?;
+    match how {
+        Show::Hide => w.hide().map_err(|e| e.to_string())?,
+        _ => w.show().map_err(|e| e.to_string())?,
+    }
     Ok(())
+}
+
+fn window_of(app: &tauri::AppHandle, label: &str) -> Result<tauri::Window, String> {
+    app.get_webview_window(label).map(|w| w.as_ref().window()).ok_or_else(|| "no such window".to_string())
+}
+
+/// Shows a window; `activate` = bring it to the front, else the game keeps the keyboard.
+#[tauri::command]
+fn window_show(app: tauri::AppHandle, label: String, activate: bool) -> Result<(), String> {
+    set_shown(&window_of(&app, &label)?, if activate { Show::Activate } else { Show::NoActivate })
+}
+
+#[tauri::command]
+fn window_hide(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    set_shown(&window_of(&app, &label)?, Show::Hide)
 }
 
 /// The overlay window is created only when it has to show (its webview costs ~60 MB) from its entry
@@ -76,10 +118,8 @@ fn main() {
     tauri::Builder::default()
         // a second launch (desktop shortcut, autostart) just brings the running app forward
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(w) = app.get_webview_window("dashboard") {
-                let _ = w.unminimize();
-                let _ = w.show();
-                let _ = w.set_focus();
+            if let Ok(w) = window_of(app, "dashboard") {
+                let _ = set_shown(&w, Show::Activate);
                 use tauri::Emitter;
                 let _ = w.emit_to("dashboard", "dashboard-shown", ());
             }
@@ -99,7 +139,8 @@ fn main() {
         .manage(logfile::Followers::default())
         .invoke_handler(tauri::generate_handler![
             app_quit,
-            show_inactive,
+            window_show,
+            window_hide,
             overlay_open,
             overlay_close,
             clipboard::clipboard_watch,
@@ -125,7 +166,7 @@ fn main() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "dashboard" && !QUITTING.load(Ordering::SeqCst) {
                     api.prevent_close();
-                    let _ = window.hide();
+                    let _ = set_shown(window, Show::Hide);
                     use tauri::Emitter;
                     let _ = window.emit_to("dashboard", "dashboard-hidden", ());
                 }

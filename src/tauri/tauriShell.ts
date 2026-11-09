@@ -67,7 +67,7 @@ export class TauriShell implements Shell {
     const monitors = await availableMonitors();
     const target = monitors.find((m) => monitorId(m) === cfg?.dashboardDisplayId) ?? monitors.find((m) => m.name !== primary?.name);
     if (target) await this.place(target, cfg?.dashboardFullscreen ?? false);
-    if (!hidden) await this.dashboard.show();
+    if (!hidden) await invoke("window_show", { label: "dashboard", activate: true });
 
     this.tray = await TrayIcon.new({
       id: "main",
@@ -149,13 +149,9 @@ export class TauriShell implements Shell {
     this.dashboardShown = true;
     this.catchUp();
     void (async () => {
-      if (await w.isMinimized()) await w.unminimize();
-      if (stealFocus) {
-        await w.show();
-        await w.setFocus();
-      } else if (!(await w.isVisible())) {
-        await invoke("show_inactive", { label: "dashboard" }); // the game keeps the keyboard
-      }
+      // shown/hidden only through window_show/window_hide (see src-tauri/src/main.rs: set_shown)
+      if (stealFocus) await invoke("window_show", { label: "dashboard", activate: true });
+      else if (!(await w.isVisible())) await invoke("window_show", { label: "dashboard", activate: false }); // the game keeps the keyboard
     })();
   }
 
@@ -163,11 +159,11 @@ export class TauriShell implements Shell {
     this.overlayVisible = visible;
     if (visible) {
       void this.ensureOverlay().then(() => {
-        if (this.overlayVisible && this.overlay) void invoke("show_inactive", { label: "overlay" });
+        if (this.overlayVisible && this.overlay) void invoke("window_show", { label: "overlay", activate: false });
       });
       return;
     }
-    void this.overlay?.hide();
+    if (this.overlay) void invoke("window_hide", { label: "overlay" });
   }
 
   /**

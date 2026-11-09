@@ -459,7 +459,7 @@ export function DashboardApp() {
         <div className="status">
           <span className={`dot ${state.logStatus}`} />
           {state.areaName ?? "nenhuma zona ainda"}
-          {state.characterName ? ` · ${state.characterName}` : ""}
+          {state.characterName ? ` · ${state.characterName}` : state.areaName ? " · personagem ainda não identificado" : ""}
           {state.characterLevel !== null ? ` · nível ${state.characterLevel}` : ""}
         </div>
         <div className="chips">

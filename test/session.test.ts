@@ -143,6 +143,26 @@ describe("Session", () => {
     expect(s.endgame).toBe(false);
   });
 
+  it("a login (character select) forgets the character; the area it logs into can tell who it is", () => {
+    const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
+    const s = new Session(lookups, routes, true);
+    s.applyLine(lvlOf("Camp", "Witch", 6, "12:00:00"));
+    s.applyLine(area("1_1_town"));
+    s.applyLine(login); // switch to an endgame character
+    expect(s.characterName).toBeNull();
+    expect(s.characterLevel).toBeNull();
+    s.applyLine(area("HideoutCourts"));
+    expect(s.characterName).toBeNull(); // nobody known was there
+    s.applyLine(lvlOf("Mapper", "Duelist", 95));
+    expect(s.characterName).toBe("Mapper");
+    s.applyLine(login); // back to the campaign character, who logs in where they left
+    s.applyLine(area("1_1_town"));
+    expect(s).toMatchObject({ characterName: "Camp", characterLevel: 6 });
+    s.applyLine(login); // and back to the mapper, in the hideout
+    s.applyLine(area("HideoutCourts"));
+    expect(s.characterName).toBe("Mapper");
+  });
+
   it("parses window focus lines", () => {
     const s = new Session(lookups, routes, true);
     expect(s.applyLine("2026/11/08 12:00:00 1 a [INFO Client 1] [WINDOW] Lost focus")).toBe(false);
