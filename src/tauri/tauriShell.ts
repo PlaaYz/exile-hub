@@ -129,7 +129,7 @@ export class TauriShell implements Shell {
       await invoke("overlay_open");
       const w = await Window.getByLabel("overlay");
       if (!w) throw new Error("overlay window missing");
-      await w.setIgnoreCursorEvents(!this.overlayInteractive);
+      await invoke("set_click_through", { label: "overlay", on: !this.overlayInteractive });
       await w.setPosition(await this.overlayStartPosition());
       // remember where the player drags it (saved once it stops moving)
       await w.onMoved(({ payload }) => {
@@ -188,7 +188,7 @@ export class TauriShell implements Shell {
 
   setOverlayInteractive(on: boolean): void {
     this.overlayInteractive = on;
-    void this.overlay?.setIgnoreCursorEvents(!on);
+    if (this.overlay) void invoke("set_click_through", { label: "overlay", on: !on });
   }
 
   async listDisplays(): Promise<DisplayInfo[]> {

@@ -7,6 +7,8 @@ import { RouteTracker } from "./tracker";
 /** First zone of every new character; entering it later in the route means a new run. */
 export const kStartArea = "1_1_1";
 const kStartTown = "1_1_town"; // Lioneye's Watch, next to the Twilight Strand
+/** A character is never in an area more than this many levels above its own (under-leveled campaign included). */
+export const kLevelSlack = 15;
 /** Non-campaign areas from this level up are endgame (maps start at 68). */
 export const kEndgameAreaLevel = 68;
 /** Route steps a run must be past before entering kStartArea counts as a new run. */
@@ -128,11 +130,32 @@ export class Session {
     this.loginPending = true;
   }
 
-  /** A character logs in where it logged out: if only one known character was in this area, it is them. */
-  private onFirstAreaAfterLogin(areaId: string, now: number): void {
+  /**
+   * A character logs in where it logged out: if exactly one known character left the game in this
+   * area (hideouts are shared by the whole account: no clue there) and its level fits, it is them.
+   */
+  private onFirstAreaAfterLogin(areaId: string, areaLevel: number, now: number): void {
     this.loginPending = false;
-    const here = Object.entries(this.characters).filter(([, p]) => p.lastArea === areaId);
+    if (isHideoutOrTown(areaId) && !this.lookups.areas[areaId]) return; // hideout / endgame town
+    const here = Object.entries(this.characters).filter(
+      ([, p]) => p.lastArea === areaId && (p.level === null || areaLevel <= p.level + kLevelSlack),
+    );
     if (here.length === 1) this.restore(here[0][0], here[0][1], now);
+  }
+
+  /**
+   * The known character cannot be in an area this far above its level: another character is
+   * playing (switched without a login line we saw). Forget who it is until a level-up says.
+   * Its saved progress is left alone: what happened since belongs to someone else.
+   */
+  private checkLevelFits(areaId: string, areaLevel: number): void {
+    const lvl = this.characterLevel;
+    if (!this.characterName || lvl === null || /^Hideout/.test(areaId)) return;
+    if (areaLevel > lvl + kLevelSlack) {
+      this.characterName = null;
+      this.className = null;
+      this.characterLevel = null;
+    }
   }
 
   private onLevelUp(ev: { character: string; className: string; level: number }, now: number): void {
@@ -177,7 +200,8 @@ export class Session {
           this.onNewRun(ts);
         }
         this.areaId = ev.areaId;
-        if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, ts);
+        if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, ev.areaLevel, ts);
+        this.checkLevelFits(ev.areaId, ev.areaLevel);
         const info = this.lookups.areas[ev.areaId];
         this.areaName = info?.name ?? ev.areaId;
         // hideouts/towns say nothing about which kind of character is playing
@@ -222,7 +246,9 @@ export class Session {
       if (ev.type === "area") {
         lastArea = ev.areaId;
         enteredName = null;
-        if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, now);
+        this.areaId = ev.areaId; // snapshots taken at a later login must see where the character was
+        if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, ev.areaLevel, now);
+        this.checkLevelFits(ev.areaId, ev.areaLevel);
       } else if (ev.type === "enter") enteredName = ev.name;
       else if (ev.type === "levelup") this.onLevelUp(ev, now);
       else if (ev.type === "login") this.onLogin(now);

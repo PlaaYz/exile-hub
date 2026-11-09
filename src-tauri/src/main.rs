@@ -80,6 +80,29 @@ fn window_hide(app: tauri::AppHandle, label: String) -> Result<(), String> {
     set_shown(&window_of(&app, &label)?, Show::Hide)
 }
 
+/// Mouse clicks pass through the window (overlay over the game) or not (F10: drag, buttons).
+/// Only WS_EX_TRANSPARENT changes: Tauri's own setIgnoreCursorEvents also toggles WS_EX_LAYERED,
+/// and the transparent overlay vanished when it came back clickable.
+#[tauri::command]
+fn set_click_through(app: tauri::AppHandle, label: String, on: bool) -> Result<(), String> {
+    let w = window_of(&app, &label)?;
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_LAYERED, WS_EX_TRANSPARENT};
+        let hwnd = w.hwnd().map_err(|e| e.to_string())?.0 as _;
+        unsafe {
+            let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            let next = if on { ex | (WS_EX_TRANSPARENT | WS_EX_LAYERED) as isize } else { ex & !(WS_EX_TRANSPARENT as isize) };
+            if next != ex {
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next);
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    w.set_ignore_cursor_events(on).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// The overlay window is created only when it has to show (its webview costs ~60 MB) from its entry
 /// in tauri.conf.json ("create": false), so it gets the same browser args as the dashboard.
 #[tauri::command]
@@ -141,6 +164,7 @@ fn main() {
             app_quit,
             window_show,
             window_hide,
+            set_click_through,
             overlay_open,
             overlay_close,
             clipboard::clipboard_watch,

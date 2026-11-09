@@ -158,9 +158,38 @@ describe("Session", () => {
     s.applyLine(login); // back to the campaign character, who logs in where they left
     s.applyLine(area("1_1_town"));
     expect(s).toMatchObject({ characterName: "Camp", characterLevel: 6 });
-    s.applyLine(login); // and back to the mapper, in the hideout
+    s.applyLine(login); // and back to the mapper, in the hideout: shared by the whole account, no guess
     s.applyLine(area("HideoutCourts"));
-    expect(s.characterName).toBe("Mapper");
+    expect(s.characterName).toBeNull();
+  });
+
+  it("never assumes a character in an area far above its level, nor guesses by a shared hideout", () => {
+    const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
+    const lvlArea = (id: string, level: number) =>
+      `2026/11/08 12:00:00 1 a [DEBUG Client 1] Generating level ${level} area "${id}" with seed 1`;
+    const s = new Session(lookups, routes, true);
+    s.applyLine(lvlOf("Low", "Duelist", 6));
+    s.applyLine(lvlArea("1_1_town", 13));
+    s.applyLine(lvlArea("1_5_town", 45)); // a level 6 character cannot be here: someone else
+    expect(s.characterName).toBeNull();
+
+    const t = new Session(lookups, routes, true);
+    t.applyLine(lvlOf("Low", "Duelist", 6));
+    t.applyLine(lvlArea("HideoutCourts", 60));
+    expect(t.characterName).toBe("Low"); // hideouts do not count
+    t.applyLine(login);
+    t.applyLine(lvlArea("HideoutCourts", 60)); // the hideout is shared by every character
+    expect(t.characterName).toBeNull();
+    t.applyLine(login);
+    t.applyLine(lvlArea("1_1_town", 13)); // not where Low logged out either
+    expect(t.characterName).toBeNull();
+  });
+
+  it("backfill remembers the area a character logged out from", () => {
+    const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
+    const s = new Session(lookups, routes, true);
+    s.backfill([lvlOf("A", "Witch", 8), area("1_1_2"), login, area("HideoutCourts"), login, area("1_1_2")]);
+    expect(s.characterName).toBe("A");
   });
 
   it("parses window focus lines", () => {
