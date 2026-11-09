@@ -194,6 +194,29 @@ Tauri (shipped since 0.3.0, 2026-11-09; the Electron build in src/main still com
   (1.8 s), overlay bridge. NOT yet: tray menu clicks, F9/F10, notifications, autostart, installer,
   signed updater, overlay over the real game.
 
+0.3.1-0.3.4 (2026-11-09):
+- Clipboard: Rust watches GetClipboardSequenceNumber (src-tauri/src/clipboard.rs) and only reads on change.
+- Overlay window ("create": false in tauri.conf) is created by overlay_open when the game starts
+  (Shell.gameRunningChanged) and destroyed 5 min after the game closes; its position is saved in
+  config.overlayPos (internal key) when dragged and restored if still on a monitor.
+- Dashboard: no React redraw while hidden in the tray (a never-shown --hidden window still reports
+  document "visible": TauriShell tracks dashboardShown; Rust emits "dashboard-shown" on 2nd launch).
+- Chat commands (owner approved, 2026-11-09: ONE chat line per key press, like Awakened PoE Trade):
+  core/chatCommands.ts, config.chatCommands (default F5 /hideout); keys registered only while the log
+  says the game is running+focused; src-tauri/src/chat.rs sends Enter, Ctrl+A, text, Enter with
+  SendInput only if the foreground exe starts with "PathOfExile". {last_whisper} = last "@From" sender
+  (LogEvent "whisper", the message text is never kept).
+- Endgame mode: Session.endgame = a map or a non-campaign area of level >= 68 (hideouts/towns neutral);
+  overlay shows maps only, campaign panel paused, gem advice idle.
+- Passive tree map (panel only, owner did not want it on the overlay): slimTree keeps x/y (PoB orbit
+  angle tables for 16/40 slots) and arcs; kTreeFormat=2 forces re-download of old caches;
+  compareTree.nextPath = 15 points chained notable to notable; geometry via getTreeLayout().
+- Challenges tab: GGG has no API for completed challenges -> ticked by hand, per patch, in
+  userData/challenges-progress.json. The list is data/challenges.json on GitHub main (fetched, 6 h
+  cache, bundled fallback): update it each league without an app release (3.30 list still empty).
+- Vendor search: linkSearchCounts(n, r, g, b) (free sockets as \S to fit 50 chars) + chromatic recipe.
+- Stash value: not possible (wealthyexile uses its own approved OAuth client; no public API).
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.
