@@ -590,7 +590,8 @@ export function DashboardApp() {
           {state.characterLevel !== null ? ` · nível ${state.characterLevel}` : ""}
         </div>
         <div className="chips">
-          {ALL_PANELS.filter((p) => p.id !== "diag" || state.config.showDiagTab).map((p) => (
+          {/* act timers only mean something in the campaign: no button for them in endgame */}
+          {ALL_PANELS.filter((p) => (p.id !== "diag" || state.config.showDiagTab) && (p.id !== "timers" || !state.endgame)).map((p) => (
             <button
               key={p.id}
               className={`chip${visible.includes(p.id) ? " on" : ""}`}
