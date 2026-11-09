@@ -67,10 +67,10 @@ export function SessionsPanelBody({ state }: { state: AppState }) {
           <thead>
             <tr>
               <th>Quando</th>
-              <th>Duração</th>
-              <th>Mapas</th>
-              <th>Bosses</th>
-              <th>Mortes</th>
+              <th className="num-cell">Duração</th>
+              <th className="num-cell">Mapas</th>
+              <th className="num-cell">Bosses</th>
+              <th className="num-cell">Mortes</th>
               <th>Personagens</th>
             </tr>
           </thead>

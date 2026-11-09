@@ -2,6 +2,7 @@
 // poe.ninja, the trade site (item listings, map searches) and the trade stat list.
 import type { DiagKind } from "../core/diag";
 import { farmItemNames } from "../core/farm";
+import type { EquippedItem } from "../core/itemCompare";
 import { mapModStatIds, mapTradeQuery, tradeSearchUrl, type MapTradeOptions } from "../core/mapTrade";
 import { NinjaClient, priceByName } from "../core/ninja";
 import { looksLikePob } from "../core/pob";
@@ -10,7 +11,7 @@ import { StatIndex, type TradeStatsData } from "../core/stats";
 import { TradeClient, defaultLeague, fetchLeagues, fetchStatic, fetchStats, staticIds, type StaticIds } from "../core/trade";
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
-import type { AppConfig, PriceSearchPatch, PriceView } from "../shared/types";
+import type { AppConfig, PriceRecent, PriceSearchPatch, PriceView } from "../shared/types";
 import { kClipboardPollMs, kLeagueRefreshMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
 import type { Platform } from "./platform";
 
@@ -20,7 +21,12 @@ export interface PriceContext {
   addDiag(kind: DiagKind, text: string): void;
   /** clipboard text that looks like a Path of Building code or link */
   onPobText(text: string): void;
+  /** what the imported PoB build wears (compare with my item) */
+  equipped(): readonly EquippedItem[];
 }
+
+/** Items kept in the "recent checks" list. */
+const kRecentChecks = 10;
 
 export class PriceService {
   readonly ninja: NinjaClient;
@@ -35,6 +41,9 @@ export class PriceService {
   private lastPriceDiag = "";
   /** items priced since the app started (session summaries): one entry per copy, best known value */
   readonly history: { ts: number; name: string; chaos: number | null }[] = [];
+  /** last checked items, newest first (with their text, to check them again) */
+  private recentChecks: (PriceRecent & { text: string; seq: number })[] = [];
+  private recentId = 0;
 
   constructor(
     private readonly platform: Platform,
@@ -48,6 +57,7 @@ export class PriceService {
       stats: () => this.loadStats(),
       staticIds: () => this.loadStatic(),
       onUpdate: (v) => this.onPrice(v),
+      equipped: () => this.ctx.equipped(),
     });
   }
 
@@ -210,6 +220,7 @@ export class PriceService {
     // only item text copied from the game and Path of Building codes/links are looked at
     const league = this.league();
     if (league && this.checker.check(text, league)) {
+      this.remember(text);
       const it = this.checker.view?.item;
       this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
       const hk = this.hotkey;
@@ -248,8 +259,35 @@ export class PriceService {
       const stack = v.item.stackSize && v.item.stackSize > 1 ? v.item.stackSize : 1;
       const chaos = v.ninja ? v.ninja.chaos * stack : v.trade?.medianChaos ?? null;
       this.history.push({ ts: v.at, name: v.item.name || v.item.baseType, chaos });
+      const r = this.recentChecks.find((x) => x.seq === v.seq);
+      if (r) r.chaos = chaos;
       if (this.history.length > 500) this.history.splice(0, this.history.length - 500);
     }
+    this.ctx.broadcast();
+  }
+
+  /** Puts the item just checked on top of the recent list (the same text moves up instead of repeating). */
+  private remember(text: string): void {
+    const v = this.checker.view;
+    if (!v) return;
+    this.recentChecks = this.recentChecks.filter((r) => r.text !== text);
+    this.recentChecks.unshift({ id: ++this.recentId, text, seq: v.seq, name: v.item.name || v.item.baseType, rarity: v.item.rarity, at: v.at, chaos: null });
+    this.recentChecks.length = Math.min(this.recentChecks.length, kRecentChecks);
+  }
+
+  get recent(): PriceRecent[] {
+    return this.recentChecks.map(({ id, name, rarity, at, chaos }) => ({ id, name, rarity, at, chaos }));
+  }
+
+  /** Checks a recent item again (fresh prices) without copying it in the game. */
+  recheck(id: number): void {
+    const r = this.recentChecks.find((x) => x.id === id);
+    const league = this.league();
+    if (!r || !league || !this.checker.check(r.text, league)) return;
+    r.seq = this.checker.view!.seq;
+    r.at = this.checker.view!.at;
+    r.chaos = null;
+    this.recentChecks = [r, ...this.recentChecks.filter((x) => x !== r)];
     this.ctx.broadcast();
   }
 

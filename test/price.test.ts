@@ -244,14 +244,17 @@ describe("PriceChecker", () => {
     ]);
     expect(v.unmatched).toEqual(["Some mod the trade site does not know"]);
     expect(t.bodies[0].query.stats[0].filters.map((f: any) => f.id)).toEqual(["pseudo.pseudo_total_elemental_resistance", "pseudo.pseudo_total_life"]);
+    // only 2 results: the same search with minimums 20% lower ("similar items") runs too
+    expect(t.bodies[1].query.stats[0].filters.map((f: any) => f.value.min)).toEqual([45, 48]);
+    expect(pc.view!.similar?.total).toBe(2);
 
     pc.research({
       mods: v.mods.map((m) => ({ statId: m.statId, enabled: m.statId === "explicit.life", min: m.statId === "explicit.life" ? 50 : m.min, max: m.statId === "explicit.life" ? 80 : null })),
-      filters: { ...v.filters, online: false },
+      filters: { ...v.filters, status: "any" as const },
     });
     await settle();
-    expect(t.bodies[1].query.stats[0].filters).toEqual([{ id: "explicit.life", value: { min: 50, max: 80 }, disabled: false }]);
-    expect(t.bodies[1].query.status).toEqual({ option: "any" });
+    expect(t.bodies[2].query.stats[0].filters).toEqual([{ id: "explicit.life", value: { min: 50, max: 80 }, disabled: false }]);
+    expect(t.bodies[2].query.status).toEqual({ option: "any" });
   });
 
   it("drops results of an item that was replaced by a newer copy", async () => {

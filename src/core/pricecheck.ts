@@ -2,6 +2,7 @@
 // No Electron here; main.ts wires the clipboard and broadcasts the view.
 import { parseItem, type ParsedItem } from "./item";
 import { defences, pseudoStats, weaponDps } from "./itemCalc";
+import { compareItem, type EquippedItem } from "./itemCompare";
 import type { NinjaClient } from "./ninja";
 import type { StatIndex } from "./stats";
 import {
@@ -44,7 +45,13 @@ export interface PriceCheckDeps {
   staticIds?: () => Promise<StaticIds | null>;
   onUpdate: (v: PriceView) => void;
   now?: () => number;
+  /** what the imported PoB build wears ("compare with my item"); empty / absent = no build */
+  equipped?: () => readonly EquippedItem[];
 }
+
+/** Fewer trade results than this: also search "similar items" (minimums 20% lower). */
+const kFewResults = 3;
+const kSimilarFactor = 0.8;
 
 /** On a weapon searched by DPS, only these lines start on (resistances, life... say little about its price). */
 const ATTACK_MOD = /Critical Strike|Damage|Attack|Accuracy|Socketed|Gems?\b|Leech|Projectile|Area of Effect/;
@@ -101,7 +108,14 @@ export class PriceChecker {
       bulkStatus: this.d.staticIds && (item.stackSize !== null || NO_TRADE_CLASSES.test(item.itemClass)) ? "loading" : "n/a",
       bulkError: null,
       bulk: null,
+      compare: null,
+      similar: null,
     };
+    const equipped = this.d.equipped?.() ?? [];
+    if (equipped.length) {
+      const cmp = compareItem(item, equipped);
+      view.compare = cmp.length ? cmp : null;
+    }
     this.current = { item, view, text, queryId: null, rest: [] };
     this.emit();
     void this.runNinja(seq, league, item);
@@ -118,7 +132,7 @@ export class PriceChecker {
       if (!want) return void this.patch(seq, { bulkStatus: "n/a" });
       const have = want === "divine" ? ["chaos"] : want === "chaos" ? ["divine"] : ["chaos", "divine"];
       const [res, rates] = await Promise.all([
-        this.d.trade.exchange(league, want, have, this.current?.view.filters.online ?? true),
+        this.d.trade.exchange(league, want, have, this.current?.view.filters.status ?? "securable"),
         this.d.ninja.currencyRates(league).catch(() => null),
       ]);
       const rate = (c: string) => (c === "chaos" ? 1 : rates?.get(c));
@@ -166,7 +180,7 @@ export class PriceChecker {
       const p = byId.get(m.statId);
       return p ? { ...m, enabled: p.enabled, min: p.min, max: p.max } : m;
     });
-    this.patch(cur.view.seq, { mods, filters: patch.filters, tradeStatus: "loading", tradeError: null });
+    this.patch(cur.view.seq, { mods, filters: patch.filters, tradeStatus: "loading", tradeError: null, similar: null });
     void this.runTrade(cur.view.seq, cur.view.league);
   }
 
@@ -259,8 +273,30 @@ export class PriceChecker {
         tradeStatus: "done",
         trade: { total: res.total, url: res.url, listings, medianChaos: median(chaos), more: res.rest.length },
       });
+      if (res.total < kFewResults) await this.runSimilar(seq, league, item, rates);
     } catch (e) {
       this.patch(seq, { tradeStatus: "error", tradeError: (e as Error).message });
+    }
+  }
+
+  /** Few results: the same search with every enabled minimum 20% lower, to still show a price idea. */
+  private async runSimilar(seq: number, league: string, item: ParsedItem, rates: Map<string, number> | null): Promise<void> {
+    const cur = this.current;
+    if (!cur || cur.view.seq !== seq) return;
+    const lower = (v: number | null) => (v === null ? null : v > 0 ? Math.floor(v * kSimilarFactor) : v);
+    const mods = cur.view.mods.map((m) => (m.enabled && m.min !== null ? { ...m, min: lower(m.min) } : m));
+    const f = cur.view.filters;
+    const lowerRange = <T extends { enabled: boolean; min: number | null } | null>(r: T): T => (r?.enabled ? { ...r, min: lower(r.min) } : r);
+    const filters = { ...f, pdps: lowerRange(f.pdps), edps: lowerRange(f.edps), dps: lowerRange(f.dps), armour: lowerRange(f.armour), evasion: lowerRange(f.evasion), es: lowerRange(f.es) };
+    const changed = mods.some((m, i) => m.min !== cur.view.mods[i].min) || JSON.stringify(filters) !== JSON.stringify(f);
+    if (!changed) return;
+    try {
+      const res = await this.d.trade.search(league, buildQuery(item, mods as StatFilter[], filters));
+      const listings = withChaos(res.listings, rates).slice(0, 5);
+      const chaos = listings.map((l) => l.chaos).filter((c): c is number => c !== null);
+      this.patch(seq, { similar: { total: res.total, url: res.url, listings, medianChaos: median(chaos) } });
+    } catch {
+      /* the main search already answered; similar items are a bonus */
     }
   }
 }

@@ -43,7 +43,7 @@ describe("bulk exchange", () => {
       return ok(exchangeBody);
     };
     const r = await new TradeClient(f, "test").exchange("Allflame", "divine", ["chaos"]);
-    expect(bodies[0]).toMatchObject({ query: { status: { option: "online" }, have: ["chaos"], want: ["divine"] }, engine: "new" });
+    expect(bodies[0]).toMatchObject({ query: { status: { option: "securable" }, have: ["chaos"], want: ["divine"] }, engine: "new" });
     expect(r.url).toBe("https://www.pathofexile.com/trade/exchange/Allflame/abc");
     expect(r.offers.map((o) => [o.pay.amount, o.get.amount, o.get.stock, o.status])).toEqual([
       [450, 3, 30, "online"],

@@ -1,6 +1,6 @@
 // Official trade API (www.pathofexile.com/api/trade): search + fetch, each behind its own
 // rate limiter fed by the X-Rate-Limit-* headers GGG sends back.
-import type { PriceFilters, PriceRange } from "../shared/types";
+import type { PriceFilters, PriceRange, SellerStatus, TradeStatus } from "../shared/types";
 import type { ParsedItem } from "./item";
 import type { Defences, WeaponDps } from "./itemCalc";
 import { RateLimiter } from "./ratelimit";
@@ -33,8 +33,8 @@ export interface TradeListing {
   /** seller account and the character they are on */
   seller: string;
   character: string | null;
-  /** online now / away (afk) / offline */
-  status: "online" | "afk" | "offline";
+  /** online now / away (afk) / offline / instant buyout */
+  status: SellerStatus;
 }
 
 export interface TradeSearchResult {
@@ -54,7 +54,7 @@ export interface ExchangeOffer {
   get: { amount: number; stock: number };
   seller: string;
   character: string | null;
-  status: "online" | "afk" | "offline";
+  status: SellerStatus;
   indexed: string;
 }
 
@@ -70,7 +70,7 @@ interface RawAccount {
   lastCharacterName?: string;
   online?: { status?: string } | null;
 }
-const statusOf = (a: RawAccount | undefined): TradeListing["status"] => (!a?.online ? "offline" : a.online.status === "afk" ? "afk" : "online");
+const statusOf = (a: RawAccount | undefined): SellerStatus => (!a?.online ? "offline" : a.online.status === "afk" ? "afk" : "online");
 
 const CATEGORY_BY_CLASS: Record<string, string> = {
   "Body Armours": "armour.chest",
@@ -148,7 +148,7 @@ export function defaultFilters(item: ParsedItem, dps: WeaponDps | null, def: Def
   const gem = /Gem/.test(item.rarity);
   const r = (enabled: boolean, min: number | null, max: number | null = null): PriceRange => ({ enabled, min, max });
   const f: PriceFilters = {
-    online: true,
+    status: "securable",
     baseType: false,
     itemLevel: item.itemLevel !== null && !gem ? r(item.rarity === "Normal" && item.itemLevel >= 82, item.itemLevel) : null,
     quality: item.quality > 0 ? r(gem, item.quality) : gem ? r(false, null) : null,
@@ -198,7 +198,7 @@ export function buildQuery(item: ParsedItem, stats: StatFilter[], f: PriceFilter
   const addRange = (group: string, key: string, r: PriceRange | null) => {
     if (r?.enabled && (r.min !== null || r.max !== null)) add(group, key, range(r.min, r.max));
   };
-  const query: Record<string, unknown> = { status: { option: f.online ? "online" : "any" } };
+  const query: Record<string, unknown> = { status: { option: f.status } };
 
   if (item.rarity === "Unique" && item.name) {
     query.name = item.name;
@@ -296,7 +296,7 @@ export class TradeClient {
       this.fetchLimiter,
       `${SITE}/api/trade/fetch/${ids.slice(0, kFetchBatch).join(",")}?query=${encodeURIComponent(queryId)}`,
     )) as {
-      result: ({ listing?: { indexed?: string; account?: RawAccount; price?: { amount?: number; currency?: string } } } | null)[];
+      result: ({ listing?: { method?: string; indexed?: string; account?: RawAccount; price?: { amount?: number; currency?: string } } } | null)[];
     };
     return f.result
       .map((r) => r?.listing)
@@ -307,7 +307,8 @@ export class TradeClient {
         indexed: l.indexed ?? "",
         seller: l.account?.name ?? "",
         character: l.account?.lastCharacterName ?? null,
-        status: statusOf(l.account),
+        // merchant tab listings ("psapi") are bought on the spot, the seller need not be online
+        status: l.method === "psapi" ? "instant" : statusOf(l.account),
       }));
   }
 
@@ -326,9 +327,9 @@ export class TradeClient {
    * Bulk exchange (currency, fragments, cards...): who sells `want` for any of `have`, cheapest
    * first. Ids are the trade site's static ids ("divine", "chaos"...).
    */
-  async exchange(league: string, want: string, have: string[], onlineOnly = true): Promise<ExchangeResult> {
+  async exchange(league: string, want: string, have: string[], status: TradeStatus = "securable"): Promise<ExchangeResult> {
     const body = {
-      query: { status: { option: onlineOnly ? "online" : "any" }, have, want: [want] },
+      query: { status: { option: status }, have, want: [want] },
       sort: { have: "asc" },
       engine: "new",
     };

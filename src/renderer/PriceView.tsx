@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { PriceFilters, PriceModFilter, PriceRange, PriceView } from "../shared/types";
+import type { PriceFilters, PriceModFilter, PriceRange, PriceRecent, PriceView, SellerStatus, TradeStatus } from "../shared/types";
 
 const CURRENCY_SHORT: Record<string, string> = { chaos: "c", divine: "div", exalted: "ex" };
 
@@ -174,9 +174,15 @@ function SearchEditor({ p }: { p: PriceView }) {
     <>
       <h3>Busca no trade</h3>
       <div className="search-flags">
-        <label className="check small">
-          <input type="checkbox" checked={f.online} onChange={(e) => setF({ ...f, online: e.target.checked })} />
-          só vendedores online
+        <label className="small">
+          venda:{" "}
+          <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as TradeStatus })}>
+            {(Object.keys(TRADE_STATUS_LABEL) as TradeStatus[]).map((s) => (
+              <option key={s} value={s}>
+                {TRADE_STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
         </label>
         {rareish && (
           <label className="check small">
@@ -238,7 +244,16 @@ function SearchEditor({ p }: { p: PriceView }) {
   );
 }
 
-const STATUS_LABEL = { online: "online", afk: "ausente", offline: "offline" };
+const STATUS_LABEL: Record<SellerStatus, string> = { online: "online", afk: "ausente", offline: "offline", instant: "compra instantânea" };
+
+/** The trade site's sale types, in its order (the search always starts at instant buyout). */
+const TRADE_STATUS_LABEL: Record<TradeStatus, string> = {
+  available: "Compra instantânea e pessoalmente",
+  securable: "Compra instantânea",
+  onlineleague: "Pessoalmente (online na liga)",
+  online: "Pessoalmente (online)",
+  any: "Qualquer",
+};
 
 /** Bulk exchange offers: price per unit, how many per trade, stock, seller. */
 function BulkTable({ p }: { p: PriceView }) {
@@ -381,13 +396,102 @@ function ModTiers({ p }: { p: PriceView }) {
   );
 }
 
-export function PricePanelBody({ p }: { p: PriceView | null }) {
+const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}`;
+
+/** The checked item against what the imported PoB build wears in the same slot. */
+function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
+  if (!p.compare) {
+    if (!hasBuild && (p.item.rarity === "Rare" || p.item.rarity === "Unique") && !/Gem|Jewel|Flask|Map/.test(p.item.itemClass)) {
+      return <p className="muted small">Importe seu build do Path of Building (copie o código) para comparar com o item que você usa.</p>;
+    }
+    return null;
+  }
+  return (
+    <>
+      <h3>Comparado ao seu item</h3>
+      {p.compare.map((c) => (
+        <div key={c.slot} className="compare">
+          <div className="small">
+            <b>{c.slot}</b> <span className="muted">· {c.name}</span>
+          </div>
+          {c.rows.length > 0 && (
+            <table className="farm-items compare-rows">
+              <tbody>
+                {c.rows.map((r) => {
+                  const d = r.candidate - r.equipped;
+                  return (
+                    <tr key={r.label}>
+                      <td>{r.label}</td>
+                      <td className="muted">{Math.round(r.equipped * 10) / 10}</td>
+                      <td>→ {Math.round(r.candidate * 10) / 10}</td>
+                      <td className={d > 0 ? "good-text" : d < 0 ? "warn-text" : "muted"}>{d === 0 ? "=" : signed(d)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+          {c.onlyCandidate.length > 0 && (
+            <div className="small">
+              <span className="good-text">só neste:</span> {c.onlyCandidate.join(" · ")}
+            </div>
+          )}
+          {c.onlyEquipped.length > 0 && (
+            <div className="small">
+              <span className="warn-text">você perde:</span> {c.onlyEquipped.join(" · ")}
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** Few results: what the same search finds with every minimum 20% lower. */
+function SimilarBlock({ p }: { p: PriceView }) {
+  const s = p.similar;
+  if (!s || !p.trade) return null;
+  return (
+    <div className="similar small">
+      <b>Poucos anúncios iguais.</b> Itens parecidos (mínimos 20% menores): {s.total} anúncios
+      {s.medianChaos !== null ? (
+        <>
+          , mediana <b>{fmtChaos(s.medianChaos, p.chaosPerDivine)}</b>
+        </>
+      ) : null}
+      {s.listings.length > 0 && <span className="muted"> · {s.listings.map((l) => fmtAmount(l.amount, l.currency)).join(", ")}</span>}
+    </div>
+  );
+}
+
+/** The last checked items: click to check one again without copying it in the game. */
+export function RecentChecks({ recent, current }: { recent: PriceRecent[]; current: number | null }) {
+  if (recent.length < 2) return null;
+  return (
+    <>
+      <h3>Buscas recentes</h3>
+      <div className="recent-checks">
+        {recent.map((r) => (
+          <button key={r.id} className={`small${r.at === current ? " active" : ""}`} title="Checar de novo" onClick={() => void window.hub.priceRecheck(r.id)}>
+            {r.name}
+            {r.chaos !== null ? <span className="muted"> · {fmtChaos(r.chaos, null)}</span> : null}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceView | null; recent?: PriceRecent[]; hasBuild?: boolean }) {
   if (!p) {
     return (
-      <p className="muted">
-        No jogo, passe o mouse sobre um item e aperte <b>Ctrl+D</b> (abre o preço ao lado do item) ou <b>Ctrl+C</b>{" "}
-        (o preço aparece aqui e no overlay).
-      </p>
+      <>
+        <p className="muted">
+          No jogo, passe o mouse sobre um item e aperte <b>Ctrl+D</b> (abre o preço ao lado do item) ou <b>Ctrl+C</b>{" "}
+          (o preço aparece aqui e no overlay).
+        </p>
+        <RecentChecks recent={recent} current={null} />
+      </>
     );
   }
   const cpd = p.chaosPerDivine;
@@ -400,7 +504,9 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
         {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""}
       </div>
       <PriceSummary p={p} />
+      <SimilarBlock p={p} />
       <CalcLine p={p} />
+      <CompareBlock p={p} hasBuild={hasBuild} />
       <ModTiers p={p} />
       {p.ninja && (
         <div className="muted small">
@@ -417,7 +523,7 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
                 <td>{fmtAmount(l.amount, l.currency)}</td>
                 <td className="muted">{l.chaos !== null && l.currency !== "chaos" ? `≈ ${fmtChaos(l.chaos, null)}` : ""}</td>
                 <td>
-                  <span className={`seller ${l.status}`} title={l.seller}>
+                  <span className={`seller ${l.status}`} title={`${l.seller} · ${STATUS_LABEL[l.status]}`}>
                     {l.character ?? l.seller}
                   </span>
                 </td>
@@ -434,6 +540,7 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
         </div>
       )}
       <SearchEditor p={p} />
+      <RecentChecks recent={recent} current={p.at} />
     </>
   );
 }

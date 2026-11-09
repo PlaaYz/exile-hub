@@ -252,6 +252,19 @@ Price check round 2 (0.3.8, 2026-11-09, goal: Awakened PoE Trade level):
 150 ms grace), not the page's "blur": dragging the title bar (Windows move loop) blurred the webview
 and closed it on every drag.
 
+0.3.11 (2026-11-09):
+- Trade search "venda" list = the trade site's status options (available / securable / onlineleague /
+  online / any, all checked live); every search starts at "securable" (instant buyout), bulk exchange
+  uses the same. Listings with method "psapi" = instant buyout (no online status) -> SellerStatus "instant".
+- core/itemCompare.ts: the PoB export's active ItemSet (parsePobEquipped; {range:x} rolls filled in,
+  {variant} by "Selected Variant", needs the "Implicits: N" line) -> PriceView.compare = pseudo totals
+  and mod lines vs the same slot (rings: Ring 1-3). No DPS/defences (PoB raw items have none).
+  Hub.equipped is re-read from build.json's code at start.
+- Fewer than 3 trade results -> PriceChecker.runSimilar: same search with mins 20% lower (PriceView.similar).
+- PriceService.recentChecks (10, with item text) -> state.priceRecent; HubApi.priceRecheck(id).
+- Welcome screen (config.welcomeDone), "Reportar problema" (copyDiagReport + GitHub new issue, the
+  player pastes; nothing is sent by the app). Numeric table headers right-aligned (th.num-cell).
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.

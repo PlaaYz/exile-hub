@@ -15,3 +15,5 @@ export function readJsonText<T>(text: string): T {
   return JSON.parse(text) as T;
 }
 export const kLeagueRefreshMs = 3600 * 1000; // league list re-read (new league on launch day)
+/** "Reportar problema" opens a new issue here (the player pastes the copied report). */
+export const kIssuesUrl = "https://github.com/PlaaYz/exile-hub/issues/new";

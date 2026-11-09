@@ -36,6 +36,10 @@ export interface HubApi {
   priceOpenTrade(): Promise<void>;
   /** the next 10 trade listings of the current search */
   priceMore(): Promise<void>;
+  /** check one of state.priceRecent again (fresh prices, no copying in the game) */
+  priceRecheck(id: number): Promise<void>;
+  /** copy the diagnostic report and open a new GitHub issue to paste it in */
+  reportProblem(): Promise<void>;
   farmPrices(): Promise<FarmPricesResult>;
   setStartWithWindows(on: boolean): Promise<void>;
   copyDiagReport(): Promise<void>;

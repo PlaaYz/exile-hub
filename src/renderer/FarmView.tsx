@@ -177,11 +177,11 @@ export function FarmPanelBody({ runs }: { runs: AppState["farmRuns"] }) {
         <thead>
           <tr>
             <th>Boss</th>
-            <th>Entrada</th>
-            <th>Drops (média)</th>
-            <th>Lucro/run</th>
-            <th>Lucro/h</th>
-            <th>Suas runs</th>
+            <th className="num-cell">Entrada</th>
+            <th className="num-cell">Drops (média)</th>
+            <th className="num-cell">Lucro/run</th>
+            <th className="num-cell">Lucro/h</th>
+            <th className="num-cell">Suas runs</th>
           </tr>
         </thead>
         <tbody>
@@ -228,7 +228,7 @@ export function FarmPanelBody({ runs }: { runs: AppState["farmRuns"] }) {
             <th>Entrada</th>
             <th>Qtd</th>
             <th>Preço (c)</th>
-            <th>Custo</th>
+            <th className="num-cell">Custo</th>
           </tr>
         </thead>
         <tbody>
@@ -249,7 +249,7 @@ export function FarmPanelBody({ runs }: { runs: AppState["farmRuns"] }) {
             <th>Drop</th>
             <th>Por 100 kills</th>
             <th>Preço (c)</th>
-            <th>Média/run</th>
+            <th className="num-cell">Média/run</th>
           </tr>
         </thead>
         <tbody>

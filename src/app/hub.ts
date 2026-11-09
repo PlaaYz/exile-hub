@@ -7,6 +7,7 @@ import { parseLine, type LogEvent } from "../core/clientLog";
 import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
 import type { GemInfo } from "../core/gemAvailability";
+import { importPobEquipped, type EquippedItem } from "../core/itemCompare";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { applyGemLevels, gemLevelTable, importPob, pobSourceUrl } from "../core/pob";
 import type { Lookups } from "../core/route";
@@ -21,7 +22,7 @@ const kMaxTradeCards = 6;
 const kTradeCardMs = 15 * 60 * 1000;
 import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
-import { kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
+import { kIssuesUrl, kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
 import { Diagnostics } from "./diagnostics";
 import { LogService } from "./logService";
 import type { Platform } from "./platform";
@@ -35,6 +36,8 @@ export class Hub {
   private gemLevels!: Map<string, number>;
   private session!: Session;
   private build: PobBuild | null = null;
+  /** what the build wears, for "compare with my item" */
+  private equipped: EquippedItem[] = [];
   private buildInfo: AppState["buildInfo"] = null;
   /** from "[WINDOW] Gained/Lost focus" in Client.txt; unknown at start = treat as focused */
   private gameFocused = true;
@@ -111,6 +114,7 @@ export class Hub {
           this.diag.add("clipboard", r.ok ? "build importado do clipboard" : `não era um build válido (${r.error})`),
         );
       },
+      equipped: () => this.equipped,
     });
     this.tree = new TreeService(p, broadcast);
     this.challenges = new ChallengeService(p);
@@ -190,6 +194,7 @@ export class Hub {
       if (!text) return;
       const saved = JSON.parse(text) as { code: string; at: number };
       this.build = applyGemLevels(importPob(saved.code), this.gemLevels);
+      this.equipped = equippedOf(saved.code);
       this.buildInfo = { source: "saved", at: saved.at };
     } catch {
       /* no saved build */
@@ -204,6 +209,7 @@ export class Hub {
         code = (await this.p.fetchText(url, kPobFetchTimeoutMs)).trim();
       }
       this.build = applyGemLevels(importPob(code), this.gemLevels);
+      this.equipped = equippedOf(code);
       const at = Date.now();
       this.buildInfo = { source, at };
       await this.p.writeUserFile("build.json", JSON.stringify({ code, at })).catch((e) => console.error("could not save build", e));
@@ -386,6 +392,9 @@ export class Hub {
 
   priceMore(): Promise<void> {
     return this.prices.more();
+  }
+  priceRecheck(id: number): void {
+    this.prices.recheck(id);
   }
 
   // ---- buy requests (whispers from the trade site) -------------------------------------------
@@ -574,6 +583,15 @@ export class Hub {
     this.p.shell.installUpdate();
   }
 
+  /**
+   * "Reportar problema": copies the diagnostic report and opens a new GitHub issue, where the player
+   * pastes it (nothing is sent by the app itself).
+   */
+  async reportProblem(): Promise<void> {
+    await this.copyDiagReport();
+    this.p.openExternal(`${kIssuesUrl}?title=${encodeURIComponent(`Problema na versão ${this.p.appVersion}`)}`);
+  }
+
   /** Copies a plain-text report (status + the whole event list) for the owner to paste in a chat. */
   async copyDiagReport(): Promise<void> {
     const s = this.state();
@@ -634,6 +652,7 @@ export class Hub {
       build: this.build,
       overlayInteractive: this.overlayInteractive,
       price: this.prices.view,
+      priceRecent: this.prices.recent,
       buildInfo: this.buildInfo,
       startWithWindows: this.startWithWindowsCache,
       farmRuns: this.farmRuns(),
@@ -709,4 +728,13 @@ function sessionView(s: GameSession, prices: { ts: number; name: string; chaos: 
     priceChecks: priced.length,
     bestPrice: best && best.chaos !== null ? { name: best.name, chaos: best.chaos } : null,
   };
+}
+
+/** The build's items; a build without items (or an odd export) just has nothing to compare with. */
+function equippedOf(code: string): EquippedItem[] {
+  try {
+    return importPobEquipped(code);
+  } catch {
+    return [];
+  }
 }

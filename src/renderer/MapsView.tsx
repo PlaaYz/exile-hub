@@ -143,9 +143,9 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
         <thead>
           <tr>
             <th>Mapa</th>
-            <th>Vezes</th>
-            <th>Tempo médio</th>
-            <th>Mortes/mapa</th>
+            <th className="num-cell">Vezes</th>
+            <th className="num-cell">Tempo médio</th>
+            <th className="num-cell">Mortes/mapa</th>
           </tr>
         </thead>
         <tbody>

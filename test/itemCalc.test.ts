@@ -89,9 +89,16 @@ describe("item calculations", () => {
     expect(coveredByCalc("100% increased Armour and Energy Shield", fc)).toBe(true);
   });
 
+  it("searches start at instant buyout", () => {
+    const item = parseItem(chest)!;
+    const f = defaultFilters(item, null, defences(item));
+    expect(f.status).toBe("securable");
+    expect((buildQuery(item, [], f) as any).query.status).toEqual({ option: "securable" });
+  });
+
   it("filters the player turns on/off reach the query", () => {
     const item = parseItem(chest)!;
-    const f = { ...defaultFilters(item, null, defences(item)), online: false, baseType: true, itemLevel: { enabled: true, min: 84, max: null } };
+    const f = { ...defaultFilters(item, null, defences(item)), status: "any" as const, baseType: true, itemLevel: { enabled: true, min: 84, max: null } };
     const q = buildQuery(item, [], f) as any;
     expect(q.query.status).toEqual({ option: "any" });
     expect(q.query.type).toBe("Astral Plate");

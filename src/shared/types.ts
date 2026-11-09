@@ -3,6 +3,7 @@
 // your own copy if you have one.
 
 import type { DiagEntry } from "../core/diag";
+import type { ItemComparison } from "../core/itemCompare";
 export interface SessionView {
   start: number;
   end: number | null;
@@ -118,10 +119,19 @@ export interface PriceRange {
   max: number | null;
 }
 
+/**
+ * The trade site's sale type filter: instant buyout (merchant tabs), instant buyout or in person,
+ * in person with the seller online in the league / online anywhere, or any.
+ */
+export type TradeStatus = "securable" | "available" | "onlineleague" | "online" | "any";
+
 /** Everything about the trade search besides the mods; null = does not apply to this item. */
+/** online / away / offline; "instant" = instant buyout listing (no seller needed) */
+export type SellerStatus = "online" | "afk" | "offline" | "instant";
+
 export interface PriceFilters {
-  /** only sellers online now */
-  online: boolean;
+  /** sale type / seller status (the search always starts at instant buyout) */
+  status: TradeStatus;
   /** rares/magic: only this base type (else the whole category, e.g. any helmet) */
   baseType: boolean;
   itemLevel: PriceRange | null;
@@ -153,7 +163,7 @@ export interface PriceListing {
   indexed: string;
   seller: string;
   character: string | null;
-  status: "online" | "afk" | "offline";
+  status: SellerStatus;
 }
 
 /** One bulk exchange offer, converted to chaos per unit. */
@@ -163,7 +173,7 @@ export interface PriceBulkOffer {
   get: { amount: number; stock: number };
   seller: string;
   character: string | null;
-  status: "online" | "afk" | "offline";
+  status: SellerStatus;
 }
 
 export interface PriceView {
@@ -222,6 +232,22 @@ export interface PriceView {
       esQ20: number | null;
     } | null;
   };
+  /** against what the imported PoB build wears in that slot; null = no build or no matching slot */
+  compare: ItemComparison[] | null;
+  /**
+   * Few results: the same search with every minimum 20% lower ("similar items"), to still give a
+   * price idea. null = not needed (or not run yet).
+   */
+  similar: { total: number; url: string; medianChaos: number | null; listings: PriceListing[] } | null;
+}
+
+/** A recently checked item (price history: check it again without copying it). */
+export interface PriceRecent {
+  id: number;
+  name: string;
+  rarity: string;
+  at: number;
+  chaos: number | null;
 }
 
 // ---- app ----------------------------------------------------------------------
@@ -246,6 +272,8 @@ export interface AppConfig {
   tradeAlerts: boolean;
   /** the Diagnóstico tab (hidden by default: it is for reporting problems) */
   showDiagTab: boolean;
+  /** the welcome screen (first start) was closed */
+  welcomeDone: boolean;
   /** where the player left the overlay (physical pixels); null = top-left of the primary monitor */
   overlayPos: { x: number; y: number } | null;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */
@@ -384,6 +412,8 @@ export interface AppState {
   buildInfo: { source: "manual" | "clipboard" | "saved"; at: number } | null;
   overlayInteractive: boolean;
   price: PriceView | null;
+  /** last items price checked, newest first (open one again from the list) */
+  priceRecent: PriceRecent[];
   /** league actually used for prices (config.league or the detected challenge league) */
   league: string | null;
   leagues: string[];

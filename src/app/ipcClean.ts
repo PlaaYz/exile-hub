@@ -2,7 +2,9 @@
 import { cleanChatCommands, DEFAULT_CHAT_COMMANDS, isValidKey, normaliseKey } from "../core/chatCommands";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { MAP_MODS } from "../core/searchRegex";
-import type { AppConfig, PriceFilters, PriceRange, PriceSearchPatch } from "../shared/types";
+import type { AppConfig, PriceFilters, PriceRange, PriceSearchPatch, TradeStatus } from "../shared/types";
+
+const TRADE_STATUSES: readonly string[] = ["securable", "available", "onlineleague", "online", "any"] satisfies TradeStatus[];
 
 export const DEFAULT_CONFIG: AppConfig = {
   clientLogPath: null,
@@ -19,6 +21,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   chatCommands: DEFAULT_CHAT_COMMANDS,
   overlayPos: null,
   showDiagTab: false,
+  welcomeDone: false,
   tradeAlerts: true,
 };
 
@@ -43,6 +46,7 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   chatCommands: "chat-commands",
   overlayPos: "internal",
   showDiagTab: "boolean",
+  welcomeDone: "boolean",
   tradeAlerts: "boolean",
 };
 
@@ -92,7 +96,7 @@ export function cleanSearchPatch(patch: unknown): PriceSearchPatch | null {
   const f = p.filters as Record<string, unknown>;
   const corrupted = f.corrupted === "yes" || f.corrupted === "no" ? f.corrupted : "any";
   const filters: PriceFilters = {
-    online: f.online !== false,
+    status: TRADE_STATUSES.includes(f.status as string) ? (f.status as TradeStatus) : "securable",
     baseType: f.baseType === true,
     itemLevel: cleanRange(f.itemLevel),
     quality: cleanRange(f.quality),

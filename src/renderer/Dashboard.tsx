@@ -139,7 +139,7 @@ function PricePanel({ state }: { state: AppState }) {
         <div className="warn">Price check desligado nas configurações.</div>
       )}
       {state.config.priceCheckEnabled && !state.league && <div className="warn">Carregando ligas…</div>}
-      <PricePanelBody p={state.price} />
+      <PricePanelBody p={state.price} recent={state.priceRecent} hasBuild={!!state.build} />
     </PanelBox>
   );
 }
@@ -435,6 +435,12 @@ function SettingsPanel({ state }: { state: AppState }) {
         />
         Mostrar a aba Diagnóstico (o que o app entendeu do log, para relatar problemas)
       </label>
+      <div className="row buttons">
+        <button onClick={() => void window.hub.setConfig({ welcomeDone: false })}>Rever a introdução</button>
+        <button onClick={() => void window.hub.reportProblem()} title="Copia o relatório de diagnóstico e abre o GitHub para você colar">
+          Reportar problema
+        </button>
+      </div>
 
       <h3>Windows</h3>
       <label className="check">
@@ -480,6 +486,78 @@ function SettingsPanel({ state }: { state: AppState }) {
 
       <ChatCommandsSettings state={state} />
     </PanelBox>
+  );
+}
+
+/** First start: find Client.txt, then what the keys do. Shown again from Configurações. */
+function Welcome({ state }: { state: AppState }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const done = () => void window.hub.setConfig({ welcomeDone: true });
+  const logOk = state.logStatus === "watching" || state.logStatus === "waiting";
+  return (
+    <div className="welcome-backdrop">
+      <div className="welcome">
+        <h2>Bem-vindo ao Exile Hub</h2>
+        <p className="muted">O app lê o log do jogo (Client.txt) e entende sozinho onde você está. Três passos rápidos:</p>
+
+        <h3>1. Log do jogo</h3>
+        {logOk ? (
+          <div>
+            <span className="good-text">✓ encontrado</span> <span className="path">{state.config.clientLogPath}</span>
+          </div>
+        ) : (
+          <>
+            <div className="muted small">Fica na pasta do Path of Exile, em logs\Client.txt.</div>
+            <div className="row buttons">
+              <button
+                onClick={async () => {
+                  const p = await window.hub.detectLog();
+                  setMsg(p ? null : "não encontrei nos lugares de costume: escolha o arquivo");
+                }}
+              >
+                Detectar automaticamente
+              </button>
+              <button onClick={() => void window.hub.pickLog()}>Escolher arquivo…</button>
+            </div>
+            {msg && <div className="warn-text small">{msg}</div>}
+          </>
+        )}
+
+        <h3>2. Atalhos no jogo</h3>
+        <table className="farm-items">
+          <tbody>
+            <tr>
+              <td><b>Ctrl+D</b></td>
+              <td>com o mouse sobre um item: preço ao lado do item (Ctrl+C também funciona)</td>
+            </tr>
+            <tr>
+              <td><b>F9</b></td>
+              <td>mostra / esconde o overlay</td>
+            </tr>
+            <tr>
+              <td><b>F10</b></td>
+              <td>deixa o overlay clicável para arrastar (aperte de novo para voltar)</td>
+            </tr>
+            <tr>
+              <td><b>F5</b></td>
+              <td>vai para o hideout (outros comandos em Configurações)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>3. Seu build (opcional)</h3>
+        <p className="small">
+          Copie o código ou o link (pobb.in, pastebin) do Path of Building: o app importa sozinho, mostra as gemas e a árvore e
+          compara itens do price check com o que você usa.
+        </p>
+
+        <div className="row buttons">
+          <button className="primary" onClick={done}>
+            Começar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -540,8 +618,12 @@ export function DashboardApp() {
         {visible.includes("settings") && <SettingsPanel state={state} />}
         {state.config.showDiagTab && visible.includes("diag") && <DiagPanel state={state} />}
       </main>
+      {!state.config.welcomeDone && <Welcome state={state} />}
       <footer className="legal">
         <UpdateBadge u={state.update} />
+        <button className="link small" onClick={() => void window.hub.reportProblem()} title="Copia o relatório de diagnóstico e abre o GitHub para você colar">
+          Reportar problema
+        </button>{" "}
         Exile Hub é um projeto independente. This product isn't affiliated with or endorsed by Grinding Gear Games in
         any way.
       </footer>

@@ -125,6 +125,7 @@ textarea { resize: vertical; font-family: Consolas, monospace; font-size: 12px; 
 .farm-rank tr.neg .profit { color: var(--kill); }
 .farm-rank tr:not(.neg) .profit { color: #3fb950; }
 .num-cell { text-align: right; white-space: nowrap; }
+.farm-rank th.num-cell, .farm-items th.num-cell { text-align: right; }
 .num {
   width: 90px; background: #0b0e13; color: var(--text); border: 1px solid var(--border);
   border-radius: 6px; padding: 3px 6px; font: inherit;
@@ -274,6 +275,7 @@ body.mode-price { background: #0e1116; }
 .seller.online::before { color: #6cc46c; }
 .seller.afk::before { color: #e0c060; }
 .seller.offline::before { color: #6b7380; }
+.seller.instant::before { content: '⚡'; color: #e8b84a; }
 
 .listings tr.bait { opacity: 0.55; }
 
@@ -297,3 +299,19 @@ body.mode-trades { background: transparent; }
 .trade-price { color: #fff; font-weight: 600; }
 .trade-buttons { display: flex; gap: 4px; margin-top: auto; }
 .trade-buttons button { flex: 1; font-size: 12px; padding: 3px 0; }
+
+/* price check: compare with my item, similar items, recent checks */
+.good-text { color: #6cc46c; }
+.compare { margin: 4px 0 8px; }
+.compare-rows td:nth-child(n + 2) { text-align: right; white-space: nowrap; padding-left: 8px; }
+.similar { margin: 6px 0; padding: 6px 8px; border: 1px dashed var(--border); border-radius: 6px; }
+.recent-checks { display: flex; flex-wrap: wrap; gap: 4px; }
+.recent-checks button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-checks button.active { border-color: #4b6a9b; }
+
+/* welcome screen (first start) */
+.welcome-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.welcome { background: var(--panel, #161b22); border: 1px solid var(--accent); border-radius: 10px; padding: 18px 22px; max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; }
+.welcome h2 { margin-top: 0; color: var(--accent); }
+.welcome td:first-child { white-space: nowrap; padding-right: 10px; }
+button.link { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
