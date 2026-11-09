@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAP_MODS, atLeast, gemColors, kSearchMax, linkSearch, mapSearch, movementSearch, uniqueFragment } from "../src/core/searchRegex";
+import { MAP_MODS, atLeast, chromaticSearch, gemColors, kSearchMax, linkSearch, linkSearchCounts, mapSearch, movementSearch, uniqueFragment } from "../src/core/searchRegex";
 
 describe("map search", () => {
   it("every mod gets a fragment unique to it", () => {
@@ -80,5 +80,26 @@ describe("vendor searches", () => {
   it("movement speed boots", () => {
     const re = new RegExp(movementSearch().text.replace(/"/g, ""), "i");
     expect(re.test("10% increased Movement Speed")).toBe(true);
+  });
+});
+
+describe("generic vendor link search", () => {
+  it("any N-link when no color is asked", () => {
+    expect(linkSearchCounts(4, 0, 0, 0).text).toBe('"([rgbw]-){3}[rgbw]"');
+  });
+  it("colors with free sockets, white counts as any", () => {
+    const s = linkSearchCounts(3, 2, 0, 0);
+    expect(s.ok).toBe(true);
+    const re = new RegExp(s.text.slice(1, -1));
+    expect(re.test("r-r-b")).toBe(true);
+    expect(re.test("w-r-g")).toBe(true);
+    expect(re.test("r-g-b")).toBe(false);
+  });
+  it("chromatic recipe fits and matches any order", () => {
+    const s = chromaticSearch();
+    expect(s.length).toBeLessThanOrEqual(kSearchMax);
+    const re = new RegExp(s.text.slice(1, -1));
+    expect(re.test("b-r-g")).toBe(true);
+    expect(re.test("r-r-g")).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ import type { LogEvent } from "./clientLog";
 import { isHideoutOrTown, isMapArea, mapTier } from "./maps";
 import { isCharacterPassiveId } from "./passives";
 
-export type DiagKind = "zona" | "personagem" | "jogo" | "passivo" | "mapa" | "boss" | "overlay" | "clipboard" | "preço" | "app";
+export type DiagKind = "zona" | "personagem" | "jogo" | "passivo" | "mapa" | "boss" | "overlay" | "clipboard" | "preço" | "comando" | "app";
 
 export interface DiagEntry {
   ts: number;
@@ -52,6 +52,8 @@ export function describeEvent(ev: LogEvent, campaign: (id: string) => CampaignAr
       return { kind: "passivo", text: `${ev.allocated ? "alocado" : "removido"}: ${ev.name}` };
     case "npc":
       return { kind: "mapa", text: `mecânica: ${ev.mechanic} (${ev.speaker} falou)` };
+    case "whisper":
+      return null; // private: only the sender's name is kept, for "/invite {last_whisper}"
   }
 }
 

@@ -3,6 +3,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
+import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { fetch as httpFetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LogFollower, Platform } from "../app/platform";
@@ -137,6 +138,30 @@ export class TauriPlatform implements Platform {
       stopped = true;
       void invoke("clipboard_unwatch");
     };
+  }
+  private commandKeys: string[] = [];
+  private keyChain: Promise<void> = Promise.resolve();
+  /**
+   * Global shortcuts for chat commands (replaces the previous set; F9/F10 are separate). Calls are
+   * queued: alt-tab flips focus quickly and register/unregister must not interleave.
+   */
+  setCommandKeys(keys: string[], onPress: (key: string) => void): Promise<void> {
+    const run = async () => {
+      if (this.commandKeys.length) await unregister(this.commandKeys).catch(() => {});
+      this.commandKeys = [];
+      for (const key of keys) {
+        await register(key, (e) => {
+          if (e.state === "Pressed") onPress(key);
+        });
+        this.commandKeys.push(key);
+      }
+    };
+    const p = this.keyChain.then(run);
+    this.keyChain = p.catch(() => {});
+    return p;
+  }
+  sendChat(text: string): Promise<void> {
+    return invoke("send_chat", { text });
   }
   writeClipboard(text: string): Promise<void> {
     return writeText(text);

@@ -116,7 +116,7 @@ export class GemAdviceService {
       if (this.state.status !== "waiting") this.set({ status: "waiting", message: "aguardando o personagem subir de nível" });
       return;
     }
-    if (level > kGemAdviceMaxLevel) {
+    if (level > kGemAdviceMaxLevel || session.endgame) {
       this.idle();
       if (this.state.status !== "not-campaign") {
         this.set({ status: "not-campaign", message: `só na campanha (até o nível ${kGemAdviceMaxLevel})`, level, act });

@@ -92,6 +92,12 @@ export interface Platform {
   writeClipboard(text: string): Promise<void>;
   openExternal(url: string): void;
 
+  // ---- chat commands (optional: only builds that can send input to the game) ----------------
+  /** Registers these keys globally (replacing the previous set); [] unregisters them all. */
+  setCommandKeys?(keys: string[], onPress: (key: string) => void): Promise<void>;
+  /** Types one line in the game's chat (Enter, text, Enter); fails unless the game window is in front. */
+  sendChat?(text: string): Promise<void>;
+
   // ---- engines / windows --------------------------------------------------------------------
   readonly pob: PobEngineApi;
   readonly shell: Shell;

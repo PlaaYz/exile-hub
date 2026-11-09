@@ -202,11 +202,28 @@ function permutations(xs: string[]): string[][] {
 export function linkSearch(colors: string[]): SearchString {
   const n = colors.length;
   if (n < 2) return finish([], []);
-  const uniq = [...new Set(permutations(colors).map((p) => p.map((c) => `[${c}w]`).join("-")))];
+  const anyLink = `"([rgbw]-){${n - 1}}[rgbw]"`;
+  const label = colors.map((c) => (c === "x" ? "?" : c)).join("").toUpperCase();
+  // "x" = any color: no constraint, so a plain N-link search is exact
+  if (colors.every((c) => c === "x")) return finish([anyLink], [`qualquer item com ${n} links`]);
+  // a free socket as \S (2 chars instead of 6) keeps more combinations inside the 50-char box;
+  // the fixed colors and the dashes still pin it to a socket string
+  const cls = (c: string) => (c === "x" ? "\\S" : `[${c}w]`);
+  const uniq = [...new Set(permutations(colors).map((p) => p.map(cls).join("-")))];
   const exact = `"${uniq.join("|")}"`;
-  const label = colors.join("").toUpperCase();
-  if (exact.length <= kSearchMax) return finish([exact], [`${n} sockets ligados nas cores ${label} (branco serve)`]);
-  return finish([`"([rgbw]-){${n - 1}}[rgbw]"`], [`qualquer item com ${n} links (as cores ${label} não cabem nos 50 caracteres)`]);
+  if (exact.length <= kSearchMax) return finish([exact], [`${n} sockets ligados com ${label} (branco serve, ? = qualquer cor)`]);
+  return finish([anyLink], [`qualquer item com ${n} links (as cores ${label} não cabem nos 50 caracteres)`]);
+}
+
+/** n linked sockets with at least r red, g green, b blue (the rest any color). */
+export function linkSearchCounts(n: number, r: number, g: number, b: number): SearchString {
+  const fixed = [...Array(r).fill("r"), ...Array(g).fill("g"), ...Array(b).fill("b")].slice(0, n);
+  return linkSearch([...fixed, ...Array(Math.max(0, n - fixed.length)).fill("x")]);
+}
+
+/** Chromatic orb recipe: one red, one green and one blue socket linked, in any order. */
+export function chromaticSearch(): SearchString {
+  return finish([`"r-g-b|r-b-g|g-r-b|g-b-r|b-r-g|b-g-r"`], ["vermelho, verde e azul ligados (receita de Chromatic Orb)"]);
 }
 
 /** Movement speed boots at a vendor: "10% increased Movement Speed". */

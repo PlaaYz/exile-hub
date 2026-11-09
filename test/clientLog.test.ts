@@ -29,9 +29,10 @@ describe("parseLine", () => {
     expect(
       parseLine("2026/11/08 12:00:00 1 a [INFO Client 1234] #Troll: x (Witch) is now level 100"),
     ).toBeNull();
+    // a whisper that quotes a log line is only a whisper
     expect(
       parseLine('2026/11/08 12:00:00 1 a [INFO Client 1234] @From Troll: Generating level 1 area "1_1_1" with seed 1'),
-    ).toBeNull();
+    ).toEqual({ type: "whisper", from: "Troll", ts: new Date(2026, 10, 8, 12, 0, 0).getTime() });
   });
 
   it("parses window focus changes", () => {

@@ -2,6 +2,7 @@
 // state the windows show. The platform (Platform + Shell) provides files, clipboard, HTTP, the PoB
 // engine, windows and the tray.
 import { measuredMinutes } from "../core/bossRuns";
+import { cleanChatCommands, expandCommand } from "../core/chatCommands";
 import { parseLine, type LogEvent } from "../core/clientLog";
 import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
@@ -37,6 +38,10 @@ export class Hub {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private overlayInteractive = false;
   private startWithWindowsCache = false;
+  /** last player who whispered you (Client.txt), for "/invite {last_whisper}" */
+  private lastWhisper: string | null = null;
+  /** command keys registered now, joined (change detection) */
+  private commandKeys = "";
   private ready = false;
 
   readonly diag = new Diagnostics();
@@ -143,6 +148,7 @@ export class Hub {
     if (patch.overlayEnabled !== undefined || patch.overlayHideUnfocused !== undefined) this.applyOverlayVisibility();
     if (patch.priceCheckEnabled !== undefined) void this.prices.applyClipboardWatch();
     if (patch.gemAdviceEnabled !== undefined) this.gems.maybeAdvise(true);
+    if (patch.chatCommandsEnabled !== undefined || patch.chatCommands !== undefined) this.applyCommandKeys();
     this.updateTray();
     this.broadcast();
   }
@@ -228,18 +234,22 @@ export class Hub {
     // learn where the player is from the end of the log
     this.session.backfill(tail);
     // is the game focused right now? (last focus line; none = game not started yet)
-    for (let i = tail.length - 1; i >= 0; i--) {
+    let focusSeen = false;
+    for (let i = tail.length - 1; i >= 0 && !(focusSeen && this.lastWhisper); i--) {
       const ev = parseLine(tail[i]);
-      if (ev?.type === "focus") {
+      if (ev?.type === "focus" && !focusSeen) {
+        focusSeen = true;
         this.gameFocused = ev.focused;
         // the app started while the game was already running: no "open the dashboard" later
         this.gameRunning = !ev.closing;
-        break;
+      } else if (ev?.type === "whisper" && !this.lastWhisper) {
+        this.lastWhisper = ev.from;
       }
     }
     this.scheduleSave();
     this.gems.maybeAdvise(); // the log tail may have a newer character than the saved progress
     this.applyOverlayVisibility();
+    this.applyCommandKeys();
   }
 
   private onScanDone(lastLevelUp: LogEvent | null): void {
@@ -258,6 +268,11 @@ export class Hub {
       this.gameFocused = ev.focused;
       this.onGameFocus(ev);
       this.applyOverlayVisibility();
+      this.applyCommandKeys();
+      return;
+    }
+    if (ev.type === "whisper") {
+      this.lastWhisper = ev.from;
       return;
     }
     const s = this.session;
@@ -306,6 +321,44 @@ export class Hub {
     parts.push(`${v.deaths} morte${v.deaths === 1 ? "" : "s"}`);
     this.p.shell.notify("Sessão encerrada", parts.join(" · "));
     this.diag.add("jogo", `sessão encerrada: ${parts.join(" · ")}`);
+  }
+
+  // ---- chat commands (F5 -> /hideout) -------------------------------------------------------
+
+  /**
+   * The command keys are registered only while the game has focus (from Client.txt), so F5 & co.
+   * keep working in other programs; the platform also checks the game window is in front.
+   */
+  private applyCommandKeys(): void {
+    const p = this.p;
+    if (!this.ready || !p.setCommandKeys || !p.sendChat) return;
+    const on = this.config.chatCommandsEnabled && this.gameRunning && this.gameFocused;
+    const keys = on ? (cleanChatCommands(this.config.chatCommands) ?? []).map((c) => c.key) : [];
+    const sig = keys.join(",");
+    if (sig === this.commandKeys) return;
+    this.commandKeys = sig;
+    p.setCommandKeys(keys, (key) => void this.runCommand(key)).catch((e: unknown) => {
+      this.commandKeys = "";
+      this.diag.add("comando", `não consegui registrar os atalhos: ${e instanceof Error ? e.message : String(e)}`);
+    });
+  }
+
+  /** One key press = one chat line. */
+  private async runCommand(key: string): Promise<void> {
+    const cmd = (cleanChatCommands(this.config.chatCommands) ?? []).find((c) => c.key === key);
+    if (!cmd || !this.p.sendChat) return;
+    const text = expandCommand(cmd.text, this.lastWhisper);
+    if (!text) {
+      this.diag.add("comando", `${key}: ninguém te sussurrou ainda, comando ignorado`);
+    } else {
+      try {
+        await this.p.sendChat(text);
+        this.diag.add("comando", `${key}: ${text}`);
+      } catch (e) {
+        this.diag.add("comando", `${key} não enviado: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    this.broadcast();
   }
 
   // ---- overlay / tray ----------------------------------------------------------------------
@@ -492,6 +545,12 @@ export class Hub {
           .map((s) => sessionView(s, this.prices.history)),
       },
       buildLinks: this.buildLinks(),
+      endgame: this.session.endgame,
+      chat: {
+        supported: !!this.p.setCommandKeys && !!this.p.sendChat,
+        active: this.commandKeys !== "",
+        lastWhisper: this.lastWhisper,
+      },
       league: this.prices.league(),
       leagues: this.prices.leagues,
     };

@@ -125,6 +125,24 @@ describe("Session", () => {
     expect(t.tracker.cursor).toBeGreaterThan(s.tracker.cursor);
   });
 
+  it("switches to endgame in maps / high-level areas and back in a campaign zone", () => {
+    const s = new Session(lookups, routes, true);
+    const lvlArea = (id: string, level: number) =>
+      `2026/11/08 12:00:00 1 a [DEBUG Client 1] Generating level ${level} area "${id}" with seed 7`;
+    s.applyLine(area("1_1_2"));
+    expect(s.endgame).toBe(false);
+    s.applyLine(lvlArea("HideoutCourts", 70)); // hideouts tell nothing
+    expect(s.endgame).toBe(false);
+    s.applyLine(lvlArea("MapWorldsCitySquare", 83));
+    expect(s.endgame).toBe(true);
+    s.applyLine(lvlArea("HideoutCourts", 1));
+    expect(s.endgame).toBe(true);
+    s.applyLine(lvlArea("SomeEndgameArea", 75)); // e.g. Eternal Labyrinth
+    expect(s.endgame).toBe(true);
+    s.applyLine(area("1_1_town"));
+    expect(s.endgame).toBe(false);
+  });
+
   it("parses window focus lines", () => {
     const s = new Session(lookups, routes, true);
     expect(s.applyLine("2026/11/08 12:00:00 1 a [INFO Client 1] [WINDOW] Lost focus")).toBe(false);

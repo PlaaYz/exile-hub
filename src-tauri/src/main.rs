@@ -3,6 +3,7 @@
 // engine in a separate process, show windows without stealing focus.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod chat;
 mod clipboard;
 mod files;
 mod logfile;
@@ -103,6 +104,7 @@ fn main() {
             overlay_close,
             clipboard::clipboard_watch,
             clipboard::clipboard_unwatch,
+            chat::send_chat,
             files::app_info,
             files::read_data,
             files::read_user_file,

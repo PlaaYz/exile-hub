@@ -1,4 +1,5 @@
 import { parseLine, type LogEvent } from "./clientLog";
+import { isHideoutOrTown, isMapArea } from "./maps";
 import { parseRoute, type Lookups } from "./route";
 import { RunTimer, type TimerState } from "./timer";
 import { RouteTracker } from "./tracker";
@@ -6,6 +7,8 @@ import { RouteTracker } from "./tracker";
 /** First zone of every new character; entering it later in the route means a new run. */
 export const kStartArea = "1_1_1";
 const kStartTown = "1_1_town"; // Lioneye's Watch, next to the Twilight Strand
+/** Non-campaign areas from this level up are endgame (maps start at 68). */
+export const kEndgameAreaLevel = 68;
 /** Route steps a run must be past before entering kStartArea counts as a new run. */
 const kNewRunMinCursor = 3;
 
@@ -40,6 +43,12 @@ export class Session {
   characterName: string | null = null;
   className: string | null = null;
   characterLevel: number | null = null;
+  /**
+   * The player is in endgame content (a map, or a non-campaign area of level 68+): an endgame
+   * character, which the log does not name until it levels up. The campaign route is paused until
+   * a campaign zone is entered again.
+   */
+  endgame = false;
   private characters: Record<string, CharacterProgress> = {};
   /** set when a new run started and its character is not known yet (no level-up so far) */
   private freshRun = false;
@@ -144,6 +153,9 @@ export class Session {
         this.areaId = ev.areaId;
         const info = this.lookups.areas[ev.areaId];
         this.areaName = info?.name ?? ev.areaId;
+        // hideouts/towns say nothing about which kind of character is playing
+        if (info) this.endgame = false;
+        else if (!isHideoutOrTown(ev.areaId) && (isMapArea(ev.areaId) || ev.areaLevel >= kEndgameAreaLevel)) this.endgame = true;
         if (info) {
           this.tracker.onArea(ev.areaId);
           this.timer.onArea(info.act, ts);
@@ -160,6 +172,7 @@ export class Session {
       case "focus":
       case "passive":
       case "npc":
+      case "whisper":
         return false;
     }
   }

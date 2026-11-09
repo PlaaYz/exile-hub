@@ -9,8 +9,9 @@ const kOverlayMaxSteps = 9;
 const kPriceCardMs = 25_000; // how long a price stays on the overlay after Ctrl+C
 
 export function OverlayApp() {
-  const state = useHubState();
-  if (!state) return null;
+  const hubState = useHubState();
+  if (!hubState) return null;
+  const state = hubState;
   const { tracker: t, timers, build, characterLevel } = state;
   const interactive = state.overlayInteractive;
 
@@ -34,6 +35,34 @@ export function OverlayApp() {
         </div>
       )}
       <MapHint maps={state.maps} />
+      {state.endgame ? endgameView() : campaignView()}
+
+      {interactive && (
+        <div className="ov-controls">
+          <span className="ov-drag">arraste</span>
+          {!state.endgame && <button onClick={() => void window.hub.routePrev()}>◀ anterior</button>}
+          {!state.endgame && <button onClick={() => void window.hub.routeNext()}>próximo ▶</button>}
+          <button onClick={() => void window.hub.toggleOverlayInteractive()}>travar</button>
+        </div>
+      )}
+    </div>
+  );
+
+  function endgameView() {
+    return (
+      <>
+        <div className="ov-head">
+          <span className="ov-area">{state.areaName ?? "aguardando uma zona…"}</span>
+          <span className="ov-meta">endgame</span>
+        </div>
+        {state.logStatus !== "watching" && <div className="ov-warn">Client.txt não conectado — abra o painel</div>}
+      </>
+    );
+  }
+
+  function campaignView() {
+    return (
+      <>
       <div className="ov-head">
         <span className="ov-area">{state.areaName ?? "aguardando uma zona…"}</span>
         <span className="ov-meta">
@@ -69,15 +98,7 @@ export function OverlayApp() {
           gemas em breve: {nextGems.map((g) => `${g.name} (${g.requiredLevel})`).join(", ")}
         </div>
       )}
-
-      {interactive && (
-        <div className="ov-controls">
-          <span className="ov-drag">arraste</span>
-          <button onClick={() => void window.hub.routePrev()}>◀ anterior</button>
-          <button onClick={() => void window.hub.routeNext()}>próximo ▶</button>
-          <button onClick={() => void window.hub.toggleOverlayInteractive()}>travar</button>
-        </div>
-      )}
-    </div>
-  );
+      </>
+    );
+  }
 }

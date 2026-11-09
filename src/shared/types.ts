@@ -194,6 +194,9 @@ export interface AppConfig {
   showDashboardOnGameStart: boolean;
   /** rank support gems with Path of Building's engine on level-ups (campaign) */
   gemAdviceEnabled: boolean;
+  /** chat commands on keys (F5 -> /hideout), only while the game has focus */
+  chatCommandsEnabled: boolean;
+  chatCommands: { key: string; text: string }[];
 }
 
 export interface DisplayInfo {
@@ -241,6 +244,10 @@ export interface AppState {
   };
   /** the build's main link and its socket colors ("r"/"g"/"b"), for the vendor search */
   buildLinks: { label: string; gems: string[]; colors: string[] } | null;
+  /** playing endgame (maps...): the campaign route is paused and the overlay shows maps */
+  endgame: boolean;
+  /** chat commands on keys: supported by this build, keys registered now, last whisperer */
+  chat: { supported: boolean; active: boolean; lastWhisper: string | null };
   /** "best next support gems" from Path of Building's engine (campaign only) */
   gemAdvice: {
     status: "off" | "no-build" | "waiting" | "not-campaign" | "computing" | "ok" | "error" | "no-pob";

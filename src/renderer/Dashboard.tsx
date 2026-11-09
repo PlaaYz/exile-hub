@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { AppState, DisplayInfo, Panel } from "../shared/types";
 import { fmtMs, useHubState } from "./hooks";
+import { ChatCommandsSettings } from "./ChatCommandsView";
 import { DiagPanelBody } from "./DiagView";
 import { SearchPanelBody } from "./SearchView";
 import { SessionsPanelBody } from "./SessionsView";
@@ -52,6 +53,16 @@ function PanelBox({ title, children, className }: { title: string; children: Rea
 function CampaignPanel({ state }: { state: AppState }) {
   const t = state.tracker;
   const pct = t.total ? Math.round((t.cursor / t.total) * 100) : 0;
+  if (state.endgame) {
+    return (
+      <PanelBox title="Campanha">
+        <div className="muted">
+          Você está no endgame ({state.areaName ?? "mapa"}): a rota da campanha fica pausada e o overlay mostra os mapas.
+          Ela volta sozinha quando você entrar numa zona da campanha.
+        </div>
+      </PanelBox>
+    );
+  }
   return (
     <PanelBox title={`Campanha — Ato ${t.act || "–"}`}>
       <div className="row">
@@ -416,6 +427,8 @@ function SettingsPanel({ state }: { state: AppState }) {
         F10 deixa o overlay clicável para arrastar ou usar anterior/próximo; aperte de novo para travar. O jogo
         precisa estar em tela cheia em janela (windowed fullscreen) para o overlay aparecer por cima.
       </div>
+
+      <ChatCommandsSettings state={state} />
     </PanelBox>
   );
 }

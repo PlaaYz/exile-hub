@@ -10,7 +10,9 @@ export type LogEvent =
   | { type: "passive"; allocated: boolean; skillId: string; name: string; ts: number | null; pid: number }
   | { type: "death"; character: string; ts: number | null }
   | { type: "focus"; focused: boolean; ts: number | null; closing?: true; /** a new game process started */ opening?: true }
-  | { type: "npc"; speaker: string; mechanic: string; ts: number | null };
+  | { type: "npc"; speaker: string; mechanic: string; ts: number | null }
+  /** a whisper received ("@From [<GUILD>] Name: ..."); the message itself is not kept */
+  | { type: "whisper"; from: string; ts: number | null };
 
 /**
  * League-mechanic NPCs whose dialogue shows up in Client.txt when they appear in a zone
@@ -33,7 +35,9 @@ export const MECHANIC_NPCS: Record<string, string> = {
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const NPC_RE = new RegExp(`\\[INFO Client \\d+\\] (${Object.keys(MECHANIC_NPCS).map(escapeRe).join("|")}): `);
 
-const TS_RE = /^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})/;
+// character names have no spaces or colons; a guild tag may come first
+const WHISPER_RE = /\[INFO Client \d+\] @From (?:<[^>]*> )?([^\s:<>]+): /;
+const TS_RE =/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})/;
 const GENERATING_RE =
   /\[(?:DEBUG|INFO) Client \d+\] Generating level (\d+) area "([^"]+)" with seed (\d+)/;
 const ENTERED_RE = /\[INFO Client \d+\] : You have entered (.+?)\.\s*$/;
@@ -83,6 +87,9 @@ export function parseLine(rawLine: string): LogEvent | null {
 
   m = NPC_RE.exec(line);
   if (m) return { type: "npc", speaker: m[1], mechanic: MECHANIC_NPCS[m[1]], ts };
+
+  m = WHISPER_RE.exec(line);
+  if (m) return { type: "whisper", from: m[1], ts };
 
   return null;
 }

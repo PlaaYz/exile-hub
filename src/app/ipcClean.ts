@@ -1,4 +1,5 @@
 // Validation of everything the renderer sends to the main process. Pure (no Electron): tested.
+import { cleanChatCommands, DEFAULT_CHAT_COMMANDS } from "../core/chatCommands";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { MAP_MODS } from "../core/searchRegex";
 import type { AppConfig } from "../shared/types";
@@ -14,9 +15,11 @@ export const DEFAULT_CONFIG: AppConfig = {
   overlayHideUnfocused: true,
   showDashboardOnGameStart: true,
   gemAdviceEnabled: true,
+  chatCommandsEnabled: true,
+  chatCommands: DEFAULT_CHAT_COMMANDS,
 };
 
-type Kind = "boolean" | "string-or-null" | "internal";
+type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands";
 /**
  * How each config key may be set from the renderer. Every AppConfig key must be listed (the
  * compiler enforces it), so a new setting cannot silently be ignored by the settings screen.
@@ -33,6 +36,8 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   overlayHideUnfocused: "boolean",
   showDashboardOnGameStart: "boolean",
   gemAdviceEnabled: "boolean",
+  chatCommandsEnabled: "boolean",
+  chatCommands: "chat-commands",
 };
 
 /** Only known keys with the right primitive type. */
@@ -44,6 +49,10 @@ export function cleanConfigPatch(patch: unknown): Partial<AppConfig> {
     const v = p[key];
     if (kind === "boolean" && typeof v === "boolean") out[key] = v;
     if (kind === "string-or-null" && (typeof v === "string" || v === null)) out[key] = v;
+    if (kind === "chat-commands") {
+      const cmds = cleanChatCommands(v);
+      if (cmds) out[key] = cmds;
+    }
   }
   return out as Partial<AppConfig>;
 }

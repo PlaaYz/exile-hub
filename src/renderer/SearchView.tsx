@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { MAP_MODS, kSearchMax, linkSearch, mapSearch, movementSearch, type SearchString } from "../core/searchRegex";
+import { MAP_MODS, chromaticSearch, kSearchMax, linkSearchCounts, mapSearch, movementSearch, type SearchString } from "../core/searchRegex";
+
+interface LinkPrefs {
+  n: number;
+  r: number;
+  g: number;
+  b: number;
+}
+const DEFAULT_LINKS: LinkPrefs = { n: 4, r: 0, g: 0, b: 0 };
+
+function socketsLabel(l: LinkPrefs): string {
+  const parts = [l.r && `${l.r} vermelho${l.r > 1 ? "s" : ""}`, l.g && `${l.g} verde${l.g > 1 ? "s" : ""}`, l.b && `${l.b} azu${l.b > 1 ? "is" : "l"}`];
+  return parts.filter(Boolean).join(", ");
+}
 import type { AppState } from "../shared/types";
 
 const LS = "exile-hub.mapSearch.v1";
@@ -12,6 +25,7 @@ interface Prefs {
   tierMax?: number | null;
   rarity?: "any" | "rare" | "magic" | "normal";
   corrupted?: "any" | "yes" | "no";
+  links?: LinkPrefs;
 }
 
 function loadPrefs(): Prefs {
@@ -110,7 +124,9 @@ export function SearchPanelBody({ state }: { state: AppState }) {
   }, [prefs]);
   const map = useMemo(() => mapSearch(prefs.exclude, prefs.minQuant), [prefs]);
   const links = state.buildLinks;
-  const linkS = useMemo(() => (links && links.colors.length >= 2 ? linkSearch(links.colors.slice(0, 6)) : null), [links]);
+  const lp = prefs.links ?? DEFAULT_LINKS;
+  const setLinks = (patch: Partial<LinkPrefs>) => setPrefs((p) => ({ ...p, links: { ...(p.links ?? DEFAULT_LINKS), ...patch } }));
+  const linkS = useMemo(() => linkSearchCounts(lp.n, lp.r, lp.g, lp.b), [lp.n, lp.r, lp.g, lp.b]);
   const toggle = (id: string) =>
     setPrefs((p) => ({ ...p, exclude: p.exclude.includes(id) ? p.exclude.filter((x) => x !== id) : [...p.exclude, id] }));
   const sorted = [...MAP_MODS].sort((a, b) => Number(!!b.common) - Number(!!a.common));
@@ -172,15 +188,46 @@ export function SearchPanelBody({ state }: { state: AppState }) {
         marcados entram.
       </p>
 
-      <h3>Vendedor (campanha)</h3>
-      {linkS ? (
-        <CopyBox
-          s={linkS}
-          title={`Links nas cores do seu build: ${links!.colors.join("").toUpperCase()} (${links!.gems.slice(0, 6).join(", ")})`}
-        />
-      ) : (
-        <p className="muted small">Importe um build do PoB para gerar a busca de links nas cores dele.</p>
-      )}
+      <h3>Vendedor</h3>
+      <div className="row">
+        <span className="muted small">Links</span>
+        <select className="narrow-select" value={lp.n} onChange={(e) => setLinks({ n: Number(e.target.value) })}>
+          {[2, 3, 4, 5, 6].map((n) => (
+            <option key={n} value={n}>
+              {n} ligados
+            </option>
+          ))}
+        </select>
+        {(["r", "g", "b"] as const).map((c) => (
+          <label key={c} className="small">
+            <span className={`sock sock-${c}`}>{c === "r" ? "vermelho" : c === "g" ? "verde" : "azul"}</span>{" "}
+            <input
+              className="num narrow"
+              type="number"
+              min="0"
+              max={lp.n}
+              value={lp[c]}
+              onChange={(e) => setLinks({ [c]: Math.max(0, Number(e.target.value) || 0) })}
+            />
+          </label>
+        ))}
+        {links && links.colors.length >= 2 && (
+          <button
+            className="small"
+            title={`Cores do build importado: ${links.gems.slice(0, 6).join(", ")}`}
+            onClick={() => {
+              const cs = links.colors.slice(0, 6);
+              const count = (c: string) => cs.filter((x) => x === c).length;
+              setLinks({ n: Math.max(2, cs.length), r: count("r"), g: count("g"), b: count("b") });
+            }}
+          >
+            usar as cores do build
+          </button>
+        )}
+      </div>
+      {lp.r + lp.g + lp.b > lp.n && <div className="warn small">Mais cores do que sockets: só as primeiras {lp.n} contam.</div>}
+      <CopyBox s={linkS} title={`${lp.n} sockets ligados${lp.r + lp.g + lp.b ? ` com ${socketsLabel(lp)}` : ""}`} />
+      <CopyBox s={chromaticSearch()} title="Vermelho + verde + azul ligados (Chromatic Orb no vendedor)" />
       <CopyBox s={movementSearch()} title="Botas com velocidade de movimento" />
     </>
   );
