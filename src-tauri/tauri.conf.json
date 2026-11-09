@@ -44,6 +44,23 @@
         "focus": false,
         "focusable": false,
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
+      },
+      {
+        "label": "price",
+        "create": false,
+        "title": "Exile Hub preço",
+        "url": "index.html?mode=price",
+        "width": 480,
+        "height": 640,
+        "minWidth": 360,
+        "minHeight": 300,
+        "visible": false,
+        "decorations": false,
+        "resizable": true,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "backgroundColor": "#0e1116",
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
       }
     ],
     "security": {

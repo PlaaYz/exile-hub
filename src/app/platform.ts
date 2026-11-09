@@ -34,6 +34,9 @@ export interface Shell {
   notify(title: string, body: string): void;
   startWithWindows(): Promise<boolean>;
   setStartWithWindows(on: boolean): Promise<void>;
+  /** the full price check next to the item, over the game (Ctrl+D); optional */
+  showPricePopup?(): Promise<void>;
+  hidePricePopup?(): void;
   /** the game opened/closed (Client.txt): a shell may prepare or release the overlay window */
   gameRunningChanged?(running: boolean): void;
   /** quit and install a downloaded update */
@@ -85,6 +88,8 @@ export interface Platform {
   setCommandKeys?(keys: string[], onPress: (key: string) => void): Promise<void>;
   /** Types one line in the game's chat (Enter, text, Enter); fails unless the game window is in front. */
   sendChat?(text: string): Promise<void>;
+  /** Copies the item under the mouse with the game's advanced copy (Ctrl+Alt+C); game in front only. */
+  copyItem?(): Promise<void>;
 
   // ---- windows ---------------------------------------------------------------------------------
   readonly shell: Shell;

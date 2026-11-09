@@ -14,8 +14,16 @@ import { errorText } from "./errors";
 import { TauriShell } from "./tauriShell";
 import { TauriUpdater } from "./tauriUpdater";
 
-/** What the overlay may ask the dashboard for. */
-const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive"]);
+/** What the overlay and the price popup may ask the dashboard for (validated like the dashboard's own calls). */
+const OVERLAY_CALLS = new Set<keyof HubApi>([
+  "getState",
+  "routeNext",
+  "routePrev",
+  "toggleOverlayInteractive",
+  "priceResearch",
+  "priceOpenTrade",
+  "closePricePopup",
+]);
 
 interface CallMsg {
   id: number;
@@ -58,6 +66,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     setStartWithWindows: (on) => hub.setStartWithWindows(on === true),
     copyDiagReport: () => hub.copyDiagReport(),
     getTreeLayout: () => hub.getTreeLayout(),
+    closePricePopup: async () => hub.closePricePopup(),
     setCharacter: async (name) => {
       if (typeof name === "string" && name.length <= 40) hub.setCharacter(name);
     },
@@ -105,7 +114,7 @@ async function overlayApi(): Promise<HubApi> {
 }
 
 export async function installTauriHub(mode: string | null): Promise<void> {
-  if (mode === "overlay") {
+  if (mode === "overlay" || mode === "price") {
     window.hub = await overlayApi();
     return;
   }

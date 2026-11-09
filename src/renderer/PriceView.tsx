@@ -202,7 +202,8 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
   if (!p) {
     return (
       <p className="muted">
-        No jogo, passe o mouse sobre um item e aperte <b>Ctrl+C</b>. O preço aparece aqui e no overlay.
+        No jogo, passe o mouse sobre um item e aperte <b>Ctrl+D</b> (abre o preço ao lado do item) ou <b>Ctrl+C</b>{" "}
+        (o preço aparece aqui e no overlay).
       </p>
     );
   }

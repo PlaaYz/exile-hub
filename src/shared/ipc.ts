@@ -38,6 +38,8 @@ export interface HubApi {
   copyDiagReport(): Promise<void>;
   /** passive tree geometry for the map; null until GGG's tree data is loaded */
   getTreeLayout(): Promise<TreeLayout | null>;
+  /** close the price popup and give the keyboard back to the game */
+  closePricePopup(): Promise<void>;
   /** pick who is playing (one of state.knownCharacters) */
   setCharacter(name: string): Promise<void>;
   getChallenges(): Promise<ChallengesView>;

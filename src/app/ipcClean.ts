@@ -1,5 +1,5 @@
 // Validation of everything the renderer sends to the main process. Pure (no Electron): tested.
-import { cleanChatCommands, DEFAULT_CHAT_COMMANDS } from "../core/chatCommands";
+import { cleanChatCommands, DEFAULT_CHAT_COMMANDS, isValidKey, normaliseKey } from "../core/chatCommands";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { MAP_MODS } from "../core/searchRegex";
 import type { AppConfig } from "../shared/types";
@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   dashboardFullscreen: false,
   overlayEnabled: true,
   priceCheckEnabled: true,
+  priceCheckKey: "Ctrl+D",
   league: null,
   overlayHideUnfocused: true,
   showDashboardOnGameStart: true,
@@ -19,7 +20,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   overlayPos: null,
 };
 
-type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands";
+type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands" | "hotkey";
 /**
  * How each config key may be set from the renderer. Every AppConfig key must be listed (the
  * compiler enforces it), so a new setting cannot silently be ignored by the settings screen.
@@ -32,6 +33,7 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   dashboardFullscreen: "boolean",
   overlayEnabled: "boolean",
   priceCheckEnabled: "boolean",
+  priceCheckKey: "hotkey",
   league: "string-or-null",
   overlayHideUnfocused: "boolean",
   showDashboardOnGameStart: "boolean",
@@ -49,6 +51,7 @@ export function cleanConfigPatch(patch: unknown): Partial<AppConfig> {
     const v = p[key];
     if (kind === "boolean" && typeof v === "boolean") out[key] = v;
     if (kind === "string-or-null" && (typeof v === "string" || v === null)) out[key] = v;
+    if (kind === "hotkey" && (v === null || (typeof v === "string" && isValidKey(v)))) out[key] = v === null ? null : normaliseKey(v);
     if (kind === "chat-commands") {
       const cmds = cleanChatCommands(v);
       if (cmds) out[key] = cmds;

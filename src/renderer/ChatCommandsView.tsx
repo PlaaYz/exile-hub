@@ -12,7 +12,7 @@ function acceleratorOf(e: KeyboardEvent): string | null {
   return normaliseKey([...mods, main].join("+"));
 }
 
-function KeyInput({ value, onChange }: { value: string; onChange: (k: string) => void }) {
+export function KeyInput({ value, onChange }: { value: string; onChange: (k: string) => void }) {
   const [hint, setHint] = useState<string | null>(null);
   return (
     <input

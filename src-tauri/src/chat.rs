@@ -3,7 +3,7 @@
 use std::{thread, time::Duration};
 
 #[cfg(windows)]
-mod win {
+pub(crate) mod win {
     use windows_sys::Win32::{
         Foundation::{CloseHandle, HWND},
         System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION},
@@ -42,7 +42,7 @@ mod win {
         }
     }
 
-    fn key(vk: VIRTUAL_KEY, up: bool) -> INPUT {
+    pub fn key(vk: VIRTUAL_KEY, up: bool) -> INPUT {
         INPUT {
             r#type: INPUT_KEYBOARD,
             Anonymous: INPUT_0 {
@@ -89,7 +89,7 @@ mod win {
     pub const ENTER: VIRTUAL_KEY = VK_RETURN;
 }
 
-fn is_game(exe: &str) -> bool {
+pub(crate) fn is_game(exe: &str) -> bool {
     exe.to_ascii_lowercase().starts_with("pathofexile")
 }
 

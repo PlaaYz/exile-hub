@@ -157,6 +157,8 @@ export interface AppConfig {
   overlayEnabled: boolean;
   /** watch the clipboard for items copied in game (Ctrl+C) and price them */
   priceCheckEnabled: boolean;
+  /** key that copies the item under the mouse (Ctrl+Alt+C) and opens the price popup; null = off */
+  priceCheckKey: string | null;
   /** trade league id; null = current challenge league */
   league: string | null;
   /** hide the overlay while the game is in the background (from Client.txt focus lines) */

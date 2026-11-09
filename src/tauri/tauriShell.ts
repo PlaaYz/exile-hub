@@ -94,6 +94,56 @@ export class TauriShell implements Shell {
     this.lastState = state;
     if (this.drawing) for (const l of this.stateListeners) l(state);
     if (this.overlayVisible && this.overlay) void emitTo("overlay", "state", state);
+    if (this.priceVisible) void emitTo("price", "state", state);
+  }
+
+  // ---- price popup (Ctrl+D) -------------------------------------------------------------------
+
+  private priceVisible = false;
+  private priceReady: Promise<Window | null> | null = null;
+
+  private ensurePrice(): Promise<Window | null> {
+    this.priceReady ??= (async () => {
+      await invoke("window_open", { label: "price" });
+      return Window.getByLabel("price");
+    })().catch((e: unknown) => {
+      this.priceReady = null;
+      console.error("could not open the price window", e);
+      return null;
+    });
+    return this.priceReady;
+  }
+
+  /** Next to the mouse (the item being checked), kept inside that monitor, focused for Esc/filters. */
+  async showPricePopup(): Promise<void> {
+    const w = await this.ensurePrice();
+    if (!w) return;
+    const [cx, cy] = await invoke<[number, number]>("cursor_pos");
+    const monitors = await availableMonitors();
+    const m =
+      monitors.find((x) => cx >= x.position.x && cy >= x.position.y && cx < x.position.x + x.size.width && cy < x.position.y + x.size.height) ??
+      (await primaryMonitor());
+    const size = await w.outerSize();
+    if (m) {
+      const wa = m.workArea ?? { position: m.position, size: m.size };
+      const gap = Math.round(24 * m.scaleFactor);
+      // right of the mouse when it fits, else left of it
+      let x = cx + gap;
+      if (x + size.width > wa.position.x + wa.size.width) x = cx - gap - size.width;
+      x = Math.max(wa.position.x, x);
+      const y = Math.min(Math.max(wa.position.y, cy - Math.round(size.height / 3)), wa.position.y + wa.size.height - size.height);
+      await w.setPosition(new PhysicalPosition(x, y));
+    }
+    this.priceVisible = true;
+    if (this.lastState) void emitTo("price", "state", this.lastState);
+    await invoke("window_show", { label: "price", activate: true });
+  }
+
+  /** Hide it and give the keyboard back to the game. */
+  hidePricePopup(): void {
+    if (!this.priceVisible) return;
+    this.priceVisible = false;
+    void invoke("window_hide", { label: "price" }).then(() => invoke("focus_game"));
   }
 
   private get drawing(): boolean {
@@ -126,7 +176,7 @@ export class TauriShell implements Shell {
   /** Creates the overlay window (closed while unused: its webview costs ~60 MB). */
   private ensureOverlay(): Promise<void> {
     this.overlayReady ??= (async () => {
-      await invoke("overlay_open");
+      await invoke("window_open", { label: "overlay" });
       const w = await Window.getByLabel("overlay");
       if (!w) throw new Error("overlay window missing");
       await invoke("set_click_through", { label: "overlay", on: !this.overlayInteractive });
@@ -182,7 +232,7 @@ export class TauriShell implements Shell {
       if (this.overlayVisible || !this.overlay) return;
       this.overlay = null;
       this.overlayReady = null;
-      void invoke("overlay_close");
+      void invoke("window_close", { label: "overlay" });
     }, kOverlayKeepMs);
   }
 

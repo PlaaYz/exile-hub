@@ -133,14 +133,43 @@ export class PriceService {
     }
   }
 
+  // ---- price key (Ctrl+D) -----------------------------------------------------------------
+
+  private hotkey: { before: string; onItem: () => void; timer: ReturnType<typeof setTimeout> } | null = null;
+
+  /** The next item copied in the next 2 s came from the price key: show it, then restore `before`. */
+  expectHotkeyItem(before: string, onItem: () => void): void {
+    this.cancelHotkey();
+    const timer = setTimeout(() => {
+      if (this.hotkey?.timer !== timer) return;
+      this.hotkey = null;
+      this.ctx.addDiag("preço", "atalho de preço: nada foi copiado (o mouse estava sobre um item?)");
+      this.ctx.broadcast();
+    }, 2000);
+    this.hotkey = { before, onItem, timer };
+  }
+
+  cancelHotkey(): void {
+    if (this.hotkey) clearTimeout(this.hotkey.timer);
+    this.hotkey = null;
+  }
+
   private onClipboardText(text: string): void {
-    if (text === this.lastClipboard) return;
+    // the same item twice is a new check when it came from the price key
+    if (text === this.lastClipboard && !this.hotkey) return;
     this.lastClipboard = text;
     // only item text copied from the game and Path of Building codes/links are looked at
     const league = this.league();
     if (league && this.checker.check(text, league)) {
       const it = this.checker.view?.item;
       this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
+      const hk = this.hotkey;
+      if (hk) {
+        this.cancelHotkey();
+        hk.onItem();
+        // put back what the player had on the clipboard (the watcher ignores our own write)
+        if (hk.before && hk.before !== text) void this.writeClipboard(hk.before).catch(() => {});
+      }
       return;
     }
     if (looksLikePob(text)) {

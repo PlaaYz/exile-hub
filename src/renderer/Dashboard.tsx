@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { AppState, DisplayInfo, Panel } from "../shared/types";
 import { fmtMs, useHubState } from "./hooks";
 import { ChallengesPanelBody } from "./ChallengesView";
-import { ChatCommandsSettings } from "./ChatCommandsView";
+import { ChatCommandsSettings, KeyInput } from "./ChatCommandsView";
 import { DiagPanelBody } from "./DiagView";
 import { SearchPanelBody } from "./SearchView";
 import { SessionsPanelBody } from "./SessionsView";
@@ -357,6 +357,20 @@ function SettingsPanel({ state }: { state: AppState }) {
         />
         Precificar itens copiados no jogo (Ctrl+C sobre o item)
       </label>
+      {state.chat.supported && state.config.priceCheckEnabled && (
+        <div className="row">
+          <span className="muted">Tecla do price check</span>
+          <KeyInput value={state.config.priceCheckKey ?? ""} onChange={(k) => void window.hub.setConfig({ priceCheckKey: k })} />
+          {state.config.priceCheckKey && (
+            <button className="small" onClick={() => void window.hub.setConfig({ priceCheckKey: null })}>
+              desligar
+            </button>
+          )}
+          <span className="muted small">
+            com o mouse sobre o item: o app copia (Ctrl+Alt+C, com os tiers) e abre o preço ao lado; Esc fecha
+          </span>
+        </div>
+      )}
       <div className="row">
         <span className="muted">Liga</span>
         <select

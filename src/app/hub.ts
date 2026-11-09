@@ -2,7 +2,7 @@
 // state the windows show. The platform (Platform + Shell) provides files, clipboard, HTTP, the PoB
 // engine, windows and the tray.
 import { measuredMinutes } from "../core/bossRuns";
-import { cleanChatCommands, expandCommand } from "../core/chatCommands";
+import { cleanChatCommands, expandCommand, isValidKey, normaliseKey } from "../core/chatCommands";
 import { parseLine, type LogEvent } from "../core/clientLog";
 import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
@@ -141,7 +141,14 @@ export class Hub {
     if (patch.clientLogPath !== undefined && patch.clientLogPath !== prev.clientLogPath) void this.startTail();
     if (patch.overlayEnabled !== undefined || patch.overlayHideUnfocused !== undefined) this.applyOverlayVisibility();
     if (patch.priceCheckEnabled !== undefined) void this.prices.applyClipboardWatch();
-    if (patch.chatCommandsEnabled !== undefined || patch.chatCommands !== undefined) this.applyCommandKeys();
+    if (
+      patch.chatCommandsEnabled !== undefined ||
+      patch.chatCommands !== undefined ||
+      patch.priceCheckKey !== undefined ||
+      patch.priceCheckEnabled !== undefined
+    ) {
+      this.applyCommandKeys();
+    }
     this.updateTray();
     this.broadcast();
   }
@@ -326,16 +333,46 @@ export class Hub {
    */
   private applyCommandKeys(): void {
     const p = this.p;
-    if (!this.ready || !p.setCommandKeys || !p.sendChat) return;
-    const on = this.config.chatCommandsEnabled && this.gameRunning && this.gameFocused;
-    const keys = on ? (cleanChatCommands(this.config.chatCommands) ?? []).map((c) => c.key) : [];
+    if (!this.ready || !p.setCommandKeys) return;
+    const inGame = this.gameRunning && this.gameFocused;
+    const keys = inGame && this.config.chatCommandsEnabled && p.sendChat ? (cleanChatCommands(this.config.chatCommands) ?? []).map((c) => c.key) : [];
+    // the price check key (Ctrl+D) goes in the same set: also only while the game has focus
+    const priceKey = this.priceKey();
+    if (inGame && priceKey && !keys.includes(priceKey)) keys.push(priceKey);
     const sig = keys.join(",");
     if (sig === this.commandKeys) return;
     this.commandKeys = sig;
-    p.setCommandKeys(keys, (key) => void this.runCommand(key)).catch((e: unknown) => {
+    p.setCommandKeys(keys, (key) => void (key === this.priceKey() ? this.runPriceKey() : this.runCommand(key))).catch((e: unknown) => {
       this.commandKeys = "";
       this.diag.add("comando", `não consegui registrar os atalhos: ${e instanceof Error ? e.message : String(e)}`);
     });
+  }
+
+  private priceKey(): string | null {
+    const k = this.config.priceCheckKey;
+    return this.config.priceCheckEnabled && this.p.copyItem && k && isValidKey(k) ? normaliseKey(k) : null;
+  }
+
+  /**
+   * Ctrl+D: the game copies the item under the mouse (Ctrl+Alt+C, with mod tiers), the clipboard
+   * watcher prices it and the popup opens next to it; the player's clipboard is put back afterwards.
+   */
+  private async runPriceKey(): Promise<void> {
+    const p = this.p;
+    if (!p.copyItem) return;
+    const before = await p.readClipboard().catch(() => "");
+    this.prices.expectHotkeyItem(before, () => void p.shell.showPricePopup?.());
+    try {
+      await p.copyItem();
+    } catch (e) {
+      this.prices.cancelHotkey();
+      this.diag.add("preço", `atalho de preço: ${e instanceof Error ? e.message : String(e)}`);
+      this.broadcast();
+    }
+  }
+
+  closePricePopup(): void {
+    this.p.shell.hidePricePopup?.();
   }
 
   /** One key press = one chat line. */

@@ -6,6 +6,7 @@
 mod chat;
 mod clipboard;
 mod files;
+mod game;
 mod logfile;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -100,21 +101,19 @@ fn set_click_through(app: tauri::AppHandle, label: String, on: bool) -> Result<(
     Ok(())
 }
 
-/// The overlay window is created only when it has to show (its webview costs ~60 MB) from its entry
-/// in tauri.conf.json ("create": false), so it gets the same browser args as the dashboard.
+/// Windows created only when needed (overlay, price popup: a webview costs ~60 MB) from their entry in
+/// tauri.conf.json ("create": false), so they get the same browser args as the dashboard.
+const ON_DEMAND: [&str; 2] = ["overlay", "price"];
+
 #[tauri::command]
-async fn overlay_open(app: tauri::AppHandle) -> Result<(), String> {
-    if app.get_webview_window("overlay").is_some() {
+async fn window_open(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if !ON_DEMAND.contains(&label.as_str()) {
+        return Err(format!("not an on-demand window: {label}"));
+    }
+    if app.get_webview_window(&label).is_some() {
         return Ok(());
     }
-    let cfg = app
-        .config()
-        .app
-        .windows
-        .iter()
-        .find(|w| w.label == "overlay")
-        .ok_or("no overlay config")?
-        .clone();
+    let cfg = app.config().app.windows.iter().find(|w| w.label == label).ok_or("no window config")?.clone();
     tauri::WebviewWindowBuilder::from_config(&app, &cfg)
         .map_err(|e| e.to_string())?
         .build()
@@ -123,8 +122,11 @@ async fn overlay_open(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn overlay_close(app: tauri::AppHandle) {
-    if let Some(w) = app.get_webview_window("overlay") {
+fn window_close(app: tauri::AppHandle, label: String) {
+    if !ON_DEMAND.contains(&label.as_str()) {
+        return;
+    }
+    if let Some(w) = app.get_webview_window(&label) {
         let _ = w.destroy();
     }
 }
@@ -156,8 +158,11 @@ fn main() {
             window_show,
             window_hide,
             set_click_through,
-            overlay_open,
-            overlay_close,
+            window_open,
+            window_close,
+            game::copy_item,
+            game::focus_game,
+            game::cursor_pos,
             clipboard::clipboard_watch,
             clipboard::clipboard_unwatch,
             chat::send_chat,
