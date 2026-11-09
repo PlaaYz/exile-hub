@@ -9,6 +9,8 @@ export const kStartArea = "1_1_1";
 const kStartTown = "1_1_town"; // Lioneye's Watch, next to the Twilight Strand
 /** A character is never in an area more than this many levels above its own (under-leveled campaign included). */
 export const kLevelSlack = 15;
+/** The campaign ends with act 10; the zone data's act 11 is the endgame town (Karui Shores). */
+export const kLastCampaignAct = 10;
 /** Non-campaign areas from this level up are endgame (maps start at 68). */
 export const kEndgameAreaLevel = 68;
 /** Route steps a run must be past before entering kStartArea counts as a new run. */
@@ -247,11 +249,13 @@ export class Session {
         this.areaId = ev.areaId;
         if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, ev.areaLevel, ts);
         this.checkLevelFits(ev.areaId, ev.areaLevel);
-        const info = this.lookups.areas[ev.areaId];
-        this.areaName = info?.name ?? ev.areaId;
+        const known = this.lookups.areas[ev.areaId];
+        this.areaName = known?.name ?? ev.areaId;
+        // the zone data also has "act 11" (Karui Shores, the endgame town): only acts 1-10 are campaign
+        const info = known && known.act <= kLastCampaignAct ? known : undefined;
         // hideouts/towns say nothing about which kind of character is playing
         if (info) this.endgame = false;
-        else if (!isHideoutOrTown(ev.areaId) && (isMapArea(ev.areaId) || ev.areaLevel >= kEndgameAreaLevel)) this.endgame = true;
+        else if (known || (!isHideoutOrTown(ev.areaId) && (isMapArea(ev.areaId) || ev.areaLevel >= kEndgameAreaLevel))) this.endgame = true;
         if (info) {
           this.tracker.onArea(ev.areaId);
           this.timer.onArea(info.act, ts);

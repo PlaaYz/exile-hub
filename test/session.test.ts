@@ -141,6 +141,11 @@ describe("Session", () => {
     expect(s.endgame).toBe(true);
     s.applyLine(area("1_1_town"));
     expect(s.endgame).toBe(false);
+    // Karui Shores is "act 11" in the zone data: the endgame town, not campaign
+    const cursor = s.tracker.cursor;
+    s.applyLine(lvlArea("2_11_endgame_town", 69));
+    expect(s.endgame).toBe(true);
+    expect(s.tracker.cursor).toBe(cursor);
   });
 
   it("a login (character select) forgets the character; the area it logs into can tell who it is", () => {
