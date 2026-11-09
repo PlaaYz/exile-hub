@@ -126,6 +126,18 @@ export class TauriPlatform implements Platform {
   async readClipboard(): Promise<string> {
     return readText();
   }
+  watchClipboard(onText: (text: string) => void): () => void {
+    const ch = new Channel<string>();
+    let stopped = false;
+    ch.onmessage = (t) => {
+      if (!stopped) onText(t);
+    };
+    void invoke("clipboard_watch", { onText: ch });
+    return () => {
+      stopped = true;
+      void invoke("clipboard_unwatch");
+    };
+  }
   writeClipboard(text: string): Promise<void> {
     return writeText(text);
   }

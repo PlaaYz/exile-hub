@@ -3,6 +3,7 @@
 // engine in a separate process, show windows without stealing focus.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod clipboard;
 mod files;
 mod logfile;
 mod pob;
@@ -36,6 +37,35 @@ fn show_inactive(app: tauri::AppHandle, label: String) -> Result<(), String> {
     Ok(())
 }
 
+/// The overlay window is created only when it has to show (its webview costs ~60 MB) from its entry
+/// in tauri.conf.json ("create": false), so it gets the same browser args as the dashboard.
+#[tauri::command]
+async fn overlay_open(app: tauri::AppHandle) -> Result<(), String> {
+    if app.get_webview_window("overlay").is_some() {
+        return Ok(());
+    }
+    let cfg = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|w| w.label == "overlay")
+        .ok_or("no overlay config")?
+        .clone();
+    tauri::WebviewWindowBuilder::from_config(&app, &cfg)
+        .map_err(|e| e.to_string())?
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn overlay_close(app: tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.destroy();
+    }
+}
+
 fn main() {
     // the same exe hosts Path of Building's engine in a child process
     if std::env::args().any(|a| a == pob::WORKER_ARG) {
@@ -49,6 +79,8 @@ fn main() {
                 let _ = w.unminimize();
                 let _ = w.show();
                 let _ = w.set_focus();
+                use tauri::Emitter;
+                let _ = w.emit_to("dashboard", "dashboard-shown", ());
             }
         }))
         .plugin(tauri_plugin_autostart::init(
@@ -67,6 +99,10 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             app_quit,
             show_inactive,
+            overlay_open,
+            overlay_close,
+            clipboard::clipboard_watch,
+            clipboard::clipboard_unwatch,
             files::app_info,
             files::read_data,
             files::read_user_file,

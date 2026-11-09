@@ -15,6 +15,8 @@ import type { TauriUpdater } from "./tauriUpdater";
 
 const kDashboardSize = { width: 1180, height: 780 };
 const kOverlayMargin = 24;
+/** How long a hidden overlay window is kept before it is closed (memory). */
+const kOverlayKeepMs = 5 * 60 * 1000;
 
 /** What the tray menu needs from the app. */
 export interface ShellContext {
@@ -40,20 +42,26 @@ export class TauriShell implements Shell {
   readonly stateListeners = new Set<(s: AppState) => void>();
   private readonly dashboard = getCurrentWindow();
   private overlay: Window | null = null;
+  private overlayReady: Promise<void> | null = null;
+  private overlayCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  private overlayInteractive = false;
+  private lastState: AppState | null = null;
+  private dashboardShown = true;
   private tray: TrayIcon | null = null;
   private trayKey = "";
   private trayNotified = false;
 
   async init(hidden: boolean): Promise<void> {
-    this.overlay = await Window.getByLabel("overlay");
-    await this.overlay?.setIgnoreCursorEvents(true);
-    const primary = await primaryMonitor();
-    if (primary && this.overlay) {
-      const wa = primary.workArea ?? { position: primary.position, size: primary.size };
-      const m = Math.round(kOverlayMargin * primary.scaleFactor);
-      await this.overlay.setPosition(new PhysicalPosition(wa.position.x + m, wa.position.y + m));
-    }
+    // the dashboard draws nothing while hidden in the tray; catch up when it shows again.
+    // document.hidden alone is not enough: a window never shown (--hidden) still reports "visible"
+    this.dashboardShown = !hidden;
+    document.addEventListener("visibilitychange", () => this.catchUp());
+    await listen("dashboard-shown", () => {
+      this.dashboardShown = true;
+      this.catchUp();
+    });
     // default to the secondary monitor (the game stays on the primary one)
+    const primary = await primaryMonitor();
     const cfg = this.ctx?.config();
     const monitors = await availableMonitors();
     const target = monitors.find((m) => monitorId(m) === cfg?.dashboardDisplayId) ?? monitors.find((m) => m.name !== primary?.name);
@@ -70,6 +78,7 @@ export class TauriShell implements Shell {
       },
     });
     await listen("dashboard-hidden", () => {
+      this.dashboardShown = false;
       if (this.trayNotified) return;
       this.trayNotified = true;
       this.notify(
@@ -81,12 +90,44 @@ export class TauriShell implements Shell {
   }
 
   send(state: AppState): void {
-    for (const l of this.stateListeners) l(state);
-    if (this.overlayVisible) void emitTo("overlay", "state", state);
+    this.lastState = state;
+    if (this.drawing) for (const l of this.stateListeners) l(state);
+    if (this.overlayVisible && this.overlay) void emitTo("overlay", "state", state);
+  }
+
+  private get drawing(): boolean {
+    return this.dashboardShown && !document.hidden;
+  }
+
+  private catchUp(): void {
+    if (this.drawing && this.lastState) for (const l of this.stateListeners) l(this.lastState);
+  }
+
+  /** Creates the overlay window (closed while unused: its webview costs ~60 MB). */
+  private ensureOverlay(): Promise<void> {
+    this.overlayReady ??= (async () => {
+      await invoke("overlay_open");
+      const w = await Window.getByLabel("overlay");
+      if (!w) throw new Error("overlay window missing");
+      await w.setIgnoreCursorEvents(!this.overlayInteractive);
+      const primary = await primaryMonitor();
+      if (primary) {
+        const wa = primary.workArea ?? { position: primary.position, size: primary.size };
+        const m = Math.round(kOverlayMargin * primary.scaleFactor);
+        await w.setPosition(new PhysicalPosition(wa.position.x + m, wa.position.y + m));
+      }
+      this.overlay = w;
+    })().catch((e: unknown) => {
+      this.overlayReady = null;
+      console.error("could not open the overlay", e);
+    });
+    return this.overlayReady;
   }
 
   showDashboard(stealFocus: boolean): void {
     const w = this.dashboard;
+    this.dashboardShown = true;
+    this.catchUp();
     void (async () => {
       if (await w.isMinimized()) await w.unminimize();
       if (stealFocus) {
@@ -100,11 +141,26 @@ export class TauriShell implements Shell {
 
   setOverlayVisible(visible: boolean): void {
     this.overlayVisible = visible;
-    if (visible) void invoke("show_inactive", { label: "overlay" });
-    else void this.overlay?.hide();
+    if (this.overlayCloseTimer) clearTimeout(this.overlayCloseTimer);
+    this.overlayCloseTimer = null;
+    if (visible) {
+      void this.ensureOverlay().then(() => {
+        if (this.overlayVisible && this.overlay) void invoke("show_inactive", { label: "overlay" });
+      });
+      return;
+    }
+    void this.overlay?.hide();
+    // alt-tab comes back soon; a closed game or F9 off for a while frees the window
+    this.overlayCloseTimer = setTimeout(() => {
+      if (this.overlayVisible || !this.overlay) return;
+      this.overlay = null;
+      this.overlayReady = null;
+      void invoke("overlay_close");
+    }, kOverlayKeepMs);
   }
 
   setOverlayInteractive(on: boolean): void {
+    this.overlayInteractive = on;
     void this.overlay?.setIgnoreCursorEvents(!on);
   }
 

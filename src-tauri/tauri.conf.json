@@ -27,6 +27,7 @@
       },
       {
         "label": "overlay",
+        "create": false,
         "title": "Exile Hub overlay",
         "url": "index.html?mode=overlay",
         "width": 440,

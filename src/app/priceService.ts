@@ -31,6 +31,7 @@ export class PriceService {
   private lastClipboard = "";
   private clipboardTimer: ReturnType<typeof setInterval> | null = null;
   private polling = false;
+  private unwatch: (() => void) | null = null;
   private lastPriceDiag = "";
   /** items priced since the app started (session summaries): one entry per copy, best known value */
   readonly history: { ts: number; name: string; chaos: number | null }[] = [];
@@ -53,7 +54,7 @@ export class PriceService {
     return this.checker.view;
   }
   get watching(): boolean {
-    return !!this.clipboardTimer;
+    return !!this.clipboardTimer || !!this.unwatch;
   }
 
   /** League used for prices: the configured one, else the current challenge league. */
@@ -100,12 +101,17 @@ export class PriceService {
 
   async applyClipboardWatch(): Promise<void> {
     const on = this.ctx.config().priceCheckEnabled;
-    if (on && !this.clipboardTimer) {
-      this.lastClipboard = await this.platform.readClipboard().catch(() => ""); // don't price what was there before
-      this.clipboardTimer = setInterval(() => void this.pollClipboard(), kClipboardPollMs);
-    } else if (!on && this.clipboardTimer) {
-      clearInterval(this.clipboardTimer);
+    const p = this.platform;
+    if (on && !this.watching) {
+      this.lastClipboard = await p.readClipboard().catch(() => ""); // don't price what was there before
+      // the platform tells us when something is copied; otherwise look every kClipboardPollMs
+      if (p.watchClipboard) this.unwatch = p.watchClipboard((text) => this.onClipboardText(text));
+      else this.clipboardTimer = setInterval(() => void this.pollClipboard(), kClipboardPollMs);
+    } else if (!on && this.watching) {
+      if (this.clipboardTimer) clearInterval(this.clipboardTimer);
       this.clipboardTimer = null;
+      this.unwatch?.();
+      this.unwatch = null;
     }
   }
 
@@ -119,27 +125,30 @@ export class PriceService {
     if (this.polling) return; // a slow read must not stack up
     this.polling = true;
     try {
-      const text = await this.platform.readClipboard();
-      if (text === this.lastClipboard) return;
-      this.lastClipboard = text;
-      // only item text copied from the game and Path of Building codes/links are looked at
-      const league = this.league();
-      if (league && this.checker.check(text, league)) {
-        const it = this.checker.view?.item;
-        this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
-        return;
-      }
-      if (looksLikePob(text)) {
-        this.ctx.onPobText(text);
-        return;
-      }
-      if (!league && /^Item Class: /.test(text)) this.ctx.addDiag("clipboard", "item copiado, mas a liga ainda não carregou");
-      // anything else the user copies is none of our business: not even logged
+      this.onClipboardText(await this.platform.readClipboard());
     } catch {
       /* clipboard busy (another app has it open): next tick */
     } finally {
       this.polling = false;
     }
+  }
+
+  private onClipboardText(text: string): void {
+    if (text === this.lastClipboard) return;
+    this.lastClipboard = text;
+    // only item text copied from the game and Path of Building codes/links are looked at
+    const league = this.league();
+    if (league && this.checker.check(text, league)) {
+      const it = this.checker.view?.item;
+      this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
+      return;
+    }
+    if (looksLikePob(text)) {
+      this.ctx.onPobText(text);
+      return;
+    }
+    if (!league && /^Item Class: /.test(text)) this.ctx.addDiag("clipboard", "item copiado, mas a liga ainda não carregou");
+    // anything else the user copies is none of our business: not even logged
   }
 
   private onPrice(v: PriceView): void {

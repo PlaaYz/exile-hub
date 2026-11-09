@@ -84,6 +84,11 @@ export interface Platform {
 
   // ---- clipboard / links -------------------------------------------------------------------
   readClipboard(): Promise<string>;
+  /**
+   * Calls onText with the clipboard text each time something is copied (not the current text).
+   * Optional: without it the app polls readClipboard().
+   */
+  watchClipboard?(onText: (text: string) => void): () => void;
   writeClipboard(text: string): Promise<void>;
   openExternal(url: string): void;
 
