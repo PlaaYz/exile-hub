@@ -194,6 +194,8 @@ export interface AppConfig {
   showDashboardOnGameStart: boolean;
   /** rank support gems with Path of Building's engine on level-ups (campaign) */
   gemAdviceEnabled: boolean;
+  /** where the player left the overlay (physical pixels); null = top-left of the primary monitor */
+  overlayPos: { x: number; y: number } | null;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */
   chatCommandsEnabled: boolean;
   chatCommands: { key: string; text: string }[];

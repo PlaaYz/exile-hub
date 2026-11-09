@@ -18,7 +18,8 @@ describe("renderer input validation", () => {
 
   it("every default setting is either user-settable or internal", () => {
     const settable = Object.keys(cleanConfigPatch({ ...DEFAULT_CONFIG, clientLogPath: "x", league: "y" }));
-    expect(settable.sort()).toEqual(Object.keys(DEFAULT_CONFIG).filter((k) => k !== "dashboardDisplayId").sort());
+    const internal = ["dashboardDisplayId", "overlayPos"]; // only the app changes these
+    expect(settable.sort()).toEqual(Object.keys(DEFAULT_CONFIG).filter((k) => !internal.includes(k)).sort());
   });
 
   it("cleans price re-search and map trade options", () => {

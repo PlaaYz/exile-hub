@@ -17,6 +17,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   gemAdviceEnabled: true,
   chatCommandsEnabled: true,
   chatCommands: DEFAULT_CHAT_COMMANDS,
+  overlayPos: null,
 };
 
 type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands";
@@ -38,6 +39,7 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   gemAdviceEnabled: "boolean",
   chatCommandsEnabled: "boolean",
   chatCommands: "chat-commands",
+  overlayPos: "internal",
 };
 
 /** Only known keys with the right primitive type. */

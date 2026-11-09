@@ -45,6 +45,7 @@ export class TauriShell implements Shell {
   private overlayReady: Promise<void> | null = null;
   private overlayCloseTimer: ReturnType<typeof setTimeout> | null = null;
   private overlayInteractive = false;
+  private overlayMoveTimer: ReturnType<typeof setTimeout> | null = null;
   private lastState: AppState | null = null;
   private dashboardShown = true;
   private tray: TrayIcon | null = null;
@@ -103,6 +104,25 @@ export class TauriShell implements Shell {
     if (this.drawing && this.lastState) for (const l of this.stateListeners) l(this.lastState);
   }
 
+  /** Where the player left the overlay, if that spot is still on a monitor; else the primary's corner. */
+  private async overlayStartPosition(): Promise<PhysicalPosition> {
+    const saved = this.ctx?.config().overlayPos;
+    if (saved) {
+      const onScreen = (await availableMonitors()).some((m) => {
+        const a = m.workArea ?? { position: m.position, size: m.size };
+        const px = saved.x + 40; // a corner of the overlay must be inside, not just one pixel
+        const py = saved.y + 40;
+        return px >= a.position.x && py >= a.position.y && px < a.position.x + a.size.width && py < a.position.y + a.size.height;
+      });
+      if (onScreen) return new PhysicalPosition(saved.x, saved.y);
+    }
+    const primary = await primaryMonitor();
+    if (!primary) return new PhysicalPosition(kOverlayMargin, kOverlayMargin);
+    const wa = primary.workArea ?? { position: primary.position, size: primary.size };
+    const m = Math.round(kOverlayMargin * primary.scaleFactor);
+    return new PhysicalPosition(wa.position.x + m, wa.position.y + m);
+  }
+
   /** Creates the overlay window (closed while unused: its webview costs ~60 MB). */
   private ensureOverlay(): Promise<void> {
     this.overlayReady ??= (async () => {
@@ -110,12 +130,12 @@ export class TauriShell implements Shell {
       const w = await Window.getByLabel("overlay");
       if (!w) throw new Error("overlay window missing");
       await w.setIgnoreCursorEvents(!this.overlayInteractive);
-      const primary = await primaryMonitor();
-      if (primary) {
-        const wa = primary.workArea ?? { position: primary.position, size: primary.size };
-        const m = Math.round(kOverlayMargin * primary.scaleFactor);
-        await w.setPosition(new PhysicalPosition(wa.position.x + m, wa.position.y + m));
-      }
+      await w.setPosition(await this.overlayStartPosition());
+      // remember where the player drags it (saved once it stops moving)
+      await w.onMoved(({ payload }) => {
+        if (this.overlayMoveTimer) clearTimeout(this.overlayMoveTimer);
+        this.overlayMoveTimer = setTimeout(() => this.ctx?.setConfig({ overlayPos: { x: payload.x, y: payload.y } }), 800);
+      });
       this.overlay = w;
     })().catch((e: unknown) => {
       this.overlayReady = null;
