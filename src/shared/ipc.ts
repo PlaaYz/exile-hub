@@ -34,6 +34,10 @@ export interface HubApi {
   /** re-run the trade search with these mods and filters */
   priceResearch(patch: PriceSearchPatch): Promise<void>;
   priceOpenTrade(): Promise<void>;
+  /** the next 10 trade listings of the current search */
+  priceMore(): Promise<void>;
+  /** open poeprices.info's estimate for the current rare in the browser */
+  priceOpenPrediction(): Promise<void>;
   farmPrices(): Promise<FarmPricesResult>;
   setStartWithWindows(on: boolean): Promise<void>;
   copyDiagReport(): Promise<void>;

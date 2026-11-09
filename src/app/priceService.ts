@@ -7,7 +7,7 @@ import { NinjaClient, priceByName } from "../core/ninja";
 import { looksLikePob } from "../core/pob";
 import { PriceChecker } from "../core/pricecheck";
 import { StatIndex, type TradeStatsData } from "../core/stats";
-import { TradeClient, defaultLeague, fetchLeagues, fetchStats } from "../core/trade";
+import { TradeClient, defaultLeague, fetchLeagues, fetchStatic, fetchStats, staticIds, type StaticIds } from "../core/trade";
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppConfig, PriceSearchPatch, PriceView } from "../shared/types";
@@ -46,8 +46,54 @@ export class PriceService {
       ninja: this.ninja,
       trade: this.trade,
       stats: () => this.loadStats(),
+      staticIds: () => this.loadStatic(),
       onUpdate: (v) => this.onPrice(v),
     });
+  }
+
+  private staticIdx: Promise<StaticIds | null> | null = null;
+
+  /** Bulk exchange ids (currency, fragments, cards...): cached in the user folder, refreshed daily. */
+  private loadStatic(): Promise<StaticIds | null> {
+    if (this.staticIdx) return this.staticIdx;
+    const file = "trade-static.json";
+    const p = this.platform;
+    this.staticIdx = (async () => {
+      const age = await p.userFileAge(file);
+      if (age !== null && Date.now() - age < kStatsMaxAgeMs) {
+        const text = await p.readUserFile(file);
+        if (text) return staticIds(JSON.parse(text));
+      }
+      try {
+        const data = await fetchStatic(p.fetch, p.userAgent);
+        await p.writeUserFile(file, JSON.stringify(data));
+        return staticIds(data);
+      } catch (e) {
+        console.error("could not load trade static data", e);
+        const text = await p.readUserFile(file);
+        if (text) return staticIds(JSON.parse(text));
+        this.staticIdx = null;
+        return null;
+      }
+    })();
+    return this.staticIdx;
+  }
+
+  /**
+   * poeprices.info's estimate for the current rare, on their own site (its old JSON API now only
+   * redirects to the site, checked 2026-11-09). The copied item text is the only thing sent.
+   */
+  openPrediction(): void {
+    const text = this.checker.text;
+    const league = this.checker.view?.league;
+    if (!text || !league) return;
+    const bin = Array.from(new TextEncoder().encode(text), (b) => String.fromCharCode(b)).join("");
+    this.platform.openExternal(`https://www.poeprices.info/lander?l=${encodeURIComponent(league)}&i=${encodeURIComponent(btoa(bin))}`);
+  }
+
+  /** The next 10 listings of the current trade search. */
+  more(): Promise<void> {
+    return this.checker.more();
   }
 
   get view(): PriceView | null {
@@ -209,7 +255,8 @@ export class PriceService {
   }
 
   openItemTrade(): void {
-    const url = this.checker.view?.trade?.url;
+    const v = this.checker.view;
+    const url = v?.trade?.url ?? v?.bulk?.url;
     if (url && url.startsWith(kTradeSite)) this.platform.openExternal(url);
   }
 

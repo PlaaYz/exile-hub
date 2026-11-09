@@ -30,6 +30,11 @@ export interface TradeListing {
   amount: number;
   currency: string;
   indexed: string;
+  /** seller account and the character they are on */
+  seller: string;
+  character: string | null;
+  /** online now / away (afk) / offline */
+  status: "online" | "afk" | "offline";
 }
 
 export interface TradeSearchResult {
@@ -37,7 +42,35 @@ export interface TradeSearchResult {
   total: number;
   url: string;
   listings: TradeListing[];
+  /** the result ids not fetched yet ("more results") */
+  rest: string[];
 }
+
+/** One bulk offer: the seller gives `stock` of the item, `want` units for `pay` of a currency. */
+export interface ExchangeOffer {
+  /** what the seller wants per trade */
+  pay: { currency: string; amount: number };
+  /** how many items the seller gives per trade, and how many they have */
+  get: { amount: number; stock: number };
+  seller: string;
+  character: string | null;
+  status: "online" | "afk" | "offline";
+  indexed: string;
+}
+
+export interface ExchangeResult {
+  id: string;
+  total: number;
+  url: string;
+  offers: ExchangeOffer[];
+}
+
+interface RawAccount {
+  name?: string;
+  lastCharacterName?: string;
+  online?: { status?: string } | null;
+}
+const statusOf = (a: RawAccount | undefined): TradeListing["status"] => (!a?.online ? "offline" : a.online.status === "afk" ? "afk" : "online");
 
 const CATEGORY_BY_CLASS: Record<string, string> = {
   "Body Armours": "armour.chest",
@@ -119,7 +152,8 @@ export function defaultFilters(item: ParsedItem, dps: WeaponDps | null, def: Def
     baseType: false,
     itemLevel: item.itemLevel !== null && !gem ? r(item.rarity === "Normal" && item.itemLevel >= 82, item.itemLevel) : null,
     quality: item.quality > 0 ? r(gem, item.quality) : gem ? r(false, null) : null,
-    links: item.sockets ? r(item.links >= 5, item.links >= 5 ? item.links : null) : null,
+    // links set the price of uniques and bases; on a rare they are cheap to redo
+    links: item.sockets ? r(item.links >= 5 && !rareish, item.links >= 5 ? item.links : null) : null,
     gemLevel: gem ? r(true, item.gemLevel ?? 1) : null,
     mapTier: item.mapTier !== null ? r(true, item.mapTier, item.mapTier) : null,
     corrupted: item.rarity === "Unique" || gem ? (item.corrupted ? "yes" : "no") : "any",
@@ -255,24 +289,87 @@ export class TradeClient {
     return { id: s.id, total: s.total, url: this.searchUrl(league, s.id) };
   }
 
+  /** Listings for these result ids (up to 10 per call, the trade site's limit). */
+  async fetchListings(queryId: string, ids: string[]): Promise<TradeListing[]> {
+    if (!ids.length) return [];
+    const f = (await this.call(
+      this.fetchLimiter,
+      `${SITE}/api/trade/fetch/${ids.slice(0, kFetchBatch).join(",")}?query=${encodeURIComponent(queryId)}`,
+    )) as {
+      result: ({ listing?: { indexed?: string; account?: RawAccount; price?: { amount?: number; currency?: string } } } | null)[];
+    };
+    return f.result
+      .map((r) => r?.listing)
+      .filter((l): l is NonNullable<typeof l> => !!l?.price?.amount && !!l.price.currency)
+      .map((l) => ({
+        amount: l.price!.amount!,
+        currency: l.price!.currency!,
+        indexed: l.indexed ?? "",
+        seller: l.account?.name ?? "",
+        character: l.account?.lastCharacterName ?? null,
+        status: statusOf(l.account),
+      }));
+  }
+
   async search(league: string, query: object): Promise<TradeSearchResult> {
     const s = (await this.call(this.searchLimiter, `${SITE}/api/trade/search/${encodeURIComponent(league)}`, {
       method: "POST",
       body: JSON.stringify(query),
     })) as { id: string; total: number; result: string[] };
-    const ids = s.result.slice(0, kFetchBatch);
-    let listings: TradeListing[] = [];
-    if (ids.length) {
-      const f = (await this.call(
-        this.fetchLimiter,
-        `${SITE}/api/trade/fetch/${ids.join(",")}?query=${encodeURIComponent(s.id)}`,
-      )) as { result: ({ listing?: { indexed?: string; price?: { amount?: number; currency?: string } } } | null)[] };
-      listings = f.result
-        .map((r) => r?.listing)
-        .filter((l): l is NonNullable<typeof l> => !!l?.price?.amount && !!l.price.currency)
-        .map((l) => ({ amount: l.price!.amount!, currency: l.price!.currency!, indexed: l.indexed ?? "" }));
+    const listings = await this.fetchListings(s.id, s.result.slice(0, kFetchBatch));
+    return { id: s.id, total: s.total, url: this.searchUrl(league, s.id), listings, rest: s.result.slice(kFetchBatch) };
+  }
+
+  private readonly exchangeLimiter = new RateLimiter();
+
+  /**
+   * Bulk exchange (currency, fragments, cards...): who sells `want` for any of `have`, cheapest
+   * first. Ids are the trade site's static ids ("divine", "chaos"...).
+   */
+  async exchange(league: string, want: string, have: string[], onlineOnly = true): Promise<ExchangeResult> {
+    const body = {
+      query: { status: { option: onlineOnly ? "online" : "any" }, have, want: [want] },
+      sort: { have: "asc" },
+      engine: "new",
+    };
+    const r = (await this.call(this.exchangeLimiter, `${SITE}/api/trade/exchange/${encodeURIComponent(league)}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    })) as {
+      id: string;
+      total?: number;
+      result?: Record<
+        string,
+        {
+          listing?: {
+            indexed?: string;
+            account?: RawAccount;
+            offers?: { exchange?: { currency?: string; amount?: number }; item?: { amount?: number; stock?: number } }[];
+          };
+        }
+      >;
+    };
+    const offers: ExchangeOffer[] = [];
+    for (const entry of Object.values(r.result ?? {})) {
+      const l = entry.listing;
+      for (const o of l?.offers ?? []) {
+        if (!o.exchange?.currency || !o.exchange.amount || !o.item?.amount) continue;
+        offers.push({
+          pay: { currency: o.exchange.currency, amount: o.exchange.amount },
+          get: { amount: o.item.amount, stock: o.item.stock ?? o.item.amount },
+          seller: l?.account?.name ?? "",
+          character: l?.account?.lastCharacterName ?? null,
+          status: statusOf(l?.account),
+          indexed: l?.indexed ?? "",
+        });
+      }
     }
-    return { id: s.id, total: s.total, url: this.searchUrl(league, s.id), listings };
+    return {
+      id: r.id,
+      total: r.total ?? offers.length,
+      url: `${SITE}/trade/exchange/${encodeURIComponent(league)}/${r.id}`,
+      offers,
+    };
   }
 }
 
@@ -293,4 +390,21 @@ export async function fetchStats(fetchFn: TradeFetch, userAgent: string): Promis
   const res = await fetchFn(`${SITE}/api/trade/data/stats`, { headers: { "User-Agent": userAgent } });
   if (!res.ok) throw new Error(`stats HTTP ${res.status}`);
   return res.json();
+}
+
+/** The trade site's list of bulk-tradable things (currency, fragments, cards...) with their ids. */
+export async function fetchStatic(fetchFn: TradeFetch, userAgent: string): Promise<unknown> {
+  const res = await fetchFn(`${SITE}/api/trade/data/static`, { headers: { "User-Agent": userAgent } });
+  if (!res.ok) throw new Error(`static HTTP ${res.status}`);
+  return res.json();
+}
+
+export type StaticIds = Map<string, string>;
+
+/** Item name -> exchange id ("Divine Orb" -> "divine"), from /api/trade/data/static. */
+export function staticIds(data: unknown): StaticIds {
+  const out: StaticIds = new Map();
+  const groups = (data as { result?: { entries?: { id?: string; text?: string }[] }[] })?.result ?? [];
+  for (const g of groups) for (const e of g.entries ?? []) if (e.id && e.text && !out.has(e.text)) out.set(e.text, e.id);
+  return out;
 }

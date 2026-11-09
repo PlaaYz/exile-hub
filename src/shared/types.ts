@@ -151,6 +151,19 @@ export interface PriceListing {
   currency: string;
   chaos: number | null;
   indexed: string;
+  seller: string;
+  character: string | null;
+  status: "online" | "afk" | "offline";
+}
+
+/** One bulk exchange offer, converted to chaos per unit. */
+export interface PriceBulkOffer {
+  chaosPerUnit: number | null;
+  pay: { currency: string; amount: number };
+  get: { amount: number; stock: number };
+  seller: string;
+  character: string | null;
+  status: "online" | "afk" | "offline";
 }
 
 export interface PriceView {
@@ -177,7 +190,12 @@ export interface PriceView {
   ninja: { chaos: number; divine: number | null; label: string; listings: number | null; lowConfidence: boolean } | null;
   tradeStatus: FetchStatus;
   tradeError: string | null;
-  trade: { total: number; url: string; listings: PriceListing[]; medianChaos: number | null } | null;
+  /** `more` = results not fetched yet ("mais resultados") */
+  trade: { total: number; url: string; listings: PriceListing[]; medianChaos: number | null; more: number } | null;
+  /** bulk exchange (currency, fragments, cards...): real offers, cheapest first */
+  bulkStatus: FetchStatus;
+  bulkError: string | null;
+  bulk: { total: number; url: string; offers: PriceBulkOffer[] } | null;
   mods: PriceModFilter[];
   /** mod lines that could not be mapped to a trade stat */
   unmatched: string[];

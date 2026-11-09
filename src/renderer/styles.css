@@ -269,3 +269,10 @@ body.mode-price { background: #0e1116; }
 .search-flags { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 4px 0 6px; }
 .mod.pseudo .mod-text { color: #e0c060; }
 .calc-line { margin: 4px 0; font-variant-numeric: tabular-nums; }
+
+.seller::before { content: '●'; margin-right: 4px; font-size: 10px; }
+.seller.online::before { color: #6cc46c; }
+.seller.afk::before { color: #e0c060; }
+.seller.offline::before { color: #6b7380; }
+
+.listings tr.bait { opacity: 0.55; }

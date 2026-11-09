@@ -371,6 +371,14 @@ export class Hub {
     }
   }
 
+  priceOpenPrediction(): void {
+    this.prices.openPrediction();
+  }
+
+  priceMore(): Promise<void> {
+    return this.prices.more();
+  }
+
   closePricePopup(): void {
     this.p.shell.hidePricePopup?.();
   }

@@ -4,8 +4,19 @@ import { parseItem, type ParsedItem } from "./item";
 import { defences, pseudoStats, weaponDps } from "./itemCalc";
 import type { NinjaClient } from "./ninja";
 import type { StatIndex } from "./stats";
-import { buildQuery, coveredByCalc, defaultFilters, defaultMin, hasLocalMods, type StatFilter, type TradeClient } from "./trade";
-import type { PriceModFilter, PriceSearchPatch, PriceView } from "../shared/types";
+import {
+  buildQuery,
+  coveredByCalc,
+  defaultFilters,
+  defaultMin,
+  hasLocalMods,
+  kFetchBatch,
+  type StaticIds,
+  type StatFilter,
+  type TradeClient,
+  type TradeListing,
+} from "./trade";
+import type { PriceListing, PriceModFilter, PriceSearchPatch, PriceView } from "../shared/types";
 
 /** Totals searched by default (Awakened PoE Trade does the same); the others are offered, off. */
 const PSEUDO_ON = new Set([
@@ -29,13 +40,21 @@ export interface PriceCheckDeps {
   ninja: NinjaClient;
   trade: TradeClient;
   stats: () => Promise<StatIndex | null>;
+  /** bulk exchange ids (item name -> "divine"...); optional */
+  staticIds?: () => Promise<StaticIds | null>;
   onUpdate: (v: PriceView) => void;
   now?: () => number;
 }
 
+/** On a weapon searched by DPS, only these lines start on (resistances, life... say little about its price). */
+const ATTACK_MOD = /Critical Strike|Damage|Attack|Accuracy|Socketed|Gems?\b|Leech|Projectile|Area of Effect/;
+
+/** Bulk offers shown. */
+const kBulkOffers = 12;
+
 export class PriceChecker {
   private seq = 0;
-  private current: { item: ParsedItem; view: PriceView } | null = null;
+  private current: { item: ParsedItem; view: PriceView; text: string; queryId: string | null; rest: string[] } | null = null;
 
   constructor(private readonly d: PriceCheckDeps) {}
 
@@ -79,12 +98,68 @@ export class PriceChecker {
       chaosPerDivine: null,
       filters: defaultFilters(item, dps, def),
       calc: { dps, def },
+      bulkStatus: this.d.staticIds && (item.stackSize !== null || NO_TRADE_CLASSES.test(item.itemClass)) ? "loading" : "n/a",
+      bulkError: null,
+      bulk: null,
     };
-    this.current = { item, view };
+    this.current = { item, view, text, queryId: null, rest: [] };
     this.emit();
     void this.runNinja(seq, league, item);
     if (view.tradeStatus === "loading") void this.prepareMods(seq, item).then(() => this.runTrade(seq, league));
+    if (view.bulkStatus === "loading") void this.runBulk(seq, league, item);
     return true;
+  }
+
+  /** Bulk exchange: real offers for currency, fragments, cards... paid in chaos or divines. */
+  private async runBulk(seq: number, league: string, item: ParsedItem): Promise<void> {
+    try {
+      const ids = await this.d.staticIds?.();
+      const want = ids?.get(item.baseType) ?? ids?.get(item.name);
+      if (!want) return void this.patch(seq, { bulkStatus: "n/a" });
+      const have = want === "divine" ? ["chaos"] : want === "chaos" ? ["divine"] : ["chaos", "divine"];
+      const [res, rates] = await Promise.all([
+        this.d.trade.exchange(league, want, have, this.current?.view.filters.online ?? true),
+        this.d.ninja.currencyRates(league).catch(() => null),
+      ]);
+      const rate = (c: string) => (c === "chaos" ? 1 : rates?.get(c));
+      const offers = res.offers
+        .map((o) => {
+          const r = rate(o.pay.currency);
+          return { ...o, chaosPerUnit: r !== undefined ? Math.round(((o.pay.amount * r) / o.get.amount) * 100) / 100 : null };
+        })
+        .sort((a, b) => (a.chaosPerUnit ?? Infinity) - (b.chaosPerUnit ?? Infinity))
+        .slice(0, kBulkOffers)
+        .map(({ chaosPerUnit, pay, get, seller, character, status }) => ({ chaosPerUnit, pay, get, seller, character, status }));
+      this.patch(seq, { bulkStatus: "done", bulk: { total: res.total, url: res.url, offers } });
+    } catch (e) {
+      this.patch(seq, { bulkStatus: "error", bulkError: (e as Error).message });
+    }
+  }
+
+  /** The copied text of the current item (opened on poeprices.info for a rare's estimate). */
+  get text(): string | null {
+    return this.current?.text ?? null;
+  }
+
+  /** The next 10 listings of the current search. */
+  async more(): Promise<void> {
+    const cur = this.current;
+    if (!cur?.queryId || !cur.rest.length || !cur.view.trade) return;
+    const seq = cur.view.seq;
+    const ids = cur.rest.slice(0, kFetchBatch);
+    try {
+      const [listings, rates] = await Promise.all([
+        this.d.trade.fetchListings(cur.queryId, ids),
+        this.d.ninja.currencyRates(cur.view.league).catch(() => null),
+      ]);
+      if (this.current !== cur) return;
+      cur.rest = cur.rest.slice(ids.length);
+      const trade = cur.view.trade!;
+      const all = [...trade.listings, ...withChaos(listings, rates)];
+      this.patch(seq, { trade: { ...trade, listings: all, more: cur.rest.length } });
+    } catch (e) {
+      this.patch(seq, { tradeError: (e as Error).message });
+    }
   }
 
   /** Re-run the trade search with the player's choices (popup / panel): mods and filters. */
@@ -140,8 +215,10 @@ export class PriceChecker {
     // totals the trade site computes (resistances, life...) replace the lines they add up
     const pseudo = rareish ? pseudoStats(item) : [];
     const folded = new Set<string>();
+    // a weapon searched by DPS is priced by its damage: totals (resistances...) start off
+    const byDps = !!(filters?.pdps?.enabled || filters?.edps?.enabled || filters?.dps?.enabled);
     for (const p of pseudo) {
-      const on = PSEUDO_ON.has(p.statId);
+      const on = PSEUDO_ON.has(p.statId) && !byDps;
       if (on) for (const line of p.from) folded.add(line);
       mods.push({ text: p.text, kind: "pseudo", statId: p.statId, value: p.value, min: defaultMin(p.value), max: null, enabled: on });
     }
@@ -159,7 +236,8 @@ export class PriceChecker {
         rareish &&
         (hit.kind === "explicit" || hit.kind === "fractured") &&
         !folded.has(m.text) &&
-        !(filters && coveredByCalc(m.text, filters));
+        !(filters && coveredByCalc(m.text, filters)) &&
+        (!byDps || ATTACK_MOD.test(m.text));
       mods.push({ ...hit, min: defaultMin(hit.value), max: null, enabled });
     }
     this.patch(seq, { mods, unmatched });
@@ -176,17 +254,25 @@ export class PriceChecker {
       const query = buildQuery(item, cur.view.mods as StatFilter[], cur.view.filters);
       const res = await this.d.trade.search(league, query);
       const rates = await this.d.ninja.currencyRates(league).catch(() => null);
-      const listings = res.listings.map((l) => {
-        const rate = rates?.get(l.currency);
-        return { ...l, chaos: rate !== undefined ? Math.round(l.amount * rate * 10) / 10 : null };
-      });
+      const listings = withChaos(res.listings, rates);
       const chaos = listings.map((l) => l.chaos).filter((c): c is number => c !== null);
+      if (this.current === cur) {
+        cur.queryId = res.id;
+        cur.rest = res.rest;
+      }
       this.patch(seq, {
         tradeStatus: "done",
-        trade: { total: res.total, url: res.url, listings, medianChaos: median(chaos) },
+        trade: { total: res.total, url: res.url, listings, medianChaos: median(chaos), more: res.rest.length },
       });
     } catch (e) {
       this.patch(seq, { tradeStatus: "error", tradeError: (e as Error).message });
     }
   }
+}
+
+function withChaos(listings: TradeListing[], rates: Map<string, number> | null): PriceListing[] {
+  return listings.map((l) => {
+    const rate = l.currency === "chaos" ? 1 : rates?.get(l.currency);
+    return { ...l, chaos: rate !== undefined ? Math.round(l.amount * rate * 10) / 10 : null };
+  });
 }

@@ -215,6 +215,71 @@ function SearchEditor({ p }: { p: PriceView }) {
   );
 }
 
+const STATUS_LABEL = { online: "online", afk: "ausente", offline: "offline" };
+
+/** Rares: poeprices.info's machine-learning estimate, opened on their site. */
+function PredictionLine({ p }: { p: PriceView }) {
+  if (p.item.rarity !== "Rare") return null;
+  return (
+    <div className="price-line">
+      <span className="price-src">previsão</span>
+      <button className="link small" onClick={() => void window.hub.priceOpenPrediction()}>
+        ver estimativa no poeprices.info
+      </button>
+    </div>
+  );
+}
+
+/** Bulk exchange offers: price per unit, how many per trade, stock, seller. */
+function BulkTable({ p }: { p: PriceView }) {
+  if (p.bulkStatus === "n/a") return null;
+  const cpd = p.chaosPerDivine;
+  return (
+    <>
+      <h3>Troca em massa (bulk)</h3>
+      {p.bulkStatus === "loading" && <div className="muted small">buscando ofertas…</div>}
+      {p.bulkStatus === "error" && <div className="warn-text small">{p.bulkError}</div>}
+      {p.bulk && p.bulk.offers.length === 0 && <div className="muted small">ninguém vendendo agora</div>}
+      {p.bulk && p.bulk.offers.length > 0 && (
+        <table className="listings">
+          <tbody>
+            {p.bulk.offers.map((o, i) => {
+              // far below poe.ninja: usually a bait listing (1 in stock, never answers)
+              const bait = !!p.ninja && o.chaosPerUnit !== null && o.chaosPerUnit < p.ninja.chaos * 0.6;
+              return (
+              <tr key={i} className={bait ? "bait" : ""}>
+                <td title={bait ? "muito abaixo do poe.ninja: provavelmente isca" : ""}>
+                  <b>{o.chaosPerUnit !== null ? fmtChaos(o.chaosPerUnit, cpd) : "?"}</b>
+                  <span className="muted"> /un</span>
+                  {bait && <span className="warn-text small"> suspeito</span>}
+                </td>
+                <td className="muted">
+                  {fmtAmount(o.pay.amount, o.pay.currency)} → {o.get.amount}
+                </td>
+                <td className="muted">estoque {o.get.stock}</td>
+                <td>
+                  <span className={`seller ${o.status}`} title={`${o.seller} · ${STATUS_LABEL[o.status]}`}>
+                    {o.character ?? o.seller}
+                  </span>
+                </td>
+              </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {p.bulk && (
+        <div className="muted small">
+          {p.bulk.total} ofertas no total ·{" "}
+          <a href={p.bulk.url} onClick={(e) => (e.preventDefault(), void window.hub.priceOpenTrade())}>
+            abrir no site
+          </a>
+        </div>
+      )}
+    </>
+  );
+}
+
 /** pDPS/eDPS or armour/evasion/ES, now and at 20% quality. */
 function CalcLine({ p }: { p: PriceView }) {
   const d = p.calc.dps;
@@ -333,6 +398,8 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
           {p.ninja.listings !== null ? ` (${p.ninja.listings} anúncios)` : ""}
         </div>
       )}
+      <PredictionLine p={p} />
+      <BulkTable p={p} />
       {p.trade && p.trade.listings.length > 0 && (
         <table className="listings">
           <tbody>
@@ -340,6 +407,11 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
               <tr key={i}>
                 <td>{fmtAmount(l.amount, l.currency)}</td>
                 <td className="muted">{l.chaos !== null && l.currency !== "chaos" ? `≈ ${fmtChaos(l.chaos, null)}` : ""}</td>
+                <td>
+                  <span className={`seller ${l.status}`} title={l.seller}>
+                    {l.character ?? l.seller}
+                  </span>
+                </td>
                 <td className="muted">há {ago(l.indexed)}</td>
               </tr>
             ))}
@@ -349,6 +421,7 @@ export function PricePanelBody({ p }: { p: PriceView | null }) {
       {p.trade && (
         <div className="row buttons">
           <button onClick={() => void window.hub.priceOpenTrade()}>Abrir no site do trade</button>
+          {p.trade.more > 0 && <button onClick={() => void window.hub.priceMore()}>Mais resultados ({p.trade.more})</button>}
         </div>
       )}
       <SearchEditor p={p} />

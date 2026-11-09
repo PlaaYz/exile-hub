@@ -216,6 +216,22 @@ Session.known / identify / refreshFromKnown use it; the dashboard header has a p
 neither levels nor dies). Overlay map line: session count, average time and maps/hour; the endgame
 head only shows outside maps.
 
+Price check round 2 (0.3.8, 2026-11-09, goal: Awakened PoE Trade level):
+- Price key (config.priceCheckKey, default Ctrl+D; owner-approved synthetic input: one key = one
+  Ctrl+Alt+C): registered with the chat command keys only while the game has focus; src-tauri
+  game.rs copy_item/focus_game/cursor_pos; PriceService.expectHotkeyItem opens the "price" window
+  (create:false, mode=price, PricePopup.tsx) next to the mouse and restores the player's clipboard.
+  The popup talks to the dashboard through the overlay bridge (OVERLAY_CALLS whitelist).
+- core/itemCalc.ts: pseudo totals (ele/total res, life incl. str/2, attributes, ES off armour, MS),
+  weapon pDPS/eDPS/DPS and AR/EV/ES at Q20 (local increases). core/trade.ts defaultFilters /
+  coveredByCalc / buildQuery(item, mods, filters): rares by category, weapons by pDPS (attack mods
+  only), armour by defences, totals replace the lines they sum, links only for non-rares.
+- Bulk exchange: /api/trade/exchange (own RateLimiter), ids from /api/trade/data/static
+  (userData/trade-static.json, 1 day); offers far below poe.ninja are flagged "suspeito".
+- Listings carry seller/character/online-afk-offline; "Mais resultados" fetches the next 10 ids.
+- poeprices.info's JSON API now redirects to its site (checked 2026-11-09): rares get a button that
+  opens poeprices.info/lander with the item instead.
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.

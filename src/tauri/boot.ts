@@ -22,6 +22,8 @@ const OVERLAY_CALLS = new Set<keyof HubApi>([
   "toggleOverlayInteractive",
   "priceResearch",
   "priceOpenTrade",
+  "priceMore",
+  "priceOpenPrediction",
   "closePricePopup",
 ]);
 
@@ -70,6 +72,8 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     copyDiagReport: () => hub.copyDiagReport(),
     getTreeLayout: () => hub.getTreeLayout(),
     closePricePopup: async () => hub.closePricePopup(),
+    priceMore: () => hub.priceMore(),
+    priceOpenPrediction: async () => hub.priceOpenPrediction(),
     setCharacter: async (name) => {
       if (typeof name === "string" && name.length <= 40) hub.setCharacter(name);
     },
