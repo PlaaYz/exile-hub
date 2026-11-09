@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   overlayHideUnfocused: true,
   showDashboardOnGameStart: true,
   gemAdviceEnabled: true,
+  overlayTreeMap: true,
   chatCommandsEnabled: true,
   chatCommands: DEFAULT_CHAT_COMMANDS,
 };
@@ -36,6 +37,7 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   overlayHideUnfocused: "boolean",
   showDashboardOnGameStart: "boolean",
   gemAdviceEnabled: "boolean",
+  overlayTreeMap: "boolean",
   chatCommandsEnabled: "boolean",
   chatCommands: "chat-commands",
 };

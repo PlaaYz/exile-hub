@@ -49,6 +49,22 @@ describe("tree data", () => {
     expect(tree.nodes[2].links.sort()).toEqual([1, 3]);
     expect(tree.nodes[11].mastery).toBe(true);
   });
+
+  it("places nodes on their group's orbit like Path of Building", () => {
+    const t = slimTree(
+      {
+        nodes: {
+          "1": { skill: 1, name: "Centre", group: 1, orbit: 0, orbitIndex: 0 },
+          "2": { skill: 2, name: "East", group: 1, orbit: 2, orbitIndex: 4 }, // 16 slots: index 4 = 90°
+        },
+        groups: { "1": { x: 100, y: 200 } },
+        constants: { skillsPerOrbit: [1, 6, 16, 16, 40], orbitRadii: [0, 82, 162, 335, 493] },
+      },
+      "t",
+    );
+    expect([t.nodes[1].x, t.nodes[1].y]).toEqual([100, 200]);
+    expect([t.nodes[2].x, t.nodes[2].y]).toEqual([262, 200]);
+  });
 });
 
 describe("PassiveTracker", () => {
@@ -118,6 +134,17 @@ describe("compareTree", () => {
   it("starts from the class start when nothing is allocated", () => {
     const p = compareTree(tree, b, new Map());
     expect(p.missing[0]).toMatchObject({ name: "Notable X", distance: 3 });
+  });
+
+  it("next path: to the nearest notable, then on to the following ones", () => {
+    const p = compareTree(tree, b, new Map([["Intelligence", 2]]));
+    // has 2,3 -> Notable X (4), then Life 5 -> Keystone Y (6) or Life 7 -> Notable Z (8): nearest first
+    expect(p.nextPath[0]).toBe(4);
+    expect(new Set(p.nextPath)).toEqual(new Set([4, 5, 6, 7, 8]));
+    expect(p.nextPath.indexOf(5)).toBeLessThan(p.nextPath.indexOf(6));
+    expect(p.nextPath.indexOf(7)).toBeLessThan(p.nextPath.indexOf(8));
+    expect(p.haveIds.sort()).toEqual([2, 3]);
+    expect(p.startId).toBe(1);
   });
 
   it("small nodes are matched by count", () => {

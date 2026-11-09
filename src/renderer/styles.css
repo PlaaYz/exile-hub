@@ -213,3 +213,30 @@ button.primary { border-color: var(--accent); color: var(--accent); font-weight:
 .sock-r { color: #e06c6c; }
 .sock-g { color: #7cc47c; }
 .sock-b { color: #6ca0e0; }
+
+/* passive tree map */
+.tree-map { width: 100%; display: block; background: #0b0d11; border: 1px solid #222833; border-radius: 6px; touch-action: none; }
+.tree-full { height: calc(100vh - 120px); cursor: grab; }
+.tree-overlay { background: rgba(8, 10, 14, 0.75); border-color: #333; }
+.t-edge { stroke: #232a35; stroke-width: 10; }
+.t-edge.build { stroke: #3d5a80; stroke-width: 16; }
+.t-edge.have { stroke: #c9a227; stroke-width: 18; }
+.t-edge.next { stroke: #ff8c1a; stroke-width: 24; }
+.t-node { fill: #1a1f28; stroke: #39424f; stroke-width: 6; }
+.t-node.k1, .t-node.k2 { stroke-width: 10; }
+.t-node.build { fill: #1d3049; stroke: #6c9bd2; }
+.t-node.have { fill: #c9a227; stroke: #f0d060; }
+.t-node.next { fill: #ff8c1a; stroke: #ffd29a; }
+.t-node.k3 { fill: #2b2b2b; stroke: #888; }
+.t-step { fill: #fff; font: bold 70px sans-serif; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 14px; pointer-events: none; }
+.tree-overlay .t-step { font-size: 90px; }
+.tree-mini-wrap { position: relative; margin: 6px 0; }
+.tree-zoom { position: absolute; top: 6px; right: 6px; }
+.tree-next { margin: 4px 0 8px; line-height: 1.6; }
+.tree-next-step { display: inline-block; margin-right: 10px; }
+.tree-next-step b { color: #ff8c1a; }
+.tree-modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 50; display: flex; align-items: center; justify-content: center; }
+.tree-modal-box { width: 94vw; background: #0e1116; border: 1px solid #2a3240; border-radius: 8px; padding: 10px; }
+.t-legend.have { color: #c9a227; } .t-legend.build { color: #6c9bd2; } .t-legend.next { color: #ff8c1a; }
+.ov-tree { margin-top: 4px; }
+.tree-map path { fill: none; }

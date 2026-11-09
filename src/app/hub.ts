@@ -13,7 +13,7 @@ import type { Lookups } from "../core/route";
 import { gemColors } from "../core/searchRegex";
 import { Session, type ProgressData } from "../core/session";
 import type { FarmPricesResult, ImportResult } from "../shared/ipc";
-import type { AppConfig, AppState, DisplayInfo, PobBuild } from "../shared/types";
+import type { AppConfig, AppState, DisplayInfo, PobBuild, TreeLayout } from "../shared/types";
 import { ConfigStore } from "./config";
 import { kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
 import { Diagnostics } from "./diagnostics";
@@ -452,6 +452,9 @@ export class Hub {
   }
   farmPrices(): Promise<FarmPricesResult> {
     return this.prices.farmPrices();
+  }
+  getTreeLayout(): Promise<TreeLayout | null> {
+    return this.tree.layout();
   }
   refreshGemAdvice(): void {
     this.gems.maybeAdvise(true);

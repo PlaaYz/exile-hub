@@ -194,9 +194,20 @@ export interface AppConfig {
   showDashboardOnGameStart: boolean;
   /** rank support gems with Path of Building's engine on level-ups (campaign) */
   gemAdviceEnabled: boolean;
+  /** small passive tree map (next points) on the overlay */
+  overlayTreeMap: boolean;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */
   chatCommandsEnabled: boolean;
   chatCommands: { key: string; text: string }[];
+}
+
+/** Main passive tree geometry for the map: [id, x, y, kind 0 small/1 notable/2 keystone/3 start], edges by id. */
+export interface TreeLayout {
+  nodes: [number, number, number, number][];
+  /** [a, b] straight, or [a, b, radius, sweep] an arc on a group's orbit (SVG arc sweep flag) */
+  edges: ([number, number] | [number, number, number, number])[];
+  /** node id -> name (tooltips, the "take next" list) */
+  names: Record<number, string>;
 }
 
 export interface DisplayInfo {
@@ -288,6 +299,12 @@ export interface AppState {
       missing: { id: number; name: string; kind: "notable" | "keystone"; stats: string[]; distance: number | null }[];
       ascMissing: string[];
       offBuild: string[];
+      /** for the tree map (geometry comes once from getTreeLayout) */
+      buildIds: number[];
+      haveIds: number[];
+      /** points to take next, in order */
+      nextPath: number[];
+      startId: number | null;
     } | null;
   } | null;
   /** where the current build came from: pasted, picked up from the clipboard, or restored */

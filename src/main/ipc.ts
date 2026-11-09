@@ -32,6 +32,7 @@ export function registerIpc(t: Hub): void {
   ipcMain.handle(CH.farmPrices, () => t.farmPrices());
   ipcMain.handle(CH.diagCopy, () => t.copyDiagReport());
   ipcMain.handle(CH.gemAdviceRefresh, () => t.refreshGemAdvice());
+  ipcMain.handle(CH.treeLayout, () => t.getTreeLayout());
   ipcMain.handle(CH.updateInstall, () => t.installUpdate());
   ipcMain.handle(CH.appAutostart, (_e, on: unknown) => {
     return typeof on === "boolean" ? t.setStartWithWindows(on) : undefined;

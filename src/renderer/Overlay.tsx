@@ -91,7 +91,7 @@ export function OverlayApp() {
       )}
 
       <GemHint advice={state.gemAdvice} />
-      <TreeHint tree={state.tree} />
+      <TreeHint tree={state.tree} map={state.config.overlayTreeMap} />
 
       {nextGems.length > 0 && (
         <div className="ov-gems">

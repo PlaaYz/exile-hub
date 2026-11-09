@@ -423,6 +423,14 @@ function SettingsPanel({ state }: { state: AppState }) {
         />
         Esconder o overlay quando o jogo está fechado ou fora de foco (alt-tab)
       </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={state.config.overlayTreeMap}
+          onChange={(e) => void window.hub.setConfig({ overlayTreeMap: e.target.checked })}
+        />
+        Mini árvore passiva no overlay (os próximos pontos numerados)
+      </label>
       <div className="muted">
         F10 deixa o overlay clicável para arrastar ou usar anterior/próximo; aperte de novo para travar. O jogo
         precisa estar em tela cheia em janela (windowed fullscreen) para o overlay aparecer por cima.

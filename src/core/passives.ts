@@ -6,7 +6,7 @@
 // The log does not say which character allocated a point: it is attributed to the character that
 // levels up in the same game session (the pid in "Client <pid>" changes on every game start).
 import type { LogEvent } from "./clientLog";
-import type { PobBuild } from "../shared/types";
+import type { PobBuild, TreeLayout } from "../shared/types";
 
 // ---- tree data ------------------------------------------------------------------
 
@@ -22,10 +22,24 @@ export interface TreeNode {
   start?: true;
   links: number[];
   stats: string[];
+  /** position on the tree (GGG coordinates, y down); absent for nodes without a group */
+  x?: number;
+  y?: number;
+  /** group, orbit and angle (degrees): links between nodes on the same orbit are drawn as arcs */
+  g?: number;
+  o?: number;
+  a?: number;
+  /** orbit radius */
+  r?: number;
 }
+
+/** Bumped when the slim format changes: older caches are fetched again. */
+export const kTreeFormat = 2;
 
 export interface PassiveTree {
   version: string;
+  /** kTreeFormat of the cache (missing = format 1, no positions) */
+  format?: number;
   nodes: Record<number, TreeNode>;
   /** base class name -> its start node */
   classStarts: Record<string, number>;
@@ -44,12 +58,39 @@ interface RawNode {
   out?: string[];
   in?: string[];
   stats?: string[];
+  group?: number;
+  orbit?: number;
+  orbitIndex?: number;
 }
 
-/** Shrinks GGG's skilltree-export data.json (~6.6 MB) to what the comparison needs. */
-export function slimTree(raw: { tree?: string; classes?: { name: string }[]; nodes: Record<string, RawNode> }, version: string): PassiveTree {
+interface RawTree {
+  tree?: string;
+  classes?: { name: string }[];
+  nodes: Record<string, RawNode>;
+  groups?: Record<string, { x: number; y: number }>;
+  constants?: { skillsPerOrbit?: number[]; orbitRadii?: number[] };
+}
+
+// orbits with 16 and 40 slots are not evenly spaced (same tables as Path of Building)
+const ANGLES_16 = [0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330];
+const ANGLES_40 = [
+  0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 225, 230,
+  240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350,
+];
+
+/** Degrees of slot `index` on an orbit with `slots` positions. */
+export function orbitAngle(slots: number, index: number): number {
+  if (slots === 16) return ANGLES_16[index] ?? 0;
+  if (slots === 40) return ANGLES_40[index] ?? 0;
+  return (360 / slots) * index;
+}
+
+/** Shrinks GGG's skilltree-export data.json (~6.6 MB) to what the comparison and the map need. */
+export function slimTree(raw: RawTree, version: string): PassiveTree {
   const nodes: Record<number, TreeNode> = {};
   const classStarts: Record<string, number> = {};
+  const perOrbit = raw.constants?.skillsPerOrbit ?? [1, 6, 16, 16, 40, 72, 72];
+  const radii = raw.constants?.orbitRadii ?? [0, 82, 162, 335, 493, 662, 846];
   for (const [key, n] of Object.entries(raw.nodes)) {
     const id = n.skill ?? Number(key);
     if (!Number.isFinite(id) || !n.name || n.isProxy) continue;
@@ -59,6 +100,16 @@ export function slimTree(raw: { tree?: string; classes?: { name: string }[]; nod
       links: [...(n.out ?? []), ...(n.in ?? [])].map(Number).filter(Number.isFinite),
       stats: n.stats ?? [],
     };
+    const g = n.group !== undefined ? raw.groups?.[String(n.group)] : undefined;
+    if (g) {
+      const orbit = n.orbit ?? 0;
+      const deg = orbitAngle(perOrbit[orbit] ?? 1, n.orbitIndex ?? 0);
+      const a = (deg * Math.PI) / 180;
+      const r = radii[orbit] ?? 0;
+      node.x = Math.round(g.x + r * Math.sin(a));
+      node.y = Math.round(g.y - r * Math.cos(a));
+      if (orbit > 0) Object.assign(node, { g: n.group, o: orbit, a: deg, r });
+    }
     if (n.isNotable) node.notable = true;
     if (n.isKeystone) node.keystone = true;
     if (n.isMastery) node.mastery = true;
@@ -76,7 +127,34 @@ export function slimTree(raw: { tree?: string; classes?: { name: string }[]; nod
       if (o && !o.links.includes(n.id)) o.links.push(n.id);
     }
   }
-  return { version, nodes, classStarts };
+  return { version, format: kTreeFormat, nodes, classStarts };
+}
+
+/** Main-tree geometry for drawing (no ascendancy, masteries or nodes without a position). */
+export function treeLayout(tree: PassiveTree): TreeLayout {
+  const shown = (n: TreeNode | undefined): n is TreeNode & { x: number; y: number } =>
+    !!n && n.x !== undefined && n.y !== undefined && !n.asc && !n.mastery;
+  const nodes: TreeLayout["nodes"] = [];
+  const edges: TreeLayout["edges"] = [];
+  const names: TreeLayout["names"] = {};
+  for (const n of Object.values(tree.nodes)) {
+    if (!shown(n)) continue;
+    nodes.push([n.id, n.x, n.y, n.start ? 3 : n.keystone ? 2 : n.notable ? 1 : 0]);
+    names[n.id] = n.name;
+    // class starts fan out to every class: those spokes are noise on a map
+    for (const l of n.links) {
+      const m = tree.nodes[l];
+      if (l <= n.id || !shown(m) || (n.start && m.start)) continue;
+      // same group and orbit: an arc around the group centre, the short way round
+      if (n.g !== undefined && n.g === m.g && n.o === m.o && n.r && n.a !== undefined && m.a !== undefined) {
+        const delta = (m.a - n.a + 360) % 360;
+        edges.push([n.id, l, n.r, delta <= 180 ? 1 : 0]);
+      } else {
+        edges.push([n.id, l]);
+      }
+    }
+  }
+  return { nodes, edges, names };
 }
 
 // ---- what the character allocated -------------------------------------------------
@@ -201,9 +279,18 @@ export interface TreeProgress {
   ascMissing: string[];
   /** notables/keystones the character has that the build does not use */
   offBuild: string[];
+  /** for the tree map: the build's main-tree nodes and which of them the character has */
+  buildIds: number[];
+  haveIds: number[];
+  /** the points to take next, in order: the path to the nearest missing notable/keystone */
+  nextPath: number[];
+  /** class start node of the build (where an empty tree begins) */
+  startId: number | null;
 }
 
 const isPoint = (n: TreeNode) => !n.start && !n.mastery;
+/** How many points ahead the "take next" path goes. */
+export const kNextPoints = 15;
 
 export function compareTree(tree: PassiveTree, build: PobBuild, allocated: Allocated): TreeProgress {
   const left = new Map(allocated); // counts still available for matching
@@ -226,24 +313,35 @@ export function compareTree(tree: PassiveTree, build: PobBuild, allocated: Alloc
   // distance: BFS from what the character has (or the class start) through build nodes only
   const inBuild = new Set(main.map((n) => n.id));
   const start = tree.classStarts[build.className];
-  const dist = new Map<number, number>();
-  const queue: number[] = [];
-  for (const id of have) {
-    dist.set(id, 0);
-    queue.push(id);
-  }
-  if (start !== undefined) {
-    dist.set(start, 0);
-    queue.push(start);
-  }
-  for (let qi = 0; qi < queue.length; qi++) {
-    const cur = queue[qi];
-    for (const l of tree.nodes[cur]?.links ?? []) {
-      if (dist.has(l) || !inBuild.has(l)) continue;
-      dist.set(l, dist.get(cur)! + 1);
-      queue.push(l);
+  const bfs = (sources: Iterable<number>) => {
+    const dist = new Map<number, number>();
+    const parent = new Map<number, number>();
+    const queue: number[] = [];
+    for (const id of sources) {
+      dist.set(id, 0);
+      queue.push(id);
     }
-  }
+    if (start !== undefined && !dist.has(start)) {
+      dist.set(start, 0);
+      queue.push(start);
+    }
+    for (let qi = 0; qi < queue.length; qi++) {
+      const cur = queue[qi];
+      for (const l of tree.nodes[cur]?.links ?? []) {
+        if (dist.has(l) || !inBuild.has(l)) continue;
+        dist.set(l, dist.get(cur)! + 1);
+        parent.set(l, cur);
+        queue.push(l);
+      }
+    }
+    const pathTo = (id: number): number[] => {
+      const path: number[] = [];
+      for (let cur: number | undefined = id; cur !== undefined && dist.get(cur)! > 0; cur = parent.get(cur)) path.unshift(cur);
+      return path;
+    };
+    return { dist, order: queue, pathTo };
+  };
+  const { dist } = bfs(have);
 
   const missing: MissingNode[] = main
     .filter((n) => (n.notable || n.keystone) && !have.has(n.id))
@@ -263,11 +361,32 @@ export function compareTree(tree: PassiveTree, build: PobBuild, allocated: Alloc
     .map(([name]) => name)
     .sort();
 
+  // next: walk to the nearest missing notable/keystone, then from there to the next one, and so on
+  // (when no notable is left, the nearest small nodes); like following Path of Building's tree
+  const missingBig = new Set(missing.map((m) => m.id));
+  const taken = new Set(have);
+  const nextPath: number[] = [];
+  while (nextPath.length < kNextPoints) {
+    const step = bfs(taken);
+    const free = step.order.filter((id) => !taken.has(id) && (step.dist.get(id) ?? 0) > 0);
+    const target = free.find((id) => missingBig.has(id)) ?? free[0];
+    if (target === undefined) break;
+    for (const id of step.pathTo(target)) {
+      if (nextPath.length >= kNextPoints) break;
+      nextPath.push(id);
+      taken.add(id);
+    }
+  }
+
   return {
     buildPoints: main.length,
     donePoints: have.size,
     missing,
     ascMissing: asc.filter((n) => n.notable && !ascHave.has(n.id)).map((n) => n.name),
     offBuild,
+    buildIds: main.map((n) => n.id),
+    haveIds: [...have],
+    nextPath,
+    startId: start ?? null,
   };
 }

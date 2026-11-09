@@ -1,4 +1,4 @@
-import type { AppConfig, AppState, DisplayInfo } from "./types";
+import type { AppConfig, AppState, DisplayInfo, TreeLayout } from "./types";
 
 // NOTE: src/main/preload.ts duplicates these literals (a sandboxed preload cannot import
 // local modules). test/ipc.test.ts fails if they drift apart.
@@ -23,6 +23,7 @@ export const CH = {
   appAutostart: "app:autostart",
   diagCopy: "diag:copy",
   gemAdviceRefresh: "gems:refresh",
+  treeLayout: "tree:layout",
   mapTradeOpen: "maps:trade",
   updateInstall: "update:install",
 } as const;
@@ -61,6 +62,8 @@ export interface HubApi {
   setStartWithWindows(on: boolean): Promise<void>;
   copyDiagReport(): Promise<void>;
   refreshGemAdvice(): Promise<void>;
+  /** passive tree geometry for the map; null until GGG's tree data is loaded */
+  getTreeLayout(): Promise<TreeLayout | null>;
   installUpdate(): Promise<void>;
   openMapTrade(o: {
     exclude: string[];

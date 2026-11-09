@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { AppState } from "../shared/types";
+import { nextNames, TreeMap, TreeMapModal, useTreeLayout } from "./TreeMap";
 
 type Tree = NonNullable<AppState["tree"]>;
 
@@ -7,18 +9,28 @@ function pts(n: number | null): string {
   return n === 1 ? "1 ponto" : `${n} pontos`;
 }
 
-/** One line for the overlay: the nearest notable of the build still missing. */
-export function TreeHint({ tree }: { tree: AppState["tree"] }) {
-  const next = tree?.status === "ok" ? tree.progress?.missing[0] : undefined;
-  if (!next) return null;
+/** Overlay: a small map around the next points and their names. */
+export function TreeHint({ tree, map }: { tree: AppState["tree"]; map: boolean }) {
+  const layout = useTreeLayout();
+  const p = tree?.status === "ok" || tree?.status === "inconsistent" ? tree.progress : null;
+  if (!p || p.nextPath.length === 0) return null;
+  const names = nextNames(p, layout, 4);
   return (
-    <div className="ov-gems">
-      árvore: próximo <b>{next.name}</b> ({pts(next.distance)})
+    <div className="ov-tree">
+      {map && <TreeMap progress={p} mode="overlay" height={150} />}
+      {names.length > 0 && (
+        <div className="ov-gems">
+          árvore, pegue: {names.map((n, i) => `${i + 1}. ${n}`).join(" · ")}
+          {p.nextPath.length > names.length ? " …" : ""}
+        </div>
+      )}
     </div>
   );
 }
 
 export function TreePanel({ tree }: { tree: Tree }) {
+  const [full, setFull] = useState(false);
+  const layout = useTreeLayout();
   if (tree.status === "loading") return <p className="muted small">Carregando a árvore passiva oficial…</p>;
   if (tree.status === "no-character" || !tree.progress) {
     return (
@@ -50,6 +62,24 @@ export function TreePanel({ tree }: { tree: Tree }) {
           esta lista como aproximada.
         </div>
       )}
+      <div className="tree-mini-wrap">
+        <TreeMap progress={p} mode="mini" height={260} />
+        <button className="tree-zoom" onClick={() => setFull(true)}>
+          ampliar
+        </button>
+      </div>
+      {p.nextPath.length > 0 && (
+        <div className="tree-next">
+          <span className="muted small">Pegue nesta ordem: </span>
+          {nextNames(p, layout, 12).map((n, i) => (
+            <span key={i} className="tree-next-step">
+              <b>{i + 1}</b> {n}
+            </span>
+          ))}
+          {p.nextPath.length > 12 && <span className="muted small"> … +{p.nextPath.length - 12}</span>}
+        </div>
+      )}
+      {full && <TreeMapModal progress={p} onClose={() => setFull(false)} />}
       {p.missing.length === 0 ? (
         <p className="good">Todos os notables e keystones do build já estão alocados.</p>
       ) : (

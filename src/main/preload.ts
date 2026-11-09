@@ -30,6 +30,7 @@ const api: HubApi = {
   setStartWithWindows: (on: boolean) => ipcRenderer.invoke("app:autostart", on),
   copyDiagReport: () => ipcRenderer.invoke("diag:copy"),
   refreshGemAdvice: () => ipcRenderer.invoke("gems:refresh"),
+  getTreeLayout: () => ipcRenderer.invoke("tree:layout"),
   openMapTrade: (o) => ipcRenderer.invoke("maps:trade", o),
   installUpdate: () => ipcRenderer.invoke("update:install"),
 };

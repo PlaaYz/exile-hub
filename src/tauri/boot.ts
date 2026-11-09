@@ -15,7 +15,7 @@ import { TauriShell } from "./tauriShell";
 import { TauriUpdater } from "./tauriUpdater";
 
 /** What the overlay may ask the dashboard for. */
-const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive"]);
+const OVERLAY_CALLS = new Set<keyof HubApi>(["getState", "routeNext", "routePrev", "toggleOverlayInteractive", "getTreeLayout"]);
 
 interface CallMsg {
   id: number;
@@ -58,6 +58,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     setStartWithWindows: (on) => hub.setStartWithWindows(on === true),
     copyDiagReport: () => hub.copyDiagReport(),
     refreshGemAdvice: async () => hub.refreshGemAdvice(),
+    getTreeLayout: () => hub.getTreeLayout(),
     installUpdate: async () => hub.installUpdate(),
     openMapTrade: (o) => hub.openMapTrade(cleanMapTradeOptions(o)),
   };

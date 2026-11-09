@@ -1,13 +1,14 @@
 // Passive tree progress: GGG's tree data (cached) compared with the build and the log.
-import { compareTree, pointBudget, pointsIn, slimTree, type PassiveTracker, type PassiveTree } from "../core/passives";
+import { compareTree, kTreeFormat, pointBudget, pointsIn, slimTree, treeLayout, type PassiveTracker, type PassiveTree } from "../core/passives";
 import type { Session } from "../core/session";
-import type { AppState, PobBuild } from "../shared/types";
+import type { AppState, PobBuild, TreeLayout } from "../shared/types";
 import { kTreeMaxAgeMs, kTreeUrl } from "./constants";
 import type { Platform } from "./platform";
 
 export class TreeService {
   private loading: Promise<PassiveTree | null> | null = null;
   private data: PassiveTree | null = null;
+  private layoutCache: TreeLayout | null = null;
 
   constructor(
     private readonly platform: Platform,
@@ -23,7 +24,8 @@ export class TreeService {
       const age = await p.userFileAge(file);
       if (age !== null && Date.now() - age < kTreeMaxAgeMs) {
         const text = await p.readUserFile(file);
-        if (text) return JSON.parse(text) as PassiveTree;
+        const cached = text ? (JSON.parse(text) as PassiveTree) : null;
+        if (cached?.format === kTreeFormat) return cached; // older caches have no node positions
       }
       try {
         const res = await p.fetch(kTreeUrl, { headers: { "User-Agent": p.userAgent } });
@@ -44,6 +46,14 @@ export class TreeService {
       this.broadcast();
     });
     return this.loading;
+  }
+
+  /** Geometry for the tree map (sent once to a window, not with every state). */
+  async layout(): Promise<TreeLayout | null> {
+    const tree = await this.load();
+    if (!tree || tree.format !== kTreeFormat) return null;
+    this.layoutCache ??= treeLayout(tree);
+    return this.layoutCache;
   }
 
   state(build: PobBuild | null, session: Session, passives: PassiveTracker): AppState["tree"] {
