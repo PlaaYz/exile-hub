@@ -2,13 +2,25 @@
 // poe.ninja, the trade site (item listings, map searches) and the trade stat list.
 import type { DiagKind } from "../core/diag";
 import { farmItemNames } from "../core/farm";
+import { isSuspect, needsTradePrice, tradePriceByName, type TradeNamePrice } from "../core/farmTrade";
 import type { EquippedItem } from "../core/itemCompare";
 import { mapModStatIds, mapTradeQuery, tradeSearchUrl, type MapTradeOptions } from "../core/mapTrade";
 import { NinjaClient, priceByName } from "../core/ninja";
 import { looksLikePob } from "../core/pob";
 import { PriceChecker } from "../core/pricecheck";
 import { StatIndex, type TradeStatsData } from "../core/stats";
-import { TradeClient, defaultLeague, fetchLeagues, fetchStatic, fetchStats, staticIds, type StaticIds } from "../core/trade";
+import {
+  TradeClient,
+  defaultLeague,
+  fetchItemsData,
+  fetchLeagues,
+  fetchStatic,
+  fetchStats,
+  itemQueryKeys,
+  staticIds,
+  type ItemQueryKey,
+  type StaticIds,
+} from "../core/trade";
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppConfig, PriceRecent, PriceSearchPatch, PriceView } from "../shared/types";
@@ -27,6 +39,22 @@ export interface PriceContext {
 
 /** Items kept in the "recent checks" list. */
 const kRecentChecks = 10;
+/** Farm items priced on the trade site are looked up again after this long. */
+const kFarmTradeMaxAgeMs = 3600 * 1000;
+/**
+ * Pause between farm lookups. The trade site allows about 30 searches per 5 minutes: this uses
+ * about half of that and leaves the rest to the player's own price checks.
+ */
+const kFarmTradeGapMs = 20_000;
+/** A price check this recent pauses the farm lookups (the player comes first). */
+const kFarmTradeYieldMs = 30_000;
+const kFarmTradeFile = "farm-trade-prices.json";
+
+interface FarmTradeCache {
+  league: string;
+  /** name -> price and when it was looked up (null = the trade site has no usable listing) */
+  prices: Record<string, { at: number; price: TradeNamePrice | null }>;
+}
 
 export class PriceService {
   readonly ninja: NinjaClient;
@@ -44,6 +72,15 @@ export class PriceService {
   /** last checked items, newest first (with their text, to check them again) */
   private recentChecks: (PriceRecent & { text: string; seq: number })[] = [];
   private recentId = 0;
+  /** farm prices from the trade site, per league (file in the user folder) */
+  private farmTrade: FarmTradeCache | null = null;
+  private farmTradeJob: Promise<void> | null = null;
+  private farmTradeLeft = 0;
+  /** bumps when the trade lookups finish: the farm tab asks for prices again */
+  farmPricesVersion = 0;
+  /** last time the player used the trade site (price check, re-search, more results) */
+  private lastUserTradeAt = 0;
+  private itemKeys: Promise<Map<string, ItemQueryKey> | null> | null = null;
 
   constructor(
     private readonly platform: Platform,
@@ -91,7 +128,34 @@ export class PriceService {
 
   /** The next 10 listings of the current trade search. */
   more(): Promise<void> {
+    this.lastUserTradeAt = Date.now();
     return this.checker.more();
+  }
+
+  /** Unique names and item types the trade site knows (one search per farm item): cached daily. */
+  private loadItemKeys(): Promise<Map<string, ItemQueryKey> | null> {
+    if (this.itemKeys) return this.itemKeys;
+    const file = "trade-items.json";
+    const p = this.platform;
+    this.itemKeys = (async () => {
+      const age = await p.userFileAge(file);
+      if (age !== null && Date.now() - age < kStatsMaxAgeMs) {
+        const text = await p.readUserFile(file);
+        if (text) return itemQueryKeys(JSON.parse(text));
+      }
+      try {
+        const data = await fetchItemsData(p.fetch, p.userAgent);
+        await p.writeUserFile(file, JSON.stringify(data));
+        return itemQueryKeys(data);
+      } catch (e) {
+        console.error("could not load trade item list", e);
+        const text = await p.readUserFile(file);
+        if (text) return itemQueryKeys(JSON.parse(text));
+        this.itemKeys = null;
+        return null;
+      }
+    })();
+    return this.itemKeys;
   }
 
   get view(): PriceView | null {
@@ -220,6 +284,7 @@ export class PriceService {
     // only item text copied from the game and Path of Building codes/links are looked at
     const league = this.league();
     if (league && this.checker.check(text, league)) {
+      this.lastUserTradeAt = Date.now();
       this.remember(text);
       const it = this.checker.view?.item;
       this.ctx.addDiag("clipboard", `item copiado: ${it ? `${it.name || it.baseType} (${it.rarity}, ${it.itemClass})` : "?"}`);
@@ -292,6 +357,7 @@ export class PriceService {
   }
 
   research(patch: PriceSearchPatch): void {
+    this.lastUserTradeAt = Date.now();
     this.checker.research(patch);
   }
 
@@ -304,18 +370,82 @@ export class PriceService {
   /** Live prices for every item in the farm tables (poe.ninja, cached 30 min). */
   async farmPrices(): Promise<FarmPricesResult> {
     const league = this.league();
-    if (!league) return { league: null, chaosPerDivine: null, prices: {}, error: "liga ainda não carregada" };
+    if (!league) return { league: null, chaosPerDivine: null, prices: {}, suspect: [], tradePending: 0, error: "liga ainda não carregada" };
     try {
       const [found, rates] = await Promise.all([
         priceByName(this.ninja, league, farmItemNames(FARM_BOSSES)),
         this.ninja.currencyRates(league).catch(() => null),
       ]);
+      const cpd = rates?.get("divine") ?? null;
+      const cache = await this.loadFarmTrade(league);
       const prices: FarmPricesResult["prices"] = {};
-      for (const [name, p] of found) prices[name] = { chaos: p.chaos, lowConfidence: p.lowConfidence, variants: p.variants };
-      return { league, chaosPerDivine: rates?.get("divine") ?? null, prices, error: null };
+      const suspect: string[] = [];
+      const lookup: string[] = [];
+      for (const name of farmItemNames(FARM_BOSSES)) {
+        const p = found.get(name);
+        if (!needsTradePrice(p, cpd)) {
+          prices[name] = { chaos: p!.chaos, lowConfidence: p!.lowConfidence, variants: p!.variants, source: "ninja", listings: p!.listings };
+          continue;
+        }
+        const t = cache.prices[name];
+        if (t?.price) prices[name] = { chaos: t.price.chaos, lowConfidence: t.price.listings < 5, variants: 1, source: "trade", listings: t.price.listings };
+        else if (p && isSuspect(p, cpd)) suspect.push(name);
+        if (!t || Date.now() - t.at > kFarmTradeMaxAgeMs) lookup.push(name);
+      }
+      if (lookup.length) this.startFarmTrade(league, lookup, rates);
+      return { league, chaosPerDivine: cpd, prices, suspect, tradePending: this.farmTradeLeft, error: null };
     } catch (e) {
-      return { league, chaosPerDivine: null, prices: {}, error: (e as Error).message };
+      return { league, chaosPerDivine: null, prices: {}, suspect: [], tradePending: 0, error: (e as Error).message };
     }
+  }
+
+  private async loadFarmTrade(league: string): Promise<FarmTradeCache> {
+    if (this.farmTrade?.league === league) return this.farmTrade;
+    try {
+      const text = await this.platform.readUserFile(kFarmTradeFile);
+      const c = text ? (JSON.parse(text) as FarmTradeCache) : null;
+      this.farmTrade = c?.league === league && c.prices ? c : { league, prices: {} };
+    } catch {
+      this.farmTrade = { league, prices: {} };
+    }
+    return this.farmTrade;
+  }
+
+  /** Looks the items up one by one in the background, then tells the farm tab to ask again. */
+  private startFarmTrade(league: string, names: string[], rates: Map<string, number> | null): void {
+    if (this.farmTradeJob) return;
+    this.farmTradeLeft = names.length;
+    this.farmTradeJob = (async () => {
+      const cache = await this.loadFarmTrade(league);
+      const keys = await this.loadItemKeys();
+      let failures = 0;
+      for (const name of names) {
+        if (this.league() !== league) break;
+        // the player's price checks come first
+        while (Date.now() - this.lastUserTradeAt < kFarmTradeYieldMs) await new Promise((r) => setTimeout(r, 5000));
+        try {
+          cache.prices[name] = { at: Date.now(), price: await tradePriceByName(this.trade, league, name, rates, keys?.get(name)) };
+        } catch (e) {
+          // rate limit or network: stop for now, the next visit to the tab continues
+          if (++failures >= 2) {
+            console.error("farm trade prices stopped", e);
+            break;
+          }
+        }
+        this.farmTradeLeft--;
+        // keep what is known so far (closing the app mid-way loses nothing) and show it
+        await this.platform.writeUserFile(kFarmTradeFile, JSON.stringify(cache)).catch(() => {});
+        this.farmPricesVersion++;
+        this.ctx.broadcast();
+        if (this.farmTradeLeft > 0) await new Promise((r) => setTimeout(r, kFarmTradeGapMs));
+      }
+      this.ctx.addDiag("preço", `farm: preços do trade atualizados (${names.length} itens)`);
+    })().finally(() => {
+      this.farmTradeJob = null;
+      this.farmTradeLeft = 0;
+      this.farmPricesVersion++;
+      this.ctx.broadcast();
+    });
   }
 
   /**

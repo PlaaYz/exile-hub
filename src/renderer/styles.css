@@ -315,3 +315,17 @@ body.mode-trades { background: transparent; }
 .welcome h2 { margin-top: 0; color: var(--accent); }
 .welcome td:first-child { white-space: nowrap; padding-right: 10px; }
 button.link { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+/* farm: risk groups (chance to profit in 10 runs) */
+.farm-controls { flex-wrap: wrap; gap: 6px; }
+.risk-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
+.risk-badge.safe, .risk-chip.safe.on { color: #3fb950; border-color: #3fb950; }
+.risk-badge.low, .risk-chip.low.on { color: #9bd35a; border-color: #9bd35a; }
+.risk-badge.medium, .risk-chip.medium.on { color: var(--quest); border-color: var(--quest); }
+.risk-badge.high, .risk-chip.high.on { color: #f0a35b; border-color: #f0a35b; }
+.risk-badge.negative, .risk-chip.negative.on { color: var(--kill); border-color: var(--kill); }
+
+/* farm: where the time per run comes from */
+.time-src { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 2px; }
+.time-src.log { color: #3fb950; border-color: #3fb950; }
+.time-src.typed { color: var(--quest); border-color: var(--quest); }

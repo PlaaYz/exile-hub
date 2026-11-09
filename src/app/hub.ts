@@ -474,7 +474,8 @@ export class Hub {
     // hidden while the game is in the background (alt-tab), except while the user is
     // interacting with the overlay itself (F10)
     const followFocus = cfg.overlayHideUnfocused && !this.overlayInteractive;
-    const show = cfg.overlayEnabled && (!followFocus || this.gameFocused);
+    // never over a closed game (with "hide unfocused" off it used to show at app start)
+    const show = cfg.overlayEnabled && this.gameRunning && (!followFocus || this.gameFocused);
     const sh = this.p.shell;
     if (show !== sh.overlayVisible) {
       sh.setOverlayVisible(show);
@@ -656,6 +657,7 @@ export class Hub {
       buildInfo: this.buildInfo,
       startWithWindows: this.startWithWindowsCache,
       farmRuns: this.farmRuns(),
+      farmPricesVersion: this.prices.farmPricesVersion,
       tree: this.tree.state(this.build, this.session, this.log.passives),
       maps: this.log.maps.stats(),
       diag: {

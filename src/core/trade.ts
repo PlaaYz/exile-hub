@@ -400,6 +400,31 @@ export async function fetchStatic(fetchFn: TradeFetch, userAgent: string): Promi
   return res.json();
 }
 
+/** The trade site's item list (every unique name and item type), for searches by name. */
+export async function fetchItemsData(fetchFn: TradeFetch, userAgent: string): Promise<unknown> {
+  const res = await fetchFn(`${SITE}/api/trade/data/items`, { headers: { "User-Agent": userAgent } });
+  if (!res.ok) throw new Error(`items HTTP ${res.status}`);
+  return res.json();
+}
+
+/** How the trade site searches an item: a unique by name + base type, anything else by type. */
+export type ItemQueryKey = { name: string; type: string } | { type: string };
+
+/** "Voidforge" -> { name: "Voidforge", type: "Infernal Sword" }; "Archive Reliquary Key" -> { type }. */
+export function itemQueryKeys(data: unknown): Map<string, ItemQueryKey> {
+  const out = new Map<string, ItemQueryKey>();
+  const groups = (data as { result?: { entries?: { name?: string; type?: string; flags?: { unique?: boolean } }[] }[] })?.result ?? [];
+  for (const g of groups) {
+    for (const e of g.entries ?? []) {
+      if (!e.type) continue;
+      if (e.name && e.flags?.unique) {
+        if (!out.has(e.name)) out.set(e.name, { name: e.name, type: e.type });
+      } else if (!e.name && !out.has(e.type)) out.set(e.type, { type: e.type });
+    }
+  }
+  return out;
+}
+
 export type StaticIds = Map<string, string>;
 
 /** Item name -> exchange id ("Divine Orb" -> "divine"), from /api/trade/data/static. */

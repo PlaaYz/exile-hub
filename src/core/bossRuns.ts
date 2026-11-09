@@ -45,6 +45,13 @@ export const ARENAS: Arena[] = [
     uber: "uber-uber-elder",
     verified: true,
   },
+  // seen in the owner's Client.txt, checked by the "You have entered" line (2026-11-09)
+  { areaId: "BetrayalMastermindFight", enteredName: "Mastermind's Lair", boss: "catarina", verified: true },
+  { areaId: "MapWorldsMemoryBoss1", enteredName: "Moment of Trauma", boss: "incarnation-fear", uber: "uber-incarnation-fear", verified: true },
+  { areaId: "MapWorldsMemoryBoss2", enteredName: "Moment of Loneliness", boss: "incarnation-neglect", uber: "uber-incarnation-neglect", verified: true },
+  { areaId: "MapWorldsMemoryBoss3", enteredName: "Moment of Reverence", boss: "incarnation-dread", uber: "uber-incarnation-dread", verified: true },
+  { areaId: "MapWorldsPrimordialBoss1", enteredName: "Seething Chyme", boss: "infinite-hunger", verified: true },
+  { areaId: "MapWorldsPrimordialBoss2", enteredName: "Polaric Void", boss: "black-star", verified: true },
   // not in the owner's log yet: matched by arena name only
   { enteredName: "Cortex", boss: "uber-venarius", verified: false }, // only the uber fight is farmed
 ];

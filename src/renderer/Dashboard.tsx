@@ -201,7 +201,7 @@ function MapsPanel({ state }: { state: AppState }) {
 function FarmPanel({ state }: { state: AppState }) {
   return (
     <PanelBox title="Farm de bosses — valor esperado" className="panel-tall panel-wide">
-      <FarmPanelBody runs={state.farmRuns} />
+      <FarmPanelBody runs={state.farmRuns} pricesVersion={state.farmPricesVersion} />
     </PanelBox>
   );
 }

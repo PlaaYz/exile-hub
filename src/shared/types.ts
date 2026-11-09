@@ -343,6 +343,8 @@ export interface AppState {
   timers: TimerSnapshot;
   build: PobBuild | null;
   /** boss runs found in Client.txt, by FARM_BOSSES id; minutes = measured time per run */
+  /** bumps when farm prices from the trade site arrive (the farm tab asks for prices again) */
+  farmPricesVersion: number;
   farmRuns: Record<
     string,
     { runs: number; minutes: number | null; fightSec: number | null; deaths: number; lastRunAt: number | null }

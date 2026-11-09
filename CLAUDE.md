@@ -265,6 +265,27 @@ and closed it on every drag.
 - Welcome screen (config.welcomeDone), "Reportar problema" (copyDiagReport + GitHub new issue, the
   player pastes; nothing is sent by the app). Numeric table headers right-aligned (th.num-cell).
 
+0.3.13 (2026-11-09): the overlay never shows while the game is closed (with overlayHideUnfocused off it
+opened at app start); applyOverlayVisibility requires gameRunning.
+
+Farm tab like bossofexile.com (2026-11-09, owner's request; their numbers were NOT copied):
+- 29 bosses (16 new from farmofexile article tables, same source as before): Elder, Uber Atziri,
+  Venarius, Catarina, the 3 Incarnations + ubers, Black Star, Infinite Hunger, King in the Mists,
+  Oshabi, Esh-Tul, Zorath. No T17 maps (no source with rates).
+- FARM_POOLS = items that exclude each other (unique pool, astrolabe); core/farm profitChance =
+  Monte Carlo of 10 runs (seeded, 2000 trials in the tab) -> riskOf groups safe/low/medium/high/
+  negative (95/80/60%). FARM_DEFAULT_MINUTES = the owner's own kill times (user > measured > default),
+  so the list can rank by profit/hour (marked * when estimated).
+- Arenas verified in the owner's log by "You have entered": BetrayalMastermindFight (Mastermind's
+  Lair, Catarina), MapWorldsMemoryBoss1/2/3 (Moment of Trauma/Loneliness/Reverence = Fear/Neglect/
+  Dread), MapWorldsPrimordialBoss1 (Seething Chyme, Infinite Hunger), 2 (Polaric Void, Black Star).
+- core/farmTrade: items poe.ninja lacks, or prices >= 50 div with < 20 listings (joke listings:
+  Voidforge showed 880k chaos), are priced on the trade site: one search per item (unique name+base
+  or type from /api/trade/data/items, userData/trade-items.json daily), instant buyout then online,
+  median of the 10 cheapest. Background, 20 s apart (search limit ~30 per 5 min), paused 30 s after
+  any player price check; userData/farm-trade-prices.json, 1 h per item; state.farmPricesVersion
+  makes the tab refetch.
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.

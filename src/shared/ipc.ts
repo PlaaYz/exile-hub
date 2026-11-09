@@ -6,8 +6,15 @@ import type { AppConfig, AppState, ChallengesView, DisplayInfo, PriceSearchPatch
 export interface FarmPricesResult {
   league: string | null;
   chaosPerDivine: number | null;
-  /** item name -> live price; items poe.ninja does not list are absent */
-  prices: Record<string, { chaos: number; lowConfidence: boolean; variants: number }>;
+  /**
+   * item name -> live price (poe.ninja, or the trade site for what poe.ninja lacks or prices
+   * absurdly); items with no price at all are absent
+   */
+  prices: Record<string, { chaos: number; lowConfidence: boolean; variants: number; source: "ninja" | "trade"; listings: number | null }>;
+  /** poe.ninja prices ignored as joke listings (no trade price either): the item counts as 0 */
+  suspect: string[];
+  /** items still being looked up on the trade site (the tab asks again when it finishes) */
+  tradePending: number;
   error: string | null;
 }
 

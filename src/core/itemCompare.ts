@@ -159,7 +159,8 @@ export function importPobEquipped(code: string): EquippedItem[] {
   return parsePobEquipped(decodePobCode(code));
 }
 
-const label = (text: string) => text.replace(/[+-]?\d+(?:\.\d+)?/, "#");
+/** "+68% total Elemental Resistance" -> "+#% total Elemental Resistance" (the sign stays). */
+const label = (text: string) => text.replace(/\d+(?:\.\d+)?/, "#");
 /** Mod lines compared as text: numbers become # so "+40 to Strength" matches "+25 to Strength". */
 const modKey = (text: string) => text.replace(/\d+(?:\.\d+)?/g, "#");
 
