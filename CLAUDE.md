@@ -248,6 +248,10 @@ Price check round 2 (0.3.8, 2026-11-09, goal: Awakened PoE Trade level):
 - User-Agent: "ExileHub/<v> (contact: exilehub.contato@gmail.com)" (project address the owner created
   for this, 2026-11-09; src/tauri/tauriPlatform.ts kContact).
 
+0.3.10 (2026-11-09): the price popup closes on the WINDOW losing activation (Tauri onFocusChanged,
+150 ms grace), not the page's "blur": dragging the title bar (Windows move loop) blurred the webview
+and closed it on every drag.
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.

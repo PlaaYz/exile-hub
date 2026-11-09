@@ -10,9 +10,29 @@ export function PricePopupApp() {
     const close = () => void window.hub.closePricePopup();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
-    // clicking the game (or anywhere else) takes the focus away: done
-    window.addEventListener("blur", close);
+    // Clicking the game (or anywhere else) deactivates the window: done. The page's own "blur" can't
+    // be used: dragging the title bar starts Windows' move loop, which takes the focus from the
+    // webview (not from the window) and closed the popup on every drag. The window's activation
+    // stays during a drag; a short grace period covers a focus flicker.
+    let unlisten: (() => void) | null = null;
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
+    if ("__TAURI_INTERNALS__" in window) {
+      void import("@tauri-apps/api/window").then(async ({ getCurrentWindow }) => {
+        const un = await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+          if (pending) clearTimeout(pending);
+          pending = focused ? null : setTimeout(close, 150);
+        });
+        if (disposed) un();
+        else unlisten = un;
+      });
+    } else {
+      window.addEventListener("blur", close);
+    }
     return () => {
+      disposed = true;
+      if (pending) clearTimeout(pending);
+      unlisten?.();
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("blur", close);
     };
