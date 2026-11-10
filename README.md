@@ -1,6 +1,6 @@
 # Exile Hub
 
-**[Português](#português) · [English](#english)**
+**[Site](https://plaayz.github.io/exile-hub/) · [Português](#português) · [English](#english)**
 
 This product isn't affiliated with or endorsed by Grinding Gear Games in any way.
 
