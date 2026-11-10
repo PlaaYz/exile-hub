@@ -289,6 +289,13 @@ Farm tab like bossofexile.com (2026-11-09, owner's request; their numbers were N
   any player price check; userData/farm-trade-prices.json, 1 h per item; state.farmPricesVersion
   makes the tab refetch.
 
+Session earnings (2026-11-09): GameSession.kills = fresh boss arenas (normal/uber by level) and T17
+maps (bossRuns farmIdOf: MapWorldsCitadel/Sanctuary/Ziggurat/Fortress/Abomination, seen in the owner's
+log) by farm id; core/farm sessionEarnings = farmEv profit x count with market prices (the player's
+Farm-tab edits live in localStorage and are NOT applied). Hub keeps PriceService.lastFarmPrices fresh
+(retry each minute until the league loads, refresh hourly); Sessões tab column "Rendimento" + the
+close notification. Normal maps are not valued (the log has no drops).
+
 ## Known issues / notes
 - `src/main/main.ts`, `preload.ts`, `shared/types.ts`, `renderer/index.html` were rebuilt from
   compiled output after an accidental overwrite; behaviour matches, but diff against any older copy.

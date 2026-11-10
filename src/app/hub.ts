@@ -5,7 +5,9 @@ import { measuredMinutes } from "../core/bossRuns";
 import { cleanChatCommands, expandCommand, isValidKey, normaliseKey } from "../core/chatCommands";
 import { parseLine, type LogEvent } from "../core/clientLog";
 import { describeEvent, type DiagKind } from "../core/diag";
+import { sessionEarnings, type FarmPrice } from "../core/farm";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
+import { FARM_BOSSES } from "../shared/farmData";
 import type { GemInfo } from "../core/gemAvailability";
 import { importPobEquipped, type EquippedItem } from "../core/itemCompare";
 import type { MapTradeOptions } from "../core/mapTrade";
@@ -23,6 +25,10 @@ const kTradeCardMs = 15 * 60 * 1000;
 import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
 import { kIssuesUrl, kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
+
+/** Session earnings: farm prices are refreshed this often, and retried at most this often. */
+const kFarmPricesMaxAgeMs = 3600 * 1000;
+const kFarmPricesRetryMs = 60 * 1000;
 import { Diagnostics } from "./diagnostics";
 import { LogService } from "./logService";
 import type { Platform } from "./platform";
@@ -271,6 +277,31 @@ export class Hub {
     }
     this.scheduleSave();
     this.broadcast();
+    this.warmFarmPrices();
+  }
+
+  private farmWarmAt = 0;
+
+  /**
+   * Farm prices for the sessions' expected earnings (poe.ninja; the trade site fills the gaps later):
+   * asked again when missing (the league may not have loaded yet) or older than an hour, at most once
+   * a minute.
+   */
+  private warmFarmPrices(): void {
+    const f = this.prices.lastFarmPrices;
+    const stale = !f || !!f.error || Date.now() - this.prices.lastFarmPricesAt > kFarmPricesMaxAgeMs;
+    if (!stale || Date.now() - this.farmWarmAt < kFarmPricesRetryMs) return;
+    this.farmWarmAt = Date.now();
+    void this.prices.farmPrices().then((r) => {
+      if (!r.error) this.broadcast();
+    });
+  }
+
+  /** Market prices of the farm tables, for the sessions' expected earnings (null until loaded). */
+  private farmPriceMap(): Map<string, FarmPrice> | null {
+    this.warmFarmPrices();
+    const f = this.prices.lastFarmPrices;
+    return f && !f.error ? new Map(Object.entries(f.prices)) : null;
   }
 
   /** A live Client.txt event (the history trackers already saw it). */
@@ -332,7 +363,7 @@ export class Hub {
   private announceSessionEnd(): void {
     const last = this.log.sessions.recent(1)[0];
     if (!last || last.end === null) return;
-    const v = sessionView(last, this.prices.history);
+    const v = sessionView(last, this.prices.history, this.farmPriceMap());
     const mins = Math.round(v.durationMs / 60000);
     const time = mins >= 60 ? `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, "0")}` : `${mins} min`;
     const parts = [time];
@@ -340,6 +371,11 @@ export class Hub {
     if (v.bossRuns) parts.push(`${v.bossRuns} bosses`);
     for (const ch of v.characters) if (ch.to > ch.from) parts.push(`${ch.name} ${ch.from}→${ch.to}`);
     parts.push(`${v.deaths} morte${v.deaths === 1 ? "" : "s"}`);
+    if (v.earnings) {
+      const cpd = this.prices.lastFarmPrices?.chaosPerDivine ?? null;
+      const value = cpd && Math.abs(v.earnings.chaos) >= cpd ? `${(v.earnings.chaos / cpd).toFixed(1)} div` : `${Math.round(v.earnings.chaos)}c`;
+      parts.push(`rendimento esperado (bosses/T17): ${v.earnings.chaos >= 0 ? "+" : ""}${value}`);
+    }
     this.p.shell.notify("Sessão encerrada", parts.join(" · "));
     this.diag.add("jogo", `sessão encerrada: ${parts.join(" · ")}`);
   }
@@ -639,6 +675,7 @@ export class Hub {
 
   state(): AppState {
     const c = this.config;
+    const farmPrices = this.farmPriceMap();
     return {
       config: c,
       logStatus: this.log.error ? "error" : !c.clientLogPath ? "no-path" : this.log.fileSeen ? "watching" : "waiting",
@@ -672,11 +709,12 @@ export class Hub {
       },
       update: { ...this.updateState, current: this.updateState.current || this.p.appVersion },
       sessions: {
-        current: this.log.sessions.current ? sessionView(this.log.sessions.current, this.prices.history) : null,
+        current: this.log.sessions.current ? sessionView(this.log.sessions.current, this.prices.history, farmPrices) : null,
         recent: this.log.sessions
           .recent(12)
           .filter((s) => s.end !== null)
-          .map((s) => sessionView(s, this.prices.history)),
+          .map((s) => sessionView(s, this.prices.history, farmPrices)),
+        chaosPerDivine: this.prices.lastFarmPrices?.chaosPerDivine ?? null,
       },
       buildLinks: this.buildLinks(),
       endgame: this.session.endgame,
@@ -712,7 +750,12 @@ export class Hub {
 }
 
 /** A session for the screen; price checks are the app's own (only sessions while it ran have them). */
-function sessionView(s: GameSession, prices: { ts: number; name: string; chaos: number | null }[]): AppState["sessions"]["recent"][number] {
+function sessionView(
+  s: GameSession,
+  prices: { ts: number; name: string; chaos: number | null }[],
+  farmPrices: Map<string, FarmPrice> | null,
+): AppState["sessions"]["recent"][number] {
+  const earned = farmPrices ? sessionEarnings(s.kills, FARM_BOSSES, farmPrices) : null;
   const end = s.end ?? Date.now();
   const priced = prices.filter((p) => p.ts >= s.start && p.ts <= end);
   const best = priced.reduce<(typeof priced)[number] | null>((b, p) => (p.chaos !== null && (!b || (b.chaos ?? 0) < p.chaos) ? p : b), null);
@@ -729,6 +772,7 @@ function sessionView(s: GameSession, prices: { ts: number; name: string; chaos: 
     passives: s.passives,
     priceChecks: priced.length,
     bestPrice: best && best.chaos !== null ? { name: best.name, chaos: best.chaos } : null,
+    earnings: earned && { chaos: earned.chaos, lines: earned.lines.map(({ name, count, each }) => ({ name, count, each })), incomplete: earned.incomplete },
   };
 }
 

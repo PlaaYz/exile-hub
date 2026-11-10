@@ -1,7 +1,7 @@
 // Play sessions: one per game start ("***** LOG FILE OPENING *****") until it closes ("Closing game
 // gracefully"; a crash leaves no closing line, so the next start or the last event ends it).
 // Built from Client.txt, so the summaries cover every past session too.
-import { arenaOf } from "./bossRuns";
+import { arenaOf, farmIdOf } from "./bossRuns";
 import type { LogEvent } from "./clientLog";
 import { isMapArea } from "./maps";
 import { isCharacterPassiveId } from "./passives";
@@ -29,6 +29,8 @@ export interface GameSession {
   passives: number;
   /** highest campaign act entered */
   maxAct: number | null;
+  /** boss fights and T17 maps done, by farm table id (for the expected earnings) */
+  kills: Record<string, number>;
 }
 
 /** Sessions shorter than this with nothing done are noise (game opened by mistake, patch check). */
@@ -55,6 +57,7 @@ export class GameSessionTracker {
       zones: 0,
       passives: 0,
       maxAct: null,
+      kills: {},
     };
     this.seeds = new Set();
     this.sessions.push(this.cur);
@@ -94,6 +97,8 @@ export class GameSessionTracker {
         this.seeds.add(key);
         if (fresh && isMapArea(ev.areaId)) s.maps++;
         if (fresh && arenaOf(ev.areaId)) s.bossRuns++;
+        const farm = fresh ? farmIdOf(ev.areaId, ev.areaLevel) : null;
+        if (farm) s.kills[farm] = (s.kills[farm] ?? 0) + 1;
         const act = this.actOf(ev.areaId);
         if (act !== null && act > 0) s.maxAct = Math.max(s.maxAct ?? 0, act);
         return true;

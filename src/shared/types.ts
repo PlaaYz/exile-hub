@@ -19,6 +19,8 @@ export interface SessionView {
   /** items price-checked during the session (only while the app was running) */
   priceChecks: number;
   bestPrice: { name: string; chaos: number } | null;
+  /** expected value of the boss fights and T17 maps done (null = none, or prices not loaded yet) */
+  earnings: { chaos: number; lines: { name: string; count: number; each: number }[]; incomplete: boolean } | null;
 }
 
 import type { MapStats } from "../core/maps";
@@ -364,6 +366,8 @@ export interface AppState {
   sessions: {
     current: SessionView | null;
     recent: SessionView[];
+    /** chaos per divine from the farm prices (to show earnings in divines) */
+    chaosPerDivine: number | null;
   };
   /** the build's main link and its socket colors ("r"/"g"/"b"), for the vendor search */
   buildLinks: { label: string; gems: string[]; colors: string[] } | null;

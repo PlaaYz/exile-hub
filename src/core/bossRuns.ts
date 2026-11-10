@@ -64,6 +64,22 @@ export function arenaOf(areaId: string): Arena | undefined {
   return byId.get(areaId);
 }
 
+/** T17 nightmare maps by area id (seen in the owner's Client.txt): their FARM_BOSSES ids. */
+const T17_AREAS: Record<string, string> = {
+  MapWorldsCitadel: "t17-citadel",
+  MapWorldsSanctuary: "t17-sanctuary",
+  MapWorldsZiggurat: "t17-ziggurat",
+  MapWorldsFortress: "t17-fortress",
+  MapWorldsAbomination: "t17-abomination",
+};
+
+/** The farm table (FARM_BOSSES id) a fresh instance of this area counts for, if any. */
+export function farmIdOf(areaId: string, areaLevel: number): string | null {
+  const a = byId.get(areaId);
+  if (a) return areaLevel >= kUberLevel && a.uber ? a.uber : a.boss;
+  return T17_AREAS[areaId] ?? null;
+}
+
 export interface BossRun {
   boss: string;
   areaId: string;

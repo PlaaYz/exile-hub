@@ -73,6 +73,33 @@ export function farmEv(boss: FarmBoss, prices: Map<string, FarmPrice>, ov: FarmO
   };
 }
 
+export interface SessionEarnings {
+  /** expected profit in chaos (drops minus entry), over the boss fights and T17 maps of the session */
+  chaos: number;
+  lines: { id: string; name: string; count: number; each: number }[];
+  /** kills of tables with items that have no price (they count as 0) */
+  incomplete: boolean;
+}
+
+/**
+ * What the session's boss fights and T17 maps are worth on average (the farm tab's numbers, with
+ * market prices; the player's own edits in the tab are not known here). null = nothing to price.
+ */
+export function sessionEarnings(kills: Record<string, number>, bosses: FarmBoss[], prices: Map<string, FarmPrice>): SessionEarnings | null {
+  const lines: SessionEarnings["lines"] = [];
+  let incomplete = false;
+  for (const [id, count] of Object.entries(kills)) {
+    const b = bosses.find((x) => x.id === id);
+    if (!b || count <= 0) continue;
+    const r = farmEv(b, prices);
+    if (r.missing.length) incomplete = true;
+    lines.push({ id, name: b.name, count, each: r.profit });
+  }
+  if (!lines.length) return null;
+  lines.sort((a, b) => b.each * b.count - a.each * a.count);
+  return { chaos: lines.reduce((a, l) => a + l.each * l.count, 0), lines, incomplete };
+}
+
 /** Names to price on the market (items with a fixed price, like a T17 map, are not looked up). */
 export function farmItemNames(bosses: FarmBoss[]): string[] {
   return [...new Set(bosses.flatMap((b) => [...b.entry, ...b.drops].filter((i) => i.price === undefined).map((i) => i.name)))];

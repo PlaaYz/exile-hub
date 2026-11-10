@@ -44,6 +44,12 @@ function Current({ s, cpd }: { s: SessionView; cpd: number | null }) {
         </span>
       </div>
       <div className="small">Personagens: {chars(s)}</div>
+      {s.earnings && (
+        <div className="small">
+          Rendimento esperado dos bosses e T17: <b><EarningsText e={s.earnings} cpd={cpd} /></b>{" "}
+          <span className="muted">({s.earnings.lines.map((l) => `${l.count}× ${l.name}`).join(", ")})</span>
+        </div>
+      )}
       {s.bestPrice && (
         <div className="small">
           Item mais valioso que você copiou: <b>{s.bestPrice.name}</b> ({fmtChaos(s.bestPrice.chaos, cpd)})
@@ -53,9 +59,24 @@ function Current({ s, cpd }: { s: SessionView; cpd: number | null }) {
   );
 }
 
+type Earnings = AppState["sessions"]["recent"][number]["earnings"];
+
+const signedChaos = (c: number, cpd: number | null) => `${c < 0 ? "−" : "+"}${fmtChaos(Math.abs(c), cpd)}`;
+
+/** "+3.2 div" with the boss fights / T17 maps it came from on hover. */
+function EarningsText({ e, cpd }: { e: Earnings; cpd: number | null }) {
+  if (!e) return <span className="muted">—</span>;
+  const detail = e.lines.map((l) => `${l.count}× ${l.name}: ${signedChaos(l.each, cpd)} cada`).join("\n");
+  return (
+    <span className={e.chaos < 0 ? "warn-text" : "good-text"} title={detail + (e.incomplete ? "\n(alguns drops sem preço contam como 0)" : "")}>
+      {signedChaos(e.chaos, cpd)}
+    </span>
+  );
+}
+
 export function SessionsPanelBody({ state }: { state: AppState }) {
   const cur = state.sessions.current;
-  const cpd = state.price?.chaosPerDivine ?? null;
+  const cpd = state.sessions.chaosPerDivine ?? state.price?.chaosPerDivine ?? null;
   return (
     <>
       {cur ? <Current s={cur} cpd={cpd} /> : <p className="muted small">O jogo está fechado. Quando abrir, a sessão aparece aqui ao vivo.</p>}
@@ -71,6 +92,9 @@ export function SessionsPanelBody({ state }: { state: AppState }) {
               <th className="num-cell">Mapas</th>
               <th className="num-cell">Bosses</th>
               <th className="num-cell">Mortes</th>
+              <th className="num-cell" title="valor esperado dos bosses e mapas T17 feitos (média da aba Farm)">
+                Rendimento
+              </th>
               <th>Personagens</th>
             </tr>
           </thead>
@@ -85,6 +109,9 @@ export function SessionsPanelBody({ state }: { state: AppState }) {
                 <td className="num-cell">{s.maps || "—"}</td>
                 <td className="num-cell">{s.bossRuns || "—"}</td>
                 <td className={`num-cell${s.deaths ? " warn-text" : " muted"}`}>{s.deaths || "—"}</td>
+                <td className="num-cell">
+                  <EarningsText e={s.earnings} cpd={cpd} />
+                </td>
                 <td className="small">
                   {chars(s)}
                   {s.priceChecks > 0 && <div className="muted">{s.priceChecks} itens precificados</div>}
@@ -97,7 +124,8 @@ export function SessionsPanelBody({ state }: { state: AppState }) {
       <p className="muted small">
         Uma sessão vai de abrir o jogo até fechá-lo, tudo lido do Client.txt (por isso as antigas também aparecem). Ao
         fechar o jogo, o resumo aparece numa notificação do Windows. "Sem fechamento" = o jogo travou ou foi encerrado à
-        força. Itens precificados só contam enquanto o Exile Hub estava aberto.
+        força. Itens precificados só contam enquanto o Exile Hub estava aberto. Rendimento = valor esperado (média da aba Farm,
+        com preços de agora) dos bosses e mapas T17 que você fez; os outros mapas não entram, porque o log não mostra os drops.
       </p>
     </>
   );

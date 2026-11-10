@@ -78,6 +78,9 @@ export class PriceService {
   private farmTradeLeft = 0;
   /** bumps when the trade lookups finish: the farm tab asks for prices again */
   farmPricesVersion = 0;
+  /** the last farm prices (session earnings use them without asking the network again) */
+  lastFarmPrices: FarmPricesResult | null = null;
+  lastFarmPricesAt = 0;
   /** last time the player used the trade site (price check, re-search, more results) */
   private lastUserTradeAt = 0;
   private itemKeys: Promise<Map<string, ItemQueryKey> | null> | null = null;
@@ -393,7 +396,9 @@ export class PriceService {
         if (!t || Date.now() - t.at > kFarmTradeMaxAgeMs) lookup.push(name);
       }
       if (lookup.length) this.startFarmTrade(league, lookup, rates);
-      return { league, chaosPerDivine: cpd, prices, suspect, tradePending: this.farmTradeLeft, error: null };
+      this.lastFarmPrices = { league, chaosPerDivine: cpd, prices, suspect, tradePending: this.farmTradeLeft, error: null };
+      this.lastFarmPricesAt = Date.now();
+      return this.lastFarmPrices;
     } catch (e) {
       return { league, chaosPerDivine: null, prices: {}, suspect: [], tradePending: 0, error: (e as Error).message };
     }
