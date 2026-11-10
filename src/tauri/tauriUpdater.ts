@@ -3,6 +3,7 @@
 // user quits from the tray (like electron-updater's autoInstallOnAppQuit).
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import type { AppState } from "../shared/types";
+import { tr } from "../shared/i18n";
 import { errorText } from "./errors";
 
 const kCheckEveryMs = 4 * 3600 * 1000;
@@ -49,7 +50,13 @@ export class TauriUpdater {
       });
       this.update = u;
       this.set({ status: "ready", progress: 100 });
-      this.notify("Atualização pronta", `Exile Hub ${u.version} será instalado quando você fechar o app (ou clique em "Reiniciar e atualizar").`);
+      this.notify(
+        tr("Atualização pronta", "Update ready"),
+        tr(
+          `Exile Hub ${u.version} será instalado quando você fechar o app (ou clique em "Reiniciar e atualizar").`,
+          `Exile Hub ${u.version} will be installed when you quit the app (or click "Restart and update").`,
+        ),
+      );
     } catch (e) {
       this.set({ status: "error", message: errorText(e) });
     }

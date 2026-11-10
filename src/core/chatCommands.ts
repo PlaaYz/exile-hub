@@ -14,15 +14,15 @@ export const LAST_WHISPER = "{last_whisper}";
 export const DEFAULT_CHAT_COMMANDS: ChatCommand[] = [{ key: "F5", text: "/hideout" }];
 
 /** Ready-made commands the settings screen offers. */
-export const CHAT_COMMAND_PRESETS: { label: string; text: string }[] = [
-  { label: "Hideout", text: "/hideout" },
-  { label: "Seleção de personagem", text: "/exit" },
-  { label: "Kingsmarch", text: "/kingsmarch" },
-  { label: "Menagerie", text: "/menagerie" },
-  { label: "Convidar quem sussurrou", text: `/invite ${LAST_WHISPER}` },
-  { label: "Trade com quem sussurrou", text: `/tradewith ${LAST_WHISPER}` },
-  { label: "Sair da party", text: "/leave" },
-  { label: "Agradecer quem sussurrou", text: `@${LAST_WHISPER} ty` },
+export const CHAT_COMMAND_PRESETS: { label: string; labelEn: string; text: string }[] = [
+  { label: "Hideout", labelEn: "Hideout", text: "/hideout" },
+  { label: "Seleção de personagem", labelEn: "Character select", text: "/exit" },
+  { label: "Kingsmarch", labelEn: "Kingsmarch", text: "/kingsmarch" },
+  { label: "Menagerie", labelEn: "Menagerie", text: "/menagerie" },
+  { label: "Convidar quem sussurrou", labelEn: "Invite the last whisperer", text: `/invite ${LAST_WHISPER}` },
+  { label: "Trade com quem sussurrou", labelEn: "Trade with the last whisperer", text: `/tradewith ${LAST_WHISPER}` },
+  { label: "Sair da party", labelEn: "Leave the party", text: "/leave" },
+  { label: "Agradecer quem sussurrou", labelEn: "Thank the last whisperer", text: `@${LAST_WHISPER} ty` },
 ];
 
 /** F9/F10 belong to the overlay. */

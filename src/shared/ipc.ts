@@ -47,6 +47,8 @@ export interface HubApi {
   priceRecheck(id: number): Promise<void>;
   /** copy the diagnostic report and open a new GitHub issue to paste it in */
   reportProblem(): Promise<void>;
+  /** Opens the donation page (only when the app has one; voluntary, unlocks nothing). */
+  openDonate(): Promise<void>;
   farmPrices(): Promise<FarmPricesResult>;
   setStartWithWindows(on: boolean): Promise<void>;
   copyDiagReport(): Promise<void>;

@@ -4,6 +4,8 @@
 // Map mod texts below are the game's own wording (as listed in Path of Building's ModMap.lua,
 // "Item data (c) Grinding Gear Games"), with numbers removed. Labels are pt-BR.
 
+import { lang, tr } from "../shared/i18n";
+
 export const kSearchMax = 50;
 
 export interface MapModDef {
@@ -122,6 +124,13 @@ export function uniqueFragment(mod: MapModDef): string | null {
   return null;
 }
 
+/** A map mod's name in the current language (English = the mod line, "#" for the numbers). */
+export function mapModLabel(m: MapModDef): string {
+  if (lang() === "pt") return m.label;
+  const t = (m.tradeText ?? m.text).replace(/\(\s*to\s*\)/g, "#").replace(/\s+%/g, " #%").replace(/\s+/g, " ").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 export interface SearchString {
   text: string;
   length: number;
@@ -167,13 +176,13 @@ export function mapSearch(excludeIds: string[], minQuantity: number | null): Sea
     const f = mod && uniqueFragment(mod);
     if (mod && f) {
       frags.push(f);
-      parts.push(`sem "${mod.label}" (${f})`);
+      parts.push(tr(`sem "${mod.label}" (${f})`, `without "${mapModLabel(mod)}" (${f})`));
     }
   }
   if (frags.length) terms.push(`"!${frags.join("|")}"`);
   if (minQuantity && minQuantity > 0) {
     terms.push(`"y: \\+${atLeast(minQuantity)}%"`);
-    parts.push(`quantidade de itens >= ${minQuantity}%`);
+    parts.push(tr(`quantidade de itens >= ${minQuantity}%`, `item quantity >= ${minQuantity}%`));
   }
   return finish(terms, parts);
 }
@@ -205,14 +214,14 @@ export function linkSearch(colors: string[]): SearchString {
   const anyLink = `"([rgbw]-){${n - 1}}[rgbw]"`;
   const label = colors.map((c) => (c === "x" ? "?" : c)).join("").toUpperCase();
   // "x" = any color: no constraint, so a plain N-link search is exact
-  if (colors.every((c) => c === "x")) return finish([anyLink], [`qualquer item com ${n} links`]);
+  if (colors.every((c) => c === "x")) return finish([anyLink], [tr(`qualquer item com ${n} links`, `any item with ${n} links`)]);
   // a free socket as \S (2 chars instead of 6) keeps more combinations inside the 50-char box;
   // the fixed colors and the dashes still pin it to a socket string
   const cls = (c: string) => (c === "x" ? "\\S" : `[${c}w]`);
   const uniq = [...new Set(permutations(colors).map((p) => p.map(cls).join("-")))];
   const exact = `"${uniq.join("|")}"`;
-  if (exact.length <= kSearchMax) return finish([exact], [`${n} sockets ligados com ${label} (branco serve, ? = qualquer cor)`]);
-  return finish([anyLink], [`qualquer item com ${n} links (as cores ${label} não cabem nos 50 caracteres)`]);
+  if (exact.length <= kSearchMax) return finish([exact], [tr(`${n} sockets ligados com ${label} (branco serve, ? = qualquer cor)`, `${n} linked sockets with ${label} (white works, ? = any color)`)]);
+  return finish([anyLink], [tr(`qualquer item com ${n} links (as cores ${label} não cabem nos 50 caracteres)`, `any item with ${n} links (the colors ${label} do not fit in 50 characters)`)]);
 }
 
 /** n linked sockets with at least r red, g green, b blue (the rest any color). */
@@ -223,10 +232,10 @@ export function linkSearchCounts(n: number, r: number, g: number, b: number): Se
 
 /** Chromatic orb recipe: one red, one green and one blue socket linked, in any order. */
 export function chromaticSearch(): SearchString {
-  return finish([`"r-g-b|r-b-g|g-r-b|g-b-r|b-r-g|b-g-r"`], ["vermelho, verde e azul ligados (receita de Chromatic Orb)"]);
+  return finish([`"r-g-b|r-b-g|g-r-b|g-b-r|b-r-g|b-g-r"`], [tr("vermelho, verde e azul ligados (receita de Chromatic Orb)", "red, green and blue linked (Chromatic Orb recipe)")]);
 }
 
 /** Movement speed boots at a vendor: "10% increased Movement Speed". */
 export function movementSearch(): SearchString {
-  return finish([`"\\d+% increased movem"`], ["botas com velocidade de movimento"]);
+  return finish([`"\\d+% increased movem"`], [tr("botas com velocidade de movimento", "boots with movement speed")]);
 }

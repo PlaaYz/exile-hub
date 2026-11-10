@@ -26,6 +26,7 @@ import type { FarmPricesResult } from "../shared/ipc";
 import type { AppConfig, PriceRecent, PriceSearchPatch, PriceView } from "../shared/types";
 import { kClipboardPollMs, kLeagueRefreshMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
 import type { Platform } from "./platform";
+import { tr } from "../shared/i18n";
 
 export interface PriceContext {
   config(): AppConfig;
@@ -191,6 +192,12 @@ export class PriceService {
       this.leagues = await fetchLeagues(this.platform.fetch, this.platform.userAgent);
       const after = this.league();
       if (before && after && before !== after) this.ctx.addDiag("preço", `liga dos preços agora é ${after} (era ${before})`);
+      if (after && after !== before) {
+        // first load (or a new league): farm prices asked before this failed with "league not loaded";
+        // fetch them now and make an open Farm tab ask again
+        this.farmPricesVersion++;
+        void this.farmPrices().then(() => this.ctx.broadcast());
+      }
       this.ctx.broadcast();
     } catch (e) {
       console.error("could not load leagues", e);
@@ -373,7 +380,7 @@ export class PriceService {
   /** Live prices for every item in the farm tables (poe.ninja, cached 30 min). */
   async farmPrices(): Promise<FarmPricesResult> {
     const league = this.league();
-    if (!league) return { league: null, chaosPerDivine: null, prices: {}, suspect: [], tradePending: 0, error: "liga ainda não carregada" };
+    if (!league) return { league: null, chaosPerDivine: null, prices: {}, suspect: [], tradePending: 0, error: tr("liga ainda não carregada", "league not loaded yet") };
     try {
       const [found, rates] = await Promise.all([
         priceByName(this.ninja, league, farmItemNames(FARM_BOSSES)),
@@ -459,9 +466,9 @@ export class PriceService {
    */
   async openMapTrade(o: MapTradeOptions): Promise<{ ok: boolean; total?: number; missing: string[]; error?: string }> {
     const league = this.league();
-    if (!league) return { ok: false, missing: [], error: "liga ainda não carregada" };
+    if (!league) return { ok: false, missing: [], error: tr("liga ainda não carregada", "league not loaded yet") };
     const stats = await this.loadStats();
-    if (!stats) return { ok: false, missing: [], error: "lista de mods do trade indisponível (sem internet?)" };
+    if (!stats) return { ok: false, missing: [], error: tr("lista de mods do trade indisponível (sem internet?)", "the trade site's mod list is unavailable (no internet?)") };
     const { query, missing } = mapTradeQuery(o, mapModStatIds(stats.raw));
     let url: string;
     let total: number | undefined;
@@ -473,7 +480,7 @@ export class PriceService {
       console.error("map trade search via API failed, using ?q= link", e);
       url = tradeSearchUrl(league, query);
     }
-    if (!url.startsWith(kTradeSite)) return { ok: false, missing, error: "link inválido" };
+    if (!url.startsWith(kTradeSite)) return { ok: false, missing, error: tr("link inválido", "invalid link") };
     this.platform.openExternal(url);
     this.ctx.addDiag("app", `trade de mapas aberto${total !== undefined ? ` (${total} resultados)` : ""}`);
     return { ok: true, total, missing };

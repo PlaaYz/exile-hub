@@ -31,7 +31,7 @@ export type LogEvent =
  */
 export const MECHANIC_NPCS: Record<string, string> = {
   "Niko, Master of the Depths": "Delve (Niko)",
-  "Einhar, Beastmaster": "Bestiário (Einhar)",
+  "Einhar, Beastmaster": "Bestiary (Einhar)",
   "Alva Valai": "Incursion (Alva)",
   "Jun, Veiled Master": "Betrayal (Jun)",
   "Sister Cassia": "Blight (Cassia)",
@@ -40,7 +40,7 @@ export const MECHANIC_NPCS: Record<string, string> = {
   "Ailith, First of the Keepers": "Breach (Ailith)",
   "Valerie, the Corsair": "Deepwater (Valerie)",
   "The Envoy": "Maven (Envoy)",
-  "The Maven": "Maven (testemunha)",
+  "The Maven": "Maven (witness)",
   "Zana, Master Cartographer": "Zana",
 };
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

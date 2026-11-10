@@ -2,6 +2,7 @@
 // numbered path of what to take next (like Path of Building). "mini" fits the build, "full" is a
 // zoomable/draggable view.
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
+import { tr } from "../shared/i18n";
 import type { AppState, TreeLayout } from "../shared/types";
 
 type Progress = NonNullable<NonNullable<AppState["tree"]>["progress"]>;
@@ -85,7 +86,7 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
   const svgRef = useRef<SVGSVGElement>(null);
 
   if (!layout || !geo || !view) {
-    return <div className="muted small">{layout ? "" : "Carregando o mapa da árvore…"}</div>;
+    return <div className="muted small">{layout ? "" : tr("Carregando o mapa da árvore…", "Loading the tree map…")}</div>;
   }
 
 
@@ -150,7 +151,7 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
             <circle key={id} className={`${nodeClass(id)} k${k}`} cx={x} cy={y} r={RADIUS[k]}>
               <title>
                 {`${layout.names[id] ?? ""}${
-                  nextIndex.has(id) ? ` — passo ${nextIndex.get(id)! + 1}` : have.has(id) ? " — já tem" : build.has(id) ? " — do build" : ""
+                  nextIndex.has(id) ? ` — ${tr("passo", "step")} ${nextIndex.get(id)! + 1}` : have.has(id) ? tr(" — já tem", " — allocated") : build.has(id) ? tr(" — do build", " — in the build") : ""
                 }`}
               </title>
             </circle>
@@ -189,12 +190,12 @@ export function TreeMapModal({ progress, onClose }: { progress: Progress; onClos
     <div className="tree-modal" onClick={onClose}>
       <div className="tree-modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="row">
-          <b>Árvore passiva</b>
+          <b>{tr("Árvore passiva", "Passive tree")}</b>
           <span className="muted small">
-            roda do mouse = zoom · arrastar = mover · <span className="t-legend have">●</span> já tem ·{" "}
-            <span className="t-legend build">●</span> do build · <span className="t-legend next">●</span> próximos (na ordem)
+            {tr("roda do mouse = zoom · arrastar = mover", "mouse wheel = zoom · drag = move")} · <span className="t-legend have">●</span> {tr("já tem", "allocated")} ·{" "}
+            <span className="t-legend build">●</span> {tr("do build", "in the build")} · <span className="t-legend next">●</span> {tr("próximos (na ordem)", "next (in order)")}
           </span>
-          <button onClick={onClose}>fechar (Esc)</button>
+          <button onClick={onClose}>{tr("fechar (Esc)", "close (Esc)")}</button>
         </div>
         <TreeMap progress={progress} mode="full" />
       </div>

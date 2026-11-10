@@ -5,6 +5,7 @@ import type { ParsedItem } from "./item";
 import type { Defences, WeaponDps } from "./itemCalc";
 import { RateLimiter } from "./ratelimit";
 import type { MatchedMod } from "./stats";
+import { tr } from "../shared/i18n";
 
 const SITE = "https://www.pathofexile.com";
 export const kFetchBatch = 10;
@@ -262,7 +263,7 @@ export class TradeClient {
         .filter(Boolean)
         .join(",");
     limiter.update({ rules: join(""), state: join("-state"), retryAfter: res.headers.get("retry-after") });
-    if (res.status === 429) throw new Error("limite de requisições do trade atingido, tente de novo em instantes");
+    if (res.status === 429) throw new Error(tr("limite de requisições do trade atingido, tente de novo em instantes", "trade site rate limit reached, try again in a moment"));
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
       try {

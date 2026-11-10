@@ -8,7 +8,8 @@ This product isn't affiliated with or endorsed by Grinding Gear Games in any way
 
 ## Português
 
-Aplicativo gratuito de apoio para Path of Exile 1, com interface em português. Ele junta num só
+Aplicativo gratuito de apoio para Path of Exile 1, com interface em português e em inglês (segue o idioma do Windows;
+dá para trocar em Configurações). Ele junta num só
 lugar o que hoje fica espalhado em várias ferramentas: rota da campanha, build do Path of Building,
 price check, mapas, farm de bosses e sessões de jogo.
 
@@ -113,7 +114,8 @@ numa issue do GitHub, e o app não envia nada sozinho.
 
 ## English
 
-Free companion app for Path of Exile 1, with a Portuguese (pt-BR) interface. It brings together what
+Free companion app for Path of Exile 1, with an English and Portuguese (pt-BR) interface (it follows the Windows
+language; switch it in Settings). It brings together what
 separate tools do today: campaign route, Path of Building build, price check, maps, boss farming and
 play sessions.
 
@@ -134,7 +136,7 @@ hotkeys you press yourself, one key = one action.
   jumps and rewinds when you go back to the expected zone.
 - Progress is saved per character. Switching characters switches the route and timers, and a new
   character restarts the route automatically.
-- Act timers are in the **Tempos** tab, which hides once the character reaches endgame.
+- Act timers are in the **Timers** tab, which hides once the character reaches endgame.
 - A header picker chooses the character when the log cannot tell.
 
 ### Build (Path of Building)
@@ -151,7 +153,7 @@ hotkeys you press yourself, one key = one action.
 - You pick the sale type (instant buyout, online...). Every search starts at instant buyout.
 - It compares the item with what you wear in the same slot in the imported build.
 - With few results, it searches similar items with minimums 20% lower.
-- Bulk currency uses the trade bulk exchange and flags offers far below poe.ninja as "suspeito".
+- Bulk currency uses the trade bulk exchange and flags offers far below poe.ninja as suspicious.
 - The last 10 checks are kept for a one-click recheck.
 - GGG rate limits are respected.
 
@@ -199,12 +201,12 @@ Download `ExileHub-Setup-<version>.exe` from the
 and needs no admin rights.
 
 The app updates itself: new versions download in the background and install when you quit, or right
-away with "Reiniciar e atualizar" in the footer.
+away with "Restart and update" in the footer.
 
 Closing the window keeps the app in the tray. To quit, right-click the tray icon and choose
-**Sair**. Run the game in windowed fullscreen so the overlay shows on top.
+**Quit**. Run the game in windowed fullscreen so the overlay shows on top.
 
-Found a problem? Use **Reportar problema** in the app. It copies a report for you to paste into a
+Found a problem? Use **Report a problem** in the app. It copies a report for you to paste into a
 GitHub issue, and the app sends nothing on its own.
 
 ---

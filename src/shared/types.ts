@@ -276,6 +276,8 @@ export interface AppConfig {
   showDiagTab: boolean;
   /** the welcome screen (first start) was closed */
   welcomeDone: boolean;
+  /** UI language; "auto" = the system's (Portuguese for pt-*, English otherwise) */
+  language: "auto" | "pt" | "en";
   /** where the player left the overlay (physical pixels); null = top-left of the primary monitor */
   overlayPos: { x: number; y: number } | null;
   /** chat commands on keys (F5 -> /hideout), only while the game has focus */

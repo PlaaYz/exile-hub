@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { tr } from "../shared/i18n";
 import type { PriceFilters, PriceModFilter, PriceRange, PriceRecent, PriceView, SellerStatus, TradeStatus } from "../shared/types";
 
 const CURRENCY_SHORT: Record<string, string> = { chaos: "c", divine: "div", exalted: "ex" };
@@ -27,10 +28,10 @@ function ago(iso: string): string {
 export function itemTitle(p: PriceView): string {
   const it = p.item;
   const parts = [it.name && it.name !== it.baseType ? `${it.name} — ${it.baseType}` : it.baseType || it.name];
-  if (it.gemLevel !== null) parts.push(`nível ${it.gemLevel}${it.quality ? ` / ${it.quality}%` : ""}`);
+  if (it.gemLevel !== null) parts.push(`${tr("nível", "level")} ${it.gemLevel}${it.quality ? ` / ${it.quality}%` : ""}`);
   if (it.links >= 5) parts.push(`${it.links}L`);
   if (it.stackSize && it.stackSize > 1) parts.push(`x${it.stackSize}`);
-  if (it.corrupted) parts.push("corrompido");
+  if (it.corrupted) parts.push(tr("corrompido", "corrupted"));
   return parts.join(" · ");
 }
 
@@ -45,13 +46,13 @@ function TrendBadge({ t }: { t: { change: number; points: number[] } }) {
   const d = pts.map((v, i) => `${((i / (pts.length - 1)) * w).toFixed(1)},${(h - ((v - min) / span) * h).toFixed(1)}`).join(" ");
   const cls = t.change > 2 ? "up" : t.change < -2 ? "down" : "flat";
   return (
-    <span className={`trend ${cls}`} title="variação no poe.ninja nos últimos 7 dias">
+    <span className={`trend ${cls}`} title={tr("variação no poe.ninja nos últimos 7 dias", "poe.ninja change over the last 7 days")}>
       {" "}
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
         <polyline points={d} fill="none" strokeWidth="1.5" />
       </svg>{" "}
       {t.change > 0 ? "+" : ""}
-      {t.change}% em 7 dias
+      {t.change}% {tr("em 7 dias", "in 7 days")}
     </span>
   );
 }
@@ -66,33 +67,33 @@ export function PriceSummary({ p }: { p: PriceView }) {
     <div className="price-summary">
       {showNinja && <div className="price-line">
         <span className="price-src">poe.ninja</span>
-        {p.ninjaStatus === "loading" && <span className="muted">consultando…</span>}
-        {p.ninjaStatus === "n/a" && <span className="muted">sem referência</span>}
-        {p.ninjaStatus === "error" && <span className="warn-text">erro: {p.ninjaError}</span>}
+        {p.ninjaStatus === "loading" && <span className="muted">{tr("consultando…", "checking…")}</span>}
+        {p.ninjaStatus === "n/a" && <span className="muted">{tr("sem referência", "no reference")}</span>}
+        {p.ninjaStatus === "error" && <span className="warn-text">{tr("erro", "error")}: {p.ninjaError}</span>}
         {p.ninjaStatus === "done" && p.ninja && (
           <span>
             <b>{fmtChaos(p.ninja.chaos, cpd)}</b>
-            {stack ? <span className="muted"> · pilha: {fmtChaos(p.ninja.chaos * stack, cpd)}</span> : null}
+            {stack ? <span className="muted"> · {tr("pilha", "stack")}: {fmtChaos(p.ninja.chaos * stack, cpd)}</span> : null}
             {p.ninja.trend && <TrendBadge t={p.ninja.trend} />}
-            {p.ninja.lowConfidence && <span className="warn-text"> · poucos anúncios, desconfie</span>}
+            {p.ninja.lowConfidence && <span className="warn-text"> · {tr("poucos anúncios, desconfie", "few listings, be careful")}</span>}
           </span>
         )}
       </div>}
       {p.tradeStatus !== "n/a" && (
         <div className="price-line">
           <span className="price-src">trade</span>
-          {p.tradeStatus === "loading" && <span className="muted">buscando…</span>}
+          {p.tradeStatus === "loading" && <span className="muted">{tr("buscando…", "searching…")}</span>}
           {p.tradeStatus === "error" && <span className="warn-text">{p.tradeError}</span>}
           {p.tradeStatus === "done" && p.trade && (
             p.trade.total === 0 ? (
-              <span className="muted">nenhum anúncio parecido</span>
+              <span className="muted">{tr("nenhum anúncio parecido", "no similar listings")}</span>
             ) : (
               <span>
                 {p.trade.medianChaos !== null ? <b>~{fmtChaos(p.trade.medianChaos, cpd)}</b> : null}
                 <span className="muted">
                   {" "}
-                  · mais barato {fmtAmount(p.trade.listings[0].amount, p.trade.listings[0].currency)} · {p.trade.total}{" "}
-                  anúncios
+                  · {tr("mais barato", "cheapest")} {fmtAmount(p.trade.listings[0].amount, p.trade.listings[0].currency)} · {p.trade.total}{" "}
+                  {tr("anúncios", "listings")}
                 </span>
               </span>
             )
@@ -105,13 +106,14 @@ export function PriceSummary({ p }: { p: PriceView }) {
 
 const numIn = (v: string): number | null => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 
-const KIND_LABEL: Record<string, string> = {
-  pseudo: "total",
-  implicit: "implícito",
-  crafted: "craftado",
-  fractured: "fraturado",
-  enchant: "encantamento",
-};
+const kindLabel = (k: string) =>
+  ({
+    pseudo: tr("total", "total"),
+    implicit: tr("implícito", "implicit"),
+    crafted: tr("craftado", "crafted"),
+    fractured: tr("fraturado", "fractured"),
+    enchant: tr("encantamento", "enchant"),
+  })[k] ?? k;
 
 /** One number filter row: on/off, label, current value, min, max. */
 function RangeRow({
@@ -132,8 +134,8 @@ function RangeRow({
         {label}
         {current ? <span className="muted"> ({current})</span> : null}
       </span>
-      <input className="mod-min" type="number" placeholder="mín" value={r.min ?? ""} onChange={(e) => onChange({ ...r, enabled: true, min: numIn(e.target.value) })} />
-      <input className="mod-min" type="number" placeholder="máx" value={r.max ?? ""} onChange={(e) => onChange({ ...r, enabled: true, max: numIn(e.target.value) })} />
+      <input className="mod-min" type="number" placeholder={tr("mín", "min")} value={r.min ?? ""} onChange={(e) => onChange({ ...r, enabled: true, min: numIn(e.target.value) })} />
+      <input className="mod-min" type="number" placeholder={tr("máx", "max")} value={r.max ?? ""} onChange={(e) => onChange({ ...r, enabled: true, max: numIn(e.target.value) })} />
     </label>
   );
 }
@@ -156,30 +158,30 @@ function SearchEditor({ p }: { p: PriceView }) {
   const def = p.calc.def;
   const rareish = p.item.rarity === "Rare" || p.item.rarity === "Magic";
   const ranges: [keyof PriceFilters, string, string | undefined][] = [
-    ["pdps", "DPS físico", d ? `${d.pdps}, Q20 ${d.pdpsQ20}` : undefined],
-    ["edps", "DPS elemental", d ? String(d.edps) : undefined],
+    ["pdps", tr("DPS físico", "Physical DPS"), d ? `${d.pdps}, Q20 ${d.pdpsQ20}` : undefined],
+    ["edps", tr("DPS elemental", "Elemental DPS"), d ? String(d.edps) : undefined],
     ["dps", "DPS total", d ? `${d.dps}, Q20 ${d.dpsQ20}` : undefined],
-    ["armour", "Armadura", def?.armour ? `${def.armour}, Q20 ${def.armourQ20}` : undefined],
-    ["evasion", "Evasão", def?.evasion ? `${def.evasion}, Q20 ${def.evasionQ20}` : undefined],
+    ["armour", tr("Armadura", "Armour"), def?.armour ? `${def.armour}, Q20 ${def.armourQ20}` : undefined],
+    ["evasion", tr("Evasão", "Evasion"), def?.evasion ? `${def.evasion}, Q20 ${def.evasionQ20}` : undefined],
     ["es", "Energy Shield", def?.es ? `${def.es}, Q20 ${def.esQ20}` : undefined],
     ["ward", "Ward", def?.ward ? String(def.ward) : undefined],
     ["itemLevel", "Item level", p.item.itemLevel !== null ? String(p.item.itemLevel) : undefined],
     ["links", "Links", p.item.links ? String(p.item.links) : undefined],
-    ["quality", "Qualidade", p.item.quality ? `${p.item.quality}%` : undefined],
-    ["gemLevel", "Nível da gema", p.item.gemLevel !== null ? String(p.item.gemLevel) : undefined],
-    ["mapTier", "Tier do mapa", undefined],
+    ["quality", tr("Qualidade", "Quality"), p.item.quality ? `${p.item.quality}%` : undefined],
+    ["gemLevel", tr("Nível da gema", "Gem level"), p.item.gemLevel !== null ? String(p.item.gemLevel) : undefined],
+    ["mapTier", tr("Tier do mapa", "Map tier"), undefined],
   ];
 
   return (
     <>
-      <h3>Busca no trade</h3>
+      <h3>{tr("Busca no trade", "Trade search")}</h3>
       <div className="search-flags">
         <label className="small">
-          venda:{" "}
+          {tr("venda:", "sale:")}{" "}
           <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as TradeStatus })}>
-            {(Object.keys(TRADE_STATUS_LABEL) as TradeStatus[]).map((s) => (
+            {TRADE_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {TRADE_STATUS_LABEL[s]}
+                {tradeStatusLabel(s)}
               </option>
             ))}
           </select>
@@ -187,15 +189,15 @@ function SearchEditor({ p }: { p: PriceView }) {
         {rareish && (
           <label className="check small">
             <input type="checkbox" checked={f.baseType} onChange={(e) => setF({ ...f, baseType: e.target.checked })} />
-            só esta base ({p.item.baseType})
+            {tr("só esta base", "this base only")} ({p.item.baseType})
           </label>
         )}
         <label className="small">
-          corrompido{" "}
+          {tr("corrompido", "corrupted")}{" "}
           <select value={f.corrupted} onChange={(e) => setF({ ...f, corrupted: e.target.value as PriceFilters["corrupted"] })}>
-            <option value="any">tanto faz</option>
-            <option value="no">não</option>
-            <option value="yes">sim</option>
+            <option value="any">{tr("tanto faz", "either")}</option>
+            <option value="no">{tr("não", "no")}</option>
+            <option value="yes">{tr("sim", "yes")}</option>
           </select>
         </label>
         {f.influences.map((inf, i) => (
@@ -219,13 +221,13 @@ function SearchEditor({ p }: { p: PriceView }) {
             <input type="checkbox" checked={m.enabled} onChange={(e) => setMod(i, { enabled: e.target.checked })} />
             <span className={`mod-text kind-${m.kind}`}>
               {m.text}
-              {m.kind !== "explicit" ? <span className="muted"> ({KIND_LABEL[m.kind] ?? m.kind})</span> : null}
+              {m.kind !== "explicit" ? <span className="muted"> ({kindLabel(m.kind)})</span> : null}
             </span>
-            <input className="mod-min" type="number" placeholder="mín" value={m.min ?? ""} onChange={(e) => setMod(i, { enabled: true, min: numIn(e.target.value) })} />
-            <input className="mod-min" type="number" placeholder="máx" value={m.max ?? ""} onChange={(e) => setMod(i, { enabled: true, max: numIn(e.target.value) })} />
+            <input className="mod-min" type="number" placeholder={tr("mín", "min")} value={m.min ?? ""} onChange={(e) => setMod(i, { enabled: true, min: numIn(e.target.value) })} />
+            <input className="mod-min" type="number" placeholder={tr("máx", "max")} value={m.max ?? ""} onChange={(e) => setMod(i, { enabled: true, max: numIn(e.target.value) })} />
           </label>
         ))}
-        {p.unmatched.length > 0 && <div className="muted small">Não reconhecidos (fora da busca): {p.unmatched.join(" · ")}</div>}
+        {p.unmatched.length > 0 && <div className="muted small">{tr("Não reconhecidos (fora da busca):", "Not recognised (left out of the search):")} {p.unmatched.join(" · ")}</div>}
       </div>
       <div className="row buttons">
         <button
@@ -237,23 +239,26 @@ function SearchEditor({ p }: { p: PriceView }) {
             })
           }
         >
-          {p.tradeStatus === "loading" ? "Buscando…" : "Buscar"}
+          {p.tradeStatus === "loading" ? tr("Buscando…", "Searching…") : tr("Buscar", "Search")}
         </button>
       </div>
     </>
   );
 }
 
-const STATUS_LABEL: Record<SellerStatus, string> = { online: "online", afk: "ausente", offline: "offline", instant: "compra instantânea" };
+const statusLabel = (s: SellerStatus) =>
+  ({ online: "online", afk: tr("ausente", "away"), offline: "offline", instant: tr("compra instantânea", "instant buyout") })[s];
 
 /** The trade site's sale types, in its order (the search always starts at instant buyout). */
-const TRADE_STATUS_LABEL: Record<TradeStatus, string> = {
-  available: "Compra instantânea e pessoalmente",
-  securable: "Compra instantânea",
-  onlineleague: "Pessoalmente (online na liga)",
-  online: "Pessoalmente (online)",
-  any: "Qualquer",
-};
+const TRADE_STATUSES: TradeStatus[] = ["available", "securable", "onlineleague", "online", "any"];
+const tradeStatusLabel = (s: TradeStatus) =>
+  ({
+    available: tr("Compra instantânea e pessoalmente", "Instant buyout and in person"),
+    securable: tr("Compra instantânea", "Instant buyout"),
+    onlineleague: tr("Pessoalmente (online na liga)", "In person (online in league)"),
+    online: tr("Pessoalmente (online)", "In person (online)"),
+    any: tr("Qualquer", "Any"),
+  })[s];
 
 /** Bulk exchange offers: price per unit, how many per trade, stock, seller. */
 function BulkTable({ p }: { p: PriceView }) {
@@ -261,10 +266,10 @@ function BulkTable({ p }: { p: PriceView }) {
   const cpd = p.chaosPerDivine;
   return (
     <>
-      <h3>Troca em massa (bulk)</h3>
-      {p.bulkStatus === "loading" && <div className="muted small">buscando ofertas…</div>}
+      <h3>{tr("Troca em massa (bulk)", "Bulk exchange")}</h3>
+      {p.bulkStatus === "loading" && <div className="muted small">{tr("buscando ofertas…", "looking for offers…")}</div>}
       {p.bulkStatus === "error" && <div className="warn-text small">{p.bulkError}</div>}
-      {p.bulk && p.bulk.offers.length === 0 && <div className="muted small">ninguém vendendo agora</div>}
+      {p.bulk && p.bulk.offers.length === 0 && <div className="muted small">{tr("ninguém vendendo agora", "nobody selling right now")}</div>}
       {p.bulk && p.bulk.offers.length > 0 && (
         <table className="listings">
           <tbody>
@@ -273,17 +278,17 @@ function BulkTable({ p }: { p: PriceView }) {
               const bait = !!p.ninja && o.chaosPerUnit !== null && o.chaosPerUnit < p.ninja.chaos * 0.6;
               return (
               <tr key={i} className={bait ? "bait" : ""}>
-                <td title={bait ? "muito abaixo do poe.ninja: provavelmente isca" : ""}>
+                <td title={bait ? tr("muito abaixo do poe.ninja: provavelmente isca", "far below poe.ninja: probably bait") : ""}>
                   <b>{o.chaosPerUnit !== null ? fmtChaos(o.chaosPerUnit, cpd) : "?"}</b>
-                  <span className="muted"> /un</span>
-                  {bait && <span className="warn-text small"> suspeito</span>}
+                  <span className="muted"> /{tr("un", "ea")}</span>
+                  {bait && <span className="warn-text small"> {tr("suspeito", "suspicious")}</span>}
                 </td>
                 <td className="muted">
                   {fmtAmount(o.pay.amount, o.pay.currency)} → {o.get.amount}
                 </td>
-                <td className="muted">estoque {o.get.stock}</td>
+                <td className="muted">{tr("estoque", "stock")} {o.get.stock}</td>
                 <td>
-                  <span className={`seller ${o.status}`} title={`${o.seller} · ${STATUS_LABEL[o.status]}`}>
+                  <span className={`seller ${o.status}`} title={`${o.seller} · ${statusLabel(o.status)}`}>
                     {o.character ?? o.seller}
                   </span>
                 </td>
@@ -295,9 +300,9 @@ function BulkTable({ p }: { p: PriceView }) {
       )}
       {p.bulk && (
         <div className="muted small">
-          {p.bulk.total} ofertas no total ·{" "}
+          {p.bulk.total} {tr("ofertas no total", "offers in total")} ·{" "}
           <a href={p.bulk.url} onClick={(e) => (e.preventDefault(), void window.hub.priceOpenTrade())}>
-            abrir no site
+            {tr("abrir no site", "open on the site")}
           </a>
         </div>
       )}
@@ -314,12 +319,12 @@ function CalcLine({ p }: { p: PriceView }) {
   if (d) {
     if (d.pdps) parts.push(`pDPS ${d.pdps}${d.pdpsQ20 !== d.pdps ? ` (Q20 ${d.pdpsQ20})` : ""}`);
     if (d.edps) parts.push(`eDPS ${d.edps}`);
-    if (d.cdps) parts.push(`caos ${d.cdps}`);
+    if (d.cdps) parts.push(`${tr("caos", "chaos")} ${d.cdps}`);
     parts.push(`total ${d.dps}${d.dpsQ20 !== d.dps ? ` (Q20 ${d.dpsQ20})` : ""}`);
   }
   if (def) {
-    if (def.armour) parts.push(`armadura ${def.armour}${def.armourQ20 !== def.armour ? ` (Q20 ${def.armourQ20})` : ""}`);
-    if (def.evasion) parts.push(`evasão ${def.evasion}${def.evasionQ20 !== def.evasion ? ` (Q20 ${def.evasionQ20})` : ""}`);
+    if (def.armour) parts.push(`${tr("armadura", "armour")} ${def.armour}${def.armourQ20 !== def.armour ? ` (Q20 ${def.armourQ20})` : ""}`);
+    if (def.evasion) parts.push(`${tr("evasão", "evasion")} ${def.evasion}${def.evasionQ20 !== def.evasion ? ` (Q20 ${def.evasionQ20})` : ""}`);
     if (def.es) parts.push(`ES ${def.es}${def.esQ20 !== def.es ? ` (Q20 ${def.esQ20})` : ""}`);
     if (def.ward) parts.push(`ward ${def.ward}`);
   }
@@ -331,11 +336,13 @@ const tierClass = (t: number | undefined) => (t === 1 ? "tier t1" : t === 2 ? "t
 /** "1/3 prefixos · 2/3 sufixos · 2 livres" from the advanced copy. */
 export function affixText(a: NonNullable<PriceView["item"]["affixes"]>): string {
   const open = a.maxPrefix - a.prefix + (a.maxSuffix - a.suffix);
-  const parts = [`${a.prefix}/${a.maxPrefix} prefixos`, `${a.suffix}/${a.maxSuffix} sufixos`];
+  const parts = [`${a.prefix}/${a.maxPrefix} ${tr("prefixos", "prefixes")}`, `${a.suffix}/${a.maxSuffix} ${tr("sufixos", "suffixes")}`];
   if (open > 0) {
-    const where = [a.prefix < a.maxPrefix ? "prefixo" : null, a.suffix < a.maxSuffix ? "sufixo" : null].filter(Boolean).join(" e ");
-    parts.push(`espaço para craftar (${where})`);
-  } else parts.push("sem espaço livre");
+    const where = [a.prefix < a.maxPrefix ? tr("prefixo", "prefix") : null, a.suffix < a.maxSuffix ? tr("sufixo", "suffix") : null]
+      .filter(Boolean)
+      .join(tr(" e ", " and "));
+    parts.push(`${tr("espaço para craftar", "room to craft")} (${where})`);
+  } else parts.push(tr("sem espaço livre", "no open affix"));
   return parts.join(" · ");
 }
 
@@ -356,13 +363,13 @@ function ModTiers({ p }: { p: PriceView }) {
   const mods = p.item.mods.filter((m) => m.kind !== "enchant" || m.tier !== undefined);
   if (!p.item.affixes) {
     if (p.item.rarity === "Rare" || p.item.rarity === "Magic") {
-      return <p className="muted small">Copie com <b>Ctrl+Alt+C</b> para ver o tier de cada mod e se há espaço para craftar.</p>;
+      return <p className="muted small">{tr("Copie com", "Copy with")} <b>Ctrl+Alt+C</b> {tr("para ver o tier de cada mod e se há espaço para craftar.", "to see each mod's tier and whether there is room to craft.")}</p>;
     }
     return null;
   }
   return (
     <>
-      <h3>Modificadores</h3>
+      <h3>{tr("Modificadores", "Modifiers")}</h3>
       <div className="small">{affixText(p.item.affixes)}</div>
       <table className="farm-items">
         <tbody>
@@ -379,9 +386,9 @@ function ModTiers({ p }: { p: PriceView }) {
               </td>
               <td className={m.kind === "crafted" ? "f-craft" : m.kind === "implicit" ? "f-enter" : m.kind === "fractured" ? "f-quest" : ""}>
                 {m.text}
-                {m.affix ? <span className="muted small"> · {m.affix === "prefix" ? "prefixo" : "sufixo"}</span> : null}
+                {m.affix ? <span className="muted small"> · {m.affix === "prefix" ? tr("prefixo", "prefix") : tr("sufixo", "suffix")}</span> : null}
               </td>
-              <td className="roll-cell" title={m.roll !== undefined ? `rolagem ${Math.round(m.roll * 100)}% da faixa` : ""}>
+              <td className="roll-cell" title={m.roll !== undefined ? tr(`rolagem ${Math.round(m.roll * 100)}% da faixa`, `roll at ${Math.round(m.roll * 100)}% of the range`) : ""}>
                 {m.roll !== undefined && (
                   <div className="roll-bar">
                     <div className="roll-fill" style={{ width: `${Math.round(m.roll * 100)}%` }} />
@@ -402,13 +409,13 @@ const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}`;
 function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
   if (!p.compare) {
     if (!hasBuild && (p.item.rarity === "Rare" || p.item.rarity === "Unique") && !/Gem|Jewel|Flask|Map/.test(p.item.itemClass)) {
-      return <p className="muted small">Importe seu build do Path of Building (copie o código) para comparar com o item que você usa.</p>;
+      return <p className="muted small">{tr("Importe seu build do Path of Building (copie o código) para comparar com o item que você usa.", "Import your Path of Building build (copy the code) to compare with the item you wear.")}</p>;
     }
     return null;
   }
   return (
     <>
-      <h3>Comparado ao seu item</h3>
+      <h3>{tr("Comparado ao seu item", "Compared with your item")}</h3>
       {p.compare.map((c) => (
         <div key={c.slot} className="compare">
           <div className="small">
@@ -433,12 +440,12 @@ function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
           )}
           {c.onlyCandidate.length > 0 && (
             <div className="small">
-              <span className="good-text">só neste:</span> {c.onlyCandidate.join(" · ")}
+              <span className="good-text">{tr("só neste:", "only on this one:")}</span> {c.onlyCandidate.join(" · ")}
             </div>
           )}
           {c.onlyEquipped.length > 0 && (
             <div className="small">
-              <span className="warn-text">você perde:</span> {c.onlyEquipped.join(" · ")}
+              <span className="warn-text">{tr("você perde:", "you lose:")}</span> {c.onlyEquipped.join(" · ")}
             </div>
           )}
         </div>
@@ -453,10 +460,10 @@ function SimilarBlock({ p }: { p: PriceView }) {
   if (!s || !p.trade) return null;
   return (
     <div className="similar small">
-      <b>Poucos anúncios iguais.</b> Itens parecidos (mínimos 20% menores): {s.total} anúncios
+      <b>{tr("Poucos anúncios iguais.", "Few identical listings.")}</b> {tr("Itens parecidos (mínimos 20% menores):", "Similar items (minimums 20% lower):")} {s.total} {tr("anúncios", "listings")}
       {s.medianChaos !== null ? (
         <>
-          , mediana <b>{fmtChaos(s.medianChaos, p.chaosPerDivine)}</b>
+          , {tr("mediana", "median")} <b>{fmtChaos(s.medianChaos, p.chaosPerDivine)}</b>
         </>
       ) : null}
       {s.listings.length > 0 && <span className="muted"> · {s.listings.map((l) => fmtAmount(l.amount, l.currency)).join(", ")}</span>}
@@ -469,10 +476,10 @@ export function RecentChecks({ recent, current }: { recent: PriceRecent[]; curre
   if (recent.length < 2) return null;
   return (
     <>
-      <h3>Buscas recentes</h3>
+      <h3>{tr("Buscas recentes", "Recent checks")}</h3>
       <div className="recent-checks">
         {recent.map((r) => (
-          <button key={r.id} className={`small${r.at === current ? " active" : ""}`} title="Checar de novo" onClick={() => void window.hub.priceRecheck(r.id)}>
+          <button key={r.id} className={`small${r.at === current ? " active" : ""}`} title={tr("Checar de novo", "Check again")} onClick={() => void window.hub.priceRecheck(r.id)}>
             {r.name}
             {r.chaos !== null ? <span className="muted"> · {fmtChaos(r.chaos, null)}</span> : null}
           </button>
@@ -487,8 +494,9 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
     return (
       <>
         <p className="muted">
-          No jogo, passe o mouse sobre um item e aperte <b>Ctrl+D</b> (abre o preço ao lado do item) ou <b>Ctrl+C</b>{" "}
-          (o preço aparece aqui e no overlay).
+          {tr("No jogo, passe o mouse sobre um item e aperte", "In game, hover an item and press")} <b>Ctrl+D</b>{" "}
+          {tr("(abre o preço ao lado do item) ou", "(opens the price next to the item) or")} <b>Ctrl+C</b>{" "}
+          {tr("(o preço aparece aqui e no overlay).", "(the price shows here and on the overlay).")}
         </p>
         <RecentChecks recent={recent} current={null} />
       </>
@@ -500,7 +508,7 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
       <div className="price-item">{itemTitle(p)}</div>
       <div className="muted small">
         {p.item.rarity} · {p.item.itemClass}
-        {p.item.itemLevel !== null ? ` · ilvl ${p.item.itemLevel}` : ""} · liga {p.league}
+        {p.item.itemLevel !== null ? ` · ilvl ${p.item.itemLevel}` : ""} · {tr("liga", "league")} {p.league}
         {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""}
       </div>
       <PriceSummary p={p} />
@@ -510,8 +518,8 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
       <ModTiers p={p} />
       {p.ninja && (
         <div className="muted small">
-          referência: {p.ninja.label}
-          {p.ninja.listings !== null ? ` (${p.ninja.listings} anúncios)` : ""}
+          {tr("referência:", "reference:")} {p.ninja.label}
+          {p.ninja.listings !== null ? ` (${p.ninja.listings} ${tr("anúncios", "listings")})` : ""}
         </div>
       )}
       <BulkTable p={p} />
@@ -523,11 +531,11 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
                 <td>{fmtAmount(l.amount, l.currency)}</td>
                 <td className="muted">{l.chaos !== null && l.currency !== "chaos" ? `≈ ${fmtChaos(l.chaos, null)}` : ""}</td>
                 <td>
-                  <span className={`seller ${l.status}`} title={`${l.seller} · ${STATUS_LABEL[l.status]}`}>
+                  <span className={`seller ${l.status}`} title={`${l.seller} · ${statusLabel(l.status)}`}>
                     {l.character ?? l.seller}
                   </span>
                 </td>
-                <td className="muted">há {ago(l.indexed)}</td>
+                <td className="muted">{tr(`há ${ago(l.indexed)}`, `${ago(l.indexed)} ago`)}</td>
               </tr>
             ))}
           </tbody>
@@ -535,8 +543,8 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
       )}
       {p.trade && (
         <div className="row buttons">
-          <button onClick={() => void window.hub.priceOpenTrade()}>Abrir no site do trade</button>
-          {p.trade.more > 0 && <button onClick={() => void window.hub.priceMore()}>Mais resultados ({p.trade.more})</button>}
+          <button onClick={() => void window.hub.priceOpenTrade()}>{tr("Abrir no site do trade", "Open on the trade site")}</button>
+          {p.trade.more > 0 && <button onClick={() => void window.hub.priceMore()}>{tr("Mais resultados", "More results")} ({p.trade.more})</button>}
         </div>
       )}
       <SearchEditor p={p} />

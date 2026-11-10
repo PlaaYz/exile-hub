@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from "react";
 import { CHAT_COMMAND_PRESETS, isValidKey, isValidText, LAST_WHISPER, normaliseKey, type ChatCommand } from "../core/chatCommands";
+import { tr } from "../shared/i18n";
 import type { AppState } from "../shared/types";
 
 /** Turns a key press into an accelerator ("F5", "Ctrl+H"); null for bare modifiers. */
@@ -19,7 +20,7 @@ export function KeyInput({ value, onChange }: { value: string; onChange: (k: str
       className="key-input"
       readOnly
       value={hint ?? value}
-      title="Clique e aperte a tecla (F1–F12, ou Ctrl/Shift/Alt + letra/número)"
+      title={tr("Clique e aperte a tecla (F1–F12, ou Ctrl/Shift/Alt + letra/número)", "Click and press the key (F1–F12, or Ctrl/Shift/Alt + letter/number)")}
       onBlur={() => setHint(null)}
       onKeyDown={(e) => {
         if (e.key === "Tab") return;
@@ -27,7 +28,7 @@ export function KeyInput({ value, onChange }: { value: string; onChange: (k: str
         const acc = acceleratorOf(e);
         if (!acc) return;
         if (!isValidKey(acc)) {
-          setHint(`${acc}: não dá`);
+          setHint(`${acc}: ${tr("não dá", "not allowed")}`);
           return;
         }
         setHint(null);
@@ -45,9 +46,9 @@ export function ChatCommandsSettings({ state }: { state: AppState }) {
 
   return (
     <>
-      <h3>Comandos no teclado</h3>
+      <h3>{tr("Comandos no teclado", "Keyboard commands")}</h3>
       {!state.chat.supported ? (
-        <div className="muted">Disponível só na versão instalada do app.</div>
+        <div className="muted">{tr("Disponível só na versão instalada do app.", "Only available in the installed app.")}</div>
       ) : (
         <>
           <label className="check">
@@ -56,13 +57,16 @@ export function ChatCommandsSettings({ state }: { state: AppState }) {
               checked={cfg.chatCommandsEnabled}
               onChange={(e) => void window.hub.setConfig({ chatCommandsEnabled: e.target.checked })}
             />
-            Atalhos que digitam um comando no chat do jogo (ex.: F5 = /hideout)
+            {tr("Atalhos que digitam um comando no chat do jogo (ex.: F5 = /hideout)", "Keys that type a command in the game chat (e.g. F5 = /hideout)")}
           </label>
           <div className="muted small">
-            Uma tecla = um comando, como no Awakened PoE Trade. As teclas só valem com o jogo em foco; fora dele continuam
-            normais nos outros programas. {LAST_WHISPER} vira o último jogador que te sussurrou
-            {state.chat.lastWhisper ? ` (agora: ${state.chat.lastWhisper})` : " (ninguém ainda)"}.
-            {cfg.chatCommandsEnabled && (state.chat.active ? " Atalhos ativos." : " Atalhos ativos quando o jogo estiver em foco.")}
+            {tr(
+              "Uma tecla = um comando, como no Awakened PoE Trade. As teclas só valem com o jogo em foco; fora dele continuam normais nos outros programas.",
+              "One key = one command, like Awakened PoE Trade. The keys only work while the game has focus; elsewhere they behave normally.",
+            )}{" "}
+            {LAST_WHISPER} {tr("vira o último jogador que te sussurrou", "becomes the last player who whispered you")}
+            {state.chat.lastWhisper ? ` (${tr("agora", "now")}: ${state.chat.lastWhisper})` : tr(" (ninguém ainda)", " (nobody yet)")}.
+            {cfg.chatCommandsEnabled && (state.chat.active ? tr(" Atalhos ativos.", " Keys active.") : tr(" Atalhos ativos quando o jogo estiver em foco.", " Keys become active when the game has focus."))}
           </div>
           <table className="chat-commands">
             <tbody>
@@ -78,7 +82,7 @@ export function ChatCommandsSettings({ state }: { state: AppState }) {
                     <CommandText value={c.text} onSave={(t) => save(cmds.map((x, j) => (j === i ? { ...x, text: t } : x)))} />
                   </td>
                   <td>
-                    <button onClick={() => save(cmds.filter((_, j) => j !== i))}>remover</button>
+                    <button onClick={() => save(cmds.filter((_, j) => j !== i))}>{tr("remover", "remove")}</button>
                   </td>
                 </tr>
               ))}
@@ -93,10 +97,10 @@ export function ChatCommandsSettings({ state }: { state: AppState }) {
                 if (key && e.target.value) save([...cmds, { key, text: e.target.value }]);
               }}
             >
-              <option value="">adicionar comando…</option>
+              <option value="">{tr("adicionar comando…", "add command…")}</option>
               {CHAT_COMMAND_PRESETS.map((p) => (
                 <option key={p.text} value={p.text}>
-                  {p.label} — {p.text}
+                  {tr(p.label, p.labelEn)} — {p.text}
                 </option>
               ))}
             </select>
@@ -123,7 +127,7 @@ function CommandText({ value, onSave }: { value: string; onSave: (t: string) => 
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === "Enter" && commit()}
-      title="Comece com / (comando) ou @ (sussurro)"
+      title={tr("Comece com / (comando) ou @ (sussurro)", "Start with / (command) or @ (whisper)")}
     />
   );
 }

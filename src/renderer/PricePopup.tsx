@@ -1,6 +1,7 @@
 // The price popup over the game (price key, e.g. Ctrl+D): the same price check as the dashboard's
 // panel, next to the item. Esc, the close button or clicking back into the game closes it.
 import { useEffect } from "react";
+import { tr } from "../shared/i18n";
 import { useHubState } from "./hooks";
 import { PricePanelBody } from "./PriceView";
 
@@ -42,9 +43,9 @@ export function PricePopupApp() {
     <div className="price-popup">
       <div className="price-popup-bar" data-tauri-drag-region>
         <span className="muted small" data-tauri-drag-region>
-          Exile Hub · preço
+          Exile Hub · {tr("preço", "price")}
         </span>
-        <button className="small" onClick={() => void window.hub.closePricePopup()} title="Fechar (Esc)">
+        <button className="small" onClick={() => void window.hub.closePricePopup()} title={tr("Fechar (Esc)", "Close (Esc)")}>
           ✕
         </button>
       </div>

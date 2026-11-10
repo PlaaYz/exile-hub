@@ -3,6 +3,7 @@
 // never takes the keyboard from the game, so the commands go straight into the game's chat.
 import { useEffect, useState } from "react";
 import type { TradeAction, TradeCard } from "../shared/types";
+import { tr } from "../shared/i18n";
 import { useHubState } from "./hooks";
 
 function ago(ts: number, now: number): string {
@@ -14,17 +15,17 @@ export function Card({ t, now }: { t: TradeCard; now: number }) {
   const o = t.offer;
   const act = (a: TradeAction) => void window.hub.tradeAction(t.id, a);
   const price = o.bulk
-    ? `${o.bulk.count}× por ${o.bulk.pay.amount} ${o.bulk.pay.currency}`
+    ? `${o.bulk.count}× ${tr("por", "for")} ${o.bulk.pay.amount} ${o.bulk.pay.currency}`
     : o.price
       ? `${o.price.amount} ${o.price.currency}`
-      : "sem preço";
+      : tr("sem preço", "no price");
   return (
     <div className={`trade-card${t.arrived ? " arrived" : ""}`}>
       <div className="trade-head" data-tauri-drag-region>
         <b>{t.from}</b>
-        {t.arrived && <span className="trade-badge">chegou</span>}
-        <span className="muted small">há {ago(t.at, now)}</span>
-        <button className="trade-x" title="Fechar" onClick={() => act("dismiss")}>
+        {t.arrived && <span className="trade-badge">{tr("chegou", "arrived")}</span>}
+        <span className="muted small">{tr(`há ${ago(t.at, now)}`, `${ago(t.at, now)} ago`)}</span>
+        <button className="trade-x" title={tr("Fechar", "Close")} onClick={() => act("dismiss")}>
           ✕
         </button>
       </div>
@@ -36,17 +37,17 @@ export function Card({ t, now }: { t: TradeCard; now: number }) {
         {o.stash && (
           <span className="muted small">
             {" "}
-            · aba "{o.stash.tab}" (esq. {o.stash.left}, topo {o.stash.top})
+            · {tr("aba", "tab")} "{o.stash.tab}" ({tr("esq.", "left")} {o.stash.left}, {tr("topo", "top")} {o.stash.top})
           </span>
         )}
         {o.note && <span className="muted small" title={o.note}> · "{o.note}"</span>}
       </div>
       <div className="trade-buttons">
-        <button onClick={() => act("invite")}>Convidar</button>
+        <button onClick={() => act("invite")}>{tr("Convidar", "Invite")}</button>
         <button onClick={() => act("trade")}>Trade</button>
-        <button onClick={() => act("thanks")}>Obrigado</button>
-        <button onClick={() => act("sold")}>Vendido</button>
-        <button onClick={() => act("kick")}>Expulsar</button>
+        <button onClick={() => act("thanks")}>{tr("Obrigado", "Thanks")}</button>
+        <button onClick={() => act("sold")}>{tr("Vendido", "Sold")}</button>
+        <button onClick={() => act("kick")}>{tr("Expulsar", "Kick")}</button>
       </div>
     </div>
   );

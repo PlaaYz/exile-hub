@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
+import { resolveLang, setLang } from "../shared/i18n";
 import type { AppState } from "../shared/types";
 
 export function useHubState(): AppState | null {
   const [state, setState] = useState<AppState | null>(null);
   useEffect(() => {
     let alive = true;
-    void window.hub.getState().then((s) => alive && setState(s));
-    const off = window.hub.onState((s) => alive && setState(s));
+    // the language is set before the components render with the new state
+    const take = (s: AppState) => {
+      if (!alive) return;
+      setLang(resolveLang(s.config.language));
+      setState(s);
+    };
+    void window.hub.getState().then(take);
+    const off = window.hub.onState(take);
     return () => {
       alive = false;
       off();

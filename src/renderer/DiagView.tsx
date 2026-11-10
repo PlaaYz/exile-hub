@@ -1,12 +1,12 @@
 import { useState } from "react";
+import { locale, tr } from "../shared/i18n";
 import type { AppState } from "../shared/types";
 
 function ago(ts: number | null): string {
-  if (!ts) return "nunca";
+  if (!ts) return tr("nunca", "never");
   const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
-  if (s < 60) return `há ${s} s`;
-  const m = Math.round(s / 60);
-  return m < 60 ? `há ${m} min` : `há ${Math.round(m / 60)} h`;
+  const t = s < 60 ? `${s} s` : Math.round(s / 60) < 60 ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} h`;
+  return tr(`há ${t}`, `${t} ago`);
 }
 
 function Status({ ok, label, detail }: { ok: boolean | null; label: string; detail: string }) {
@@ -19,6 +19,16 @@ function Status({ ok, label, detail }: { ok: boolean | null; label: string; deta
     </div>
   );
 }
+
+/** The diagnostic kinds are pt-BR ids; this is how they read in English. */
+const KIND_EN: Record<string, string> = {
+  zona: "zone",
+  personagem: "character",
+  jogo: "game",
+  passivo: "passive",
+  mapa: "map",
+  preço: "price",
+};
 
 const KIND_CLASS: Record<string, string> = {
   zona: "f-enter",
@@ -40,20 +50,20 @@ export function DiagPanelBody({ state }: { state: AppState }) {
   return (
     <>
       <div className="diag-grid">
-        <Status ok={logOk} label="Client.txt" detail={`${state.logStatus} · última linha ${ago(d.lastLineAt)} · ${d.linesSeen} linhas`} />
-        <Status ok={d.gameRunning ? true : null} label="Jogo" detail={d.gameRunning ? (d.gameFocused ? "aberto, em foco" : "aberto, sem foco") : "fechado (ou ainda não visto)"} />
+        <Status ok={logOk} label="Client.txt" detail={`${state.logStatus} · ${tr("última linha", "last line")} ${ago(d.lastLineAt)} · ${d.linesSeen} ${tr("linhas", "lines")}`} />
+        <Status ok={d.gameRunning ? true : null} label={tr("Jogo", "Game")} detail={d.gameRunning ? (d.gameFocused ? tr("aberto, em foco", "running, focused") : tr("aberto, sem foco", "running, unfocused")) : tr("fechado (ou ainda não visto)", "closed (or not seen yet)")} />
         <Status
           ok={state.config.overlayEnabled ? d.overlayVisible || !d.gameFocused : null}
           label="Overlay"
-          detail={!state.config.overlayEnabled ? "desligado (F9)" : d.overlayVisible ? "visível" : "escondido"}
+          detail={!state.config.overlayEnabled ? tr("desligado (F9)", "off (F9)") : d.overlayVisible ? tr("visível", "visible") : tr("escondido", "hidden")}
         />
-        <Status ok={d.clipboardWatch} label="Price check" detail={d.clipboardWatch ? `ligado · liga ${state.league ?? "?"}` : "desligado"} />
+        <Status ok={d.clipboardWatch} label="Price check" detail={d.clipboardWatch ? `${tr("ligado · liga", "on · league")} ${state.league ?? "?"}` : tr("desligado", "off")} />
         <Status
           ok={state.characterName ? true : null}
-          label="Personagem"
-          detail={state.characterName ? `${state.characterName} (${state.className}, nível ${state.characterLevel})` : "desconhecido até subir de nível"}
+          label={tr("Personagem", "Character")}
+          detail={state.characterName ? `${state.characterName} (${state.className}, ${tr("nível", "level")} ${state.characterLevel})` : tr("desconhecido até subir de nível", "unknown until it levels up")}
         />
-        <Status ok={state.areaName ? true : null} label="Zona" detail={`${state.areaName ?? "?"} · rota ${state.tracker.cursor}/${state.tracker.total}`} />
+        <Status ok={state.areaName ? true : null} label={tr("Zona", "Zone")} detail={`${state.areaName ?? "?"} · ${tr("rota", "route")} ${state.tracker.cursor}/${state.tracker.total}`} />
       </div>
 
       <div className="row buttons">
@@ -65,30 +75,32 @@ export function DiagPanelBody({ state }: { state: AppState }) {
             });
           }}
         >
-          Copiar relatório
+          {tr("Copiar relatório", "Copy report")}
         </button>
         <span className="muted small">
-          {copied ? "Copiado! Cole na conversa com o Claude." : `versão ${d.version} · cole o relatório na conversa para eu analisar`}
+          {copied ? tr("Copiado! Cole numa issue do GitHub.", "Copied! Paste it into a GitHub issue.") : `${tr("versão", "version")} ${d.version} · ${tr("cole o relatório numa issue do GitHub", "paste the report into a GitHub issue")}`}
         </span>
       </div>
 
-      <h3>O que o app entendeu (mais recente primeiro)</h3>
+      <h3>{tr("O que o app entendeu (mais recente primeiro)", "What the app understood (newest first)")}</h3>
       {d.entries.length === 0 ? (
-        <p className="muted small">Nada ainda. Abra o jogo, troque de zona, copie um item com Ctrl+C: tudo aparece aqui.</p>
+        <p className="muted small">{tr("Nada ainda. Abra o jogo, troque de zona, copie um item com Ctrl+C: tudo aparece aqui.", "Nothing yet. Start the game, change zones, copy an item with Ctrl+C: everything shows up here.")}</p>
       ) : (
         <ul className="diag-feed">
           {d.entries.map((e, i) => (
             <li key={`${e.ts}-${i}`}>
-              <span className="muted small diag-time">{new Date(e.ts).toLocaleTimeString("pt-BR")}</span>
-              <span className={`diag-kind ${KIND_CLASS[e.kind] ?? ""}`}>{e.kind}</span>
+              <span className="muted small diag-time">{new Date(e.ts).toLocaleTimeString(locale())}</span>
+              <span className={`diag-kind ${KIND_CLASS[e.kind] ?? ""}`}>{tr(e.kind, KIND_EN[e.kind] ?? e.kind)}</span>
               <span>{e.text}</span>
             </li>
           ))}
         </ul>
       )}
       <p className="muted small">
-        Só aparecem eventos do jogo e o que o app fez com eles. Textos que você copia e não são item nem build do PoB
-        não são registrados.
+        {tr(
+          "Só aparecem eventos do jogo e o que o app fez com eles. Textos que você copia e não são item nem build do PoB não são registrados.",
+          "Only game events and what the app did with them show up. Text you copy that is neither an item nor a PoB build is not recorded.",
+        )}
       </p>
     </>
   );

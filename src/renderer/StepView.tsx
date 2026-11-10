@@ -1,11 +1,12 @@
 import type { Fragment, Step } from "../shared/types";
 import { dirArrow } from "../shared/render";
+import { lang, tr } from "../shared/i18n";
 import { routeTextPtBR } from "../shared/routePtBR";
 
 function Frag({ f }: { f: Fragment }) {
   switch (f.kind) {
     case "text":
-      return <>{routeTextPtBR(f.text)}</>;
+      return <>{lang() === "pt" ? routeTextPtBR(f.text) : f.text}</>;
     case "enter":
       return <span className="f f-enter">➞ {f.name}</span>;
     case "area":
@@ -13,7 +14,7 @@ function Frag({ f }: { f: Fragment }) {
     case "waypoint":
       return <span className="f f-wp">{f.name ? `Waypoint → ${f.name}` : "Waypoint"}</span>;
     case "waypoint_get":
-      return <span className="f f-wp">o waypoint</span>;
+      return <span className="f f-wp">{tr("o waypoint", "the waypoint")}</span>;
     case "quest":
       return <span className="f f-quest">{f.name}</span>;
     case "label":
@@ -28,15 +29,15 @@ function Frag({ f }: { f: Fragment }) {
     case "logout":
       return <span className="f f-logout">logout</span>;
     case "trial":
-      return <span className="f f-asc">trial da ascendência</span>;
+      return <span className="f f-asc">{tr("trial da ascendência", "ascendancy trial")}</span>;
     case "ascend":
       return <span className="f f-asc">Lab ({f.version})</span>;
     case "crafting":
-      return <span className="f f-craft">receita de crafting</span>;
+      return <span className="f f-craft">{tr("receita de crafting", "crafting recipe")}</span>;
     case "dir":
       return <span className="f f-dir">{dirArrow(f.degrees)}</span>;
     case "portal":
-      return <span className="f f-wp">{f.mode === "set" ? "abra um portal" : "use o portal"}</span>;
+      return <span className="f f-wp">{f.mode === "set" ? tr("abra um portal", "open a portal") : tr("use o portal", "take the portal")}</span>;
     case "copy":
       return <span className="f f-generic">{f.text}</span>;
   }

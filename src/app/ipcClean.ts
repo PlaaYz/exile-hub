@@ -22,10 +22,11 @@ export const DEFAULT_CONFIG: AppConfig = {
   overlayPos: null,
   showDiagTab: false,
   welcomeDone: false,
+  language: "auto",
   tradeAlerts: true,
 };
 
-type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands" | "hotkey";
+type Kind = "boolean" | "string-or-null" | "internal" | "chat-commands" | "hotkey" | "language";
 /**
  * How each config key may be set from the renderer. Every AppConfig key must be listed (the
  * compiler enforces it), so a new setting cannot silently be ignored by the settings screen.
@@ -47,6 +48,7 @@ const CONFIG_KEYS: Record<keyof AppConfig, Kind> = {
   overlayPos: "internal",
   showDiagTab: "boolean",
   welcomeDone: "boolean",
+  language: "language",
   tradeAlerts: "boolean",
 };
 
@@ -60,6 +62,7 @@ export function cleanConfigPatch(patch: unknown): Partial<AppConfig> {
     if (kind === "boolean" && typeof v === "boolean") out[key] = v;
     if (kind === "string-or-null" && (typeof v === "string" || v === null)) out[key] = v;
     if (kind === "hotkey" && (v === null || (typeof v === "string" && isValidKey(v)))) out[key] = v === null ? null : normaliseKey(v);
+    if (kind === "language" && (v === "auto" || v === "pt" || v === "en")) out[key] = v;
     if (kind === "chat-commands") {
       const cmds = cleanChatCommands(v);
       if (cmds) out[key] = cmds;

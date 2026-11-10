@@ -10,6 +10,7 @@ import { availableMonitors, getCurrentWindow, primaryMonitor, Window, type Monit
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import type { Shell, TrayState } from "../app/platform";
+import { lang, tr } from "../shared/i18n";
 import type { AppConfig, AppState, DisplayInfo } from "../shared/types";
 import type { TauriUpdater } from "./tauriUpdater";
 
@@ -86,8 +87,11 @@ export class TauriShell implements Shell {
       if (this.trayNotified) return;
       this.trayNotified = true;
       this.notify(
-        "Exile Hub continua rodando",
-        "O overlay, o price check e o acompanhamento do jogo seguem ativos. Para sair, use o ícone na bandeja.",
+        tr("Exile Hub continua rodando", "Exile Hub is still running"),
+        tr(
+          "O overlay, o price check e o acompanhamento do jogo seguem ativos. Para sair, use o ícone na bandeja.",
+          "The overlay, the price check and game tracking stay active. To quit, use the tray icon.",
+        ),
       );
     });
     this.windowsReady = true;
@@ -315,31 +319,31 @@ export class TauriShell implements Shell {
   updateTray(t: TrayState): void {
     const tray = this.tray;
     const ctx = this.ctx;
-    const key = JSON.stringify(t);
+    const key = JSON.stringify(t) + lang(); // the menu is rebuilt when the language changes
     if (!tray || !ctx || key === this.trayKey) return;
     this.trayKey = key;
     void (async () => {
       await tray.setTooltip(t.tooltip);
       const menu = await Menu.new({
         items: [
-          { id: "open", text: "Abrir painel", action: () => this.showDashboard(true) },
+          { id: "open", text: tr("Abrir painel", "Open dashboard"), action: () => this.showDashboard(true) },
           { item: "Separator" },
-          { id: "overlay", text: "Overlay no jogo (F9)", checked: t.overlayEnabled, action: () => ctx.toggleOverlay() },
+          { id: "overlay", text: tr("Overlay no jogo (F9)", "In-game overlay (F9)"), checked: t.overlayEnabled, action: () => ctx.toggleOverlay() },
           {
             id: "price",
-            text: "Price check (Ctrl+C no item)",
+            text: tr("Price check (Ctrl+C no item)", "Price check (Ctrl+C on an item)"),
             checked: t.priceCheckEnabled,
             action: () => ctx.setConfig({ priceCheckEnabled: !ctx.config().priceCheckEnabled }),
           },
           {
             id: "gamestart",
-            text: "Abrir o painel quando o jogo abrir",
+            text: tr("Abrir o painel quando o jogo abrir", "Open the dashboard when the game starts"),
             checked: t.showDashboardOnGameStart,
             action: () => ctx.setConfig({ showDashboardOnGameStart: !ctx.config().showDashboardOnGameStart }),
           },
-          { id: "autostart", text: "Iniciar com o Windows", checked: t.startWithWindows, action: () => ctx.setStartWithWindows(!t.startWithWindows) },
+          { id: "autostart", text: tr("Iniciar com o Windows", "Start with Windows"), checked: t.startWithWindows, action: () => ctx.setStartWithWindows(!t.startWithWindows) },
           { item: "Separator" },
-          { id: "quit", text: "Sair", action: () => this.quit() },
+          { id: "quit", text: tr("Sair", "Quit"), action: () => this.quit() },
         ],
       });
       await tray.setMenu(menu);

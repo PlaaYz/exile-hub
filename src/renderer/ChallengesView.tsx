@@ -2,9 +2,11 @@
 // already completed. The player ticks them: GGG has no API for completed challenges.
 import { useEffect, useState } from "react";
 import { isDone, orderChallenges, partsNeeded, type Challenge } from "../core/challenges";
+import { tr } from "../shared/i18n";
 import type { ChallengesView } from "../shared/types";
 
-const DIFFICULTY = ["", "muito fácil", "fácil", "médio", "difícil", "muito difícil"];
+const difficulty = (d: number) =>
+  tr(["", "muito fácil", "fácil", "médio", "difícil", "muito difícil"][d] ?? "", ["", "very easy", "easy", "medium", "hard", "very hard"][d] ?? "");
 
 export function ChallengesPanelBody() {
   const [view, setView] = useState<ChallengesView | null>(null);
@@ -14,7 +16,7 @@ export function ChallengesPanelBody() {
     void window.hub.getChallenges().then(setView);
   }, []);
 
-  if (!view) return <div className="muted small">carregando…</div>;
+  if (!view) return <div className="muted small">{tr("carregando…", "loading…")}</div>;
   const list = view.list;
   const tick = (id: string, done: boolean, part: number | null = null) => void window.hub.setChallenge(id, done, part).then(setView);
   const refresh = () => {
@@ -29,12 +31,14 @@ export function ChallengesPanelBody() {
     return (
       <>
         <p className="muted">
-          A lista de challenges {list ? `da ${list.patch} ` : ""}ainda não foi publicada. Ela é atualizada no GitHub do projeto
-          quando a liga começa, e o app baixa sozinho, sem precisar de versão nova.
+          {tr(
+            `A lista de challenges ${list ? `da ${list.patch} ` : ""}ainda não foi publicada. Ela é atualizada no GitHub do projeto quando a liga começa, e o app baixa sozinho, sem precisar de versão nova.`,
+            `The ${list ? `${list.patch} ` : ""}challenge list is not published yet. It is updated on the project's GitHub when the league starts, and the app downloads it on its own, no new version needed.`,
+          )}
         </p>
         {view.error && <div className="muted small">{view.error}</div>}
         <button disabled={busy} onClick={refresh}>
-          {busy ? "procurando…" : "Procurar agora"}
+          {busy ? tr("procurando…", "looking…") : tr("Procurar agora", "Look now")}
         </button>
       </>
     );
@@ -54,13 +58,13 @@ export function ChallengesPanelBody() {
           <input
             type="checkbox"
             checked={finished}
-            title={finished ? "desmarcar" : "marcar como completo"}
+            title={finished ? tr("desmarcar", "untick") : tr("marcar como completo", "mark as complete")}
             onChange={(e) => tick(c.id, e.target.checked)}
           />
           <button className="link chal-name" onClick={() => setOpen(expanded ? null : c.id)}>
             {c.name}
           </button>
-          <span className={`chal-diff d${c.difficulty}`}>{DIFFICULTY[c.difficulty]}</span>
+          <span className={`chal-diff d${c.difficulty}`}>{difficulty(c.difficulty)}</span>
           {c.category && <span className="muted small">{c.category}</span>}
           {need > 0 && !finished && (
             <span className="muted small">
@@ -102,29 +106,29 @@ export function ChallengesPanelBody() {
     <>
       <div className="row">
         <b>
-          {done.length}/{list.challenges.length} completos
+          {done.length}/{list.challenges.length} {tr("completos", "complete")}
         </b>
-        {next && <span className="muted small">próxima recompensa com {next}</span>}
+        {next && <span className="muted small">{tr("próxima recompensa com", "next reward at")} {next}</span>}
         <span className="muted small">
           {list.league}
-          {list.updated ? ` · lista de ${list.updated}` : ""}
+          {list.updated ? ` · ${tr("lista de", "list from")} ${list.updated}` : ""}
         </span>
         <button className="small" disabled={busy} onClick={refresh}>
-          {busy ? "atualizando…" : "atualizar lista"}
+          {busy ? tr("atualizando…", "updating…") : tr("atualizar lista", "update list")}
         </button>
       </div>
       <div className="muted small">
-        Marque o que você já fez (o jogo não informa isso para outros programas). Clique num challenge para ver como fazer.
+        {tr("Marque o que você já fez (o jogo não informa isso para outros programas). Clique num challenge para ver como fazer.", "Tick what you have done (the game does not tell other programs). Click a challenge to see how to do it.")}
       </div>
-      <h3>Falta fazer — do mais fácil ao mais difícil</h3>
+      <h3>{tr("Falta fazer — do mais fácil ao mais difícil", "To do — easiest first")}</h3>
       <ul className="chal-list">{todo.map(row)}</ul>
       {done.length > 0 && (
         <>
-          <h3>Completos</h3>
+          <h3>{tr("Completos", "Complete")}</h3>
           <ul className="chal-list">{done.map(row)}</ul>
         </>
       )}
-      {view.error && <div className="muted small">{view.error} — usando a última lista salva.</div>}
+      {view.error && <div className="muted small">{view.error} — {tr("usando a última lista salva.", "using the last saved list.")}</div>}
     </>
   );
 }

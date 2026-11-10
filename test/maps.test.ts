@@ -96,7 +96,7 @@ describe("MapTracker", () => {
       npc("17:04:40", "#Troll: Niko, Master of the Depths: fake"), // chat: not an NPC
       gen("17:06:00", "HideoutCourts", 60, 1),
     ]);
-    expect(m.runs.map((r) => r.mechanics)).toEqual([["Delve (Niko)", "Bestiário (Einhar)"], ["Delve (Niko)"]]);
+    expect(m.runs.map((r) => r.mechanics)).toEqual([["Delve (Niko)", "Bestiary (Einhar)"], ["Delve (Niko)"]]);
     const s = m.stats(at("17:07:00"));
     expect(s.mechanics[0]).toEqual({ name: "Delve (Niko)", maps: 2, share: 1 });
     expect(s.recent[0].mechanics).toEqual(["Delve (Niko)"]);

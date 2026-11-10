@@ -13,6 +13,7 @@ import { TauriPlatform, type AppInfo } from "./tauriPlatform";
 import { errorText } from "./errors";
 import { TauriShell } from "./tauriShell";
 import { TauriUpdater } from "./tauriUpdater";
+import { tr } from "../shared/i18n";
 
 /** What the overlay and the price popup may ask the dashboard for (validated like the dashboard's own calls). */
 const OVERLAY_CALLS = new Set<keyof HubApi>([
@@ -58,7 +59,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     routePrev: async () => hub.routePrev(),
     routeReset: async () => hub.routeReset(),
     routeSync: async () => hub.routeSync(),
-    importPob: (input) => (typeof input === "string" ? hub.importBuild(input) : Promise.resolve({ ok: false, error: "entrada inválida" })),
+    importPob: (input) => (typeof input === "string" ? hub.importBuild(input) : Promise.resolve({ ok: false, error: tr("entrada inválida", "invalid input") })),
     listDisplays: () => hub.listDisplays(),
     moveDashboard: (id, fs) => hub.moveDashboard(id, fs === true),
     toggleOverlay: async () => hub.toggleOverlay(),
@@ -82,6 +83,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
       if (Number.isInteger(id) && id > 0) hub.priceRecheck(id);
     },
     reportProblem: () => hub.reportProblem(),
+    openDonate: () => hub.openDonate(),
     setCharacter: async (name) => {
       if (typeof name === "string" && name.length <= 40) hub.setCharacter(name);
     },

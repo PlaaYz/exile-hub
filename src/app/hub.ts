@@ -8,6 +8,8 @@ import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionEarnings, type FarmPrice } from "../core/farm";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
 import { FARM_BOSSES } from "../shared/farmData";
+import { resolveLang, setLang, tr } from "../shared/i18n";
+import { DONATE_URL } from "../shared/links";
 import type { GemInfo } from "../core/gemAvailability";
 import { importPobEquipped, type EquippedItem } from "../core/itemCompare";
 import type { MapTradeOptions } from "../core/mapTrade";
@@ -87,6 +89,7 @@ export class Hub {
     this.gemsData = JSON.parse(gems);
     this.gemLevels = gemLevelTable(this.gemsData);
     await this.cfg.load();
+    setLang(resolveLang(this.config.language));
     this.session = new Session(this.lookups, routeTexts, this.config.leagueStart);
     // the account's characters (every level-up in the whole log), once LogService has read it
     this.session.known = (name) => this.log?.characters.get(name);
@@ -152,6 +155,7 @@ export class Hub {
 
   setConfig(patch: Partial<AppConfig>): void {
     const prev = this.cfg.update(patch);
+    if (patch.language !== undefined) setLang(resolveLang(this.config.language));
     if (patch.leagueStart !== undefined && patch.leagueStart !== prev.leagueStart) this.session.rebuild(this.config.leagueStart);
     if (patch.clientLogPath !== undefined && patch.clientLogPath !== prev.clientLogPath) void this.startTail();
     if (patch.overlayEnabled !== undefined || patch.overlayHideUnfocused !== undefined) this.applyOverlayVisibility();
@@ -367,16 +371,16 @@ export class Hub {
     const mins = Math.round(v.durationMs / 60000);
     const time = mins >= 60 ? `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, "0")}` : `${mins} min`;
     const parts = [time];
-    if (v.maps) parts.push(`${v.maps} mapas`);
+    if (v.maps) parts.push(`${v.maps} ${tr("mapas", "maps")}`);
     if (v.bossRuns) parts.push(`${v.bossRuns} bosses`);
     for (const ch of v.characters) if (ch.to > ch.from) parts.push(`${ch.name} ${ch.from}→${ch.to}`);
-    parts.push(`${v.deaths} morte${v.deaths === 1 ? "" : "s"}`);
+    parts.push(v.deaths === 1 ? tr("1 morte", "1 death") : tr(`${v.deaths} mortes`, `${v.deaths} deaths`));
     if (v.earnings) {
       const cpd = this.prices.lastFarmPrices?.chaosPerDivine ?? null;
       const value = cpd && Math.abs(v.earnings.chaos) >= cpd ? `${(v.earnings.chaos / cpd).toFixed(1)} div` : `${Math.round(v.earnings.chaos)}c`;
-      parts.push(`rendimento esperado (bosses/T17): ${v.earnings.chaos >= 0 ? "+" : ""}${value}`);
+      parts.push(`${tr("rendimento esperado (bosses/T17)", "expected earnings (bosses/T17)")}: ${v.earnings.chaos >= 0 ? "+" : ""}${value}`);
     }
-    this.p.shell.notify("Sessão encerrada", parts.join(" · "));
+    this.p.shell.notify(tr("Sessão encerrada", "Session ended"), parts.join(" · "));
     this.diag.add("jogo", `sessão encerrada: ${parts.join(" · ")}`);
   }
 
@@ -624,9 +628,14 @@ export class Hub {
    * "Reportar problema": copies the diagnostic report and opens a new GitHub issue, where the player
    * pastes it (nothing is sent by the app itself).
    */
+  /** The donation page, a fixed link of the project (nothing from the renderer reaches the URL). */
+  async openDonate(): Promise<void> {
+    if (DONATE_URL.startsWith("https://")) this.p.openExternal(DONATE_URL);
+  }
+
   async reportProblem(): Promise<void> {
     await this.copyDiagReport();
-    this.p.openExternal(`${kIssuesUrl}?title=${encodeURIComponent(`Problema na versão ${this.p.appVersion}`)}`);
+    this.p.openExternal(`${kIssuesUrl}?title=${encodeURIComponent(tr(`Problema na versão ${this.p.appVersion}`, `Problem in version ${this.p.appVersion}`))}`);
   }
 
   /** Copies a plain-text report (status + the whole event list) for the owner to paste in a chat. */

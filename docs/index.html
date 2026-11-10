@@ -258,7 +258,7 @@ footer a { color: var(--muted); }
 <header class="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Path of Exile 1 · grátis · em português</div>
+      <div class="eyebrow">Path of Exile 1 · grátis · português e inglês</div>
       <h1>Tudo o que você usa enquanto joga, <em>num só app.</em></h1>
       <p class="lead">Rota da campanha, price check, mapas, farm de bosses e sessões de jogo. O Exile Hub lê o
         log do jogo e faz o trabalho sozinho, enquanto o painel fica no seu segundo monitor.</p>
@@ -553,6 +553,10 @@ footer a { color: var(--muted); }
       <p>Sim. O app encontra o <code>Client.txt</code> sozinho, e você também pode escolher o arquivo à mão.</p>
     </details>
     <details>
+      <summary>O app tem versão em inglês?</summary>
+      <p>Sim. O idioma segue o do Windows, e você pode trocar entre português e inglês em Configurações.</p>
+    </details>
+    <details>
       <summary>O jogo está em inglês. Tem problema?</summary>
       <p>Não, é o esperado. A interface do app é em português, mas nomes de zonas, itens, gemas e bosses ficam em
         inglês para bater com o cliente do jogo.</p>
@@ -572,6 +576,17 @@ footer a { color: var(--muted); }
       <p>Clique em "Reportar problema" no app. Ele copia um relatório para você colar numa issue do GitHub. O app não
         envia nada sozinho.</p>
     </details>
+  </div>
+</section>
+
+<section class="alt" id="apoie" hidden>
+  <div class="wrap" style="max-width:820px;text-align:center">
+    <h2>Apoie o projeto</h2>
+    <p class="sub" style="margin:0 auto 24px">O Exile Hub é e continua grátis, sem anúncios e sem recurso pago. Se ele te ajuda,
+      uma doação ajuda a manter o desenvolvimento. Ela é só um apoio: não libera nada no app.</p>
+    <div class="cta" style="justify-content:center">
+      <a class="btn primary donate-link" href="#" rel="noopener">Apoiar o Exile Hub</a>
+    </div>
   </div>
 </section>
 
@@ -595,6 +610,18 @@ footer a { color: var(--muted); }
 </footer>
 
 <script>
+// Donation link: empty = the "Apoie" section and its menu link stay hidden.
+const DONATE_URL = "";
+if (DONATE_URL) {
+  document.getElementById("apoie").hidden = false;
+  document.querySelectorAll(".donate-link").forEach((a) => { a.href = DONATE_URL; a.target = "_blank"; });
+  const nav = document.querySelector("nav.top .links");
+  const link = document.createElement("a");
+  link.href = "#apoie";
+  link.textContent = "Apoie";
+  nav.insertBefore(link, nav.lastElementChild);
+}
+
 // Point the download buttons straight at the latest installer; the releases page stays as the fallback.
 (async () => {
   try {

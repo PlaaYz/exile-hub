@@ -4,6 +4,7 @@
 import { emptyProgress, parseChallengeList, setChallenge, type ChallengeList, type ChallengeProgress } from "../core/challenges";
 import type { ChallengesView } from "../shared/types";
 import type { Platform } from "./platform";
+import { tr } from "../shared/i18n";
 
 export const kChallengesUrl = "https://raw.githubusercontent.com/PlaaYz/exile-hub/main/data/challenges.json";
 const kListFile = "challenges.json";
@@ -34,9 +35,9 @@ export class ChallengeService {
         const text = await p.fetchText(kChallengesUrl, 15_000);
         list = fromText(text);
         if (list) await p.writeUserFile(kListFile, text);
-        this.error = list ? null : "lista baixada inválida";
+        this.error = list ? null : tr("lista baixada inválida", "the downloaded list is invalid");
       } catch (e) {
-        this.error = `sem conexão com o GitHub (${e instanceof Error ? e.message : String(e)})`;
+        this.error = `${tr("sem conexão com o GitHub", "no connection to GitHub")} (${e instanceof Error ? e.message : String(e)})`;
       }
     }
     list ??= fromText(await p.readUserFile(kListFile)) ?? fromText(await p.readData("challenges.json").catch(() => null));

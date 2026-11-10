@@ -1,3 +1,4 @@
+import { tr } from "../shared/i18n";
 import { fmtMs, useHubState } from "./hooks";
 import { PriceSummary, TierSummary, itemTitle } from "./PriceView";
 import { Frags, StepView } from "./StepView";
@@ -37,10 +38,10 @@ export function OverlayApp() {
 
       {interactive && (
         <div className="ov-controls">
-          <span className="ov-drag">arraste</span>
-          {!state.endgame && <button onClick={() => void window.hub.routePrev()}>◀ anterior</button>}
-          {!state.endgame && <button onClick={() => void window.hub.routeNext()}>próximo ▶</button>}
-          <button onClick={() => void window.hub.toggleOverlayInteractive()}>travar</button>
+          <span className="ov-drag">{tr("arraste", "drag")}</span>
+          {!state.endgame && <button onClick={() => void window.hub.routePrev()}>◀ {tr("anterior", "previous")}</button>}
+          {!state.endgame && <button onClick={() => void window.hub.routeNext()}>{tr("próximo", "next")} ▶</button>}
+          <button onClick={() => void window.hub.toggleOverlayInteractive()}>{tr("travar", "lock")}</button>
         </div>
       )}
     </div>
@@ -53,14 +54,14 @@ export function OverlayApp() {
       <>
         {!inMap && (
           <div className="ov-head">
-            <span className="ov-area">{state.areaName ?? "aguardando uma zona…"}</span>
+            <span className="ov-area">{state.areaName ?? tr("aguardando uma zona…", "waiting for a zone…")}</span>
             <span className="ov-meta">
               {state.characterName ?? "endgame"}
-              {state.characterLevel !== null ? ` · nível ${state.characterLevel}` : ""}
+              {state.characterLevel !== null ? ` · ${tr("nível", "level")} ${state.characterLevel}` : ""}
             </span>
           </div>
         )}
-        {state.logStatus !== "watching" && <div className="ov-warn">Client.txt não conectado — abra o painel</div>}
+        {state.logStatus !== "watching" && <div className="ov-warn">{tr("Client.txt não conectado — abra o painel", "Client.txt not connected — open the dashboard")}</div>}
       </>
     );
   }
@@ -71,16 +72,16 @@ export function OverlayApp() {
       <div className="ov-head">
         <span className="ov-area">{state.areaName ?? "aguardando uma zona…"}</span>
         <span className="ov-meta">
-          Ato {t.act || "–"} · {fmtMs(timers.actMs)}
-          {characterLevel !== null ? ` · nível ${characterLevel}` : ""}
+          {tr("Ato", "Act")} {t.act || "–"} · {fmtMs(timers.actMs)}
+          {characterLevel !== null ? ` · ${tr("nível", "level")} ${characterLevel}` : ""}
         </span>
       </div>
 
       {state.logStatus !== "watching" && <div className="ov-warn">Client.txt não conectado — abra o painel</div>}
-      {t.offRoute && <div className="ov-warn">fora da rota — sincronize no painel</div>}
+      {t.offRoute && <div className="ov-warn">{tr("fora da rota — sincronize no painel", "off route — sync in the dashboard")}</div>}
 
       {t.done ? (
-        <div className="ov-done">Rota da campanha concluída</div>
+        <div className="ov-done">{tr("Rota da campanha concluída", "Campaign route complete")}</div>
       ) : (
         <ul className="steps">
           {t.block.slice(0, kOverlayMaxSteps).map((s) => (
@@ -91,14 +92,14 @@ export function OverlayApp() {
 
       {t.next && (
         <div className="ov-next">
-          próximo: <Frags fragments={t.next.fragments} />
+          {tr("próximo:", "next:")} <Frags fragments={t.next.fragments} />
         </div>
       )}
 
 
       {nextGems.length > 0 && (
         <div className="ov-gems">
-          gemas em breve: {nextGems.map((g) => `${g.name} (${g.requiredLevel})`).join(", ")}
+          {tr("gemas em breve:", "gems soon:")} {nextGems.map((g) => `${g.name} (${g.requiredLevel})`).join(", ")}
         </div>
       )}
       </>

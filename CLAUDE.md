@@ -150,7 +150,17 @@ Publishing (public repo https://github.com/PlaaYz/exile-hub, owner chose public 
 The owner decided the loot-filter manager is not needed (they use an online filter that auto-syncs).
 Other ideas offered: build gem plan for leveling (where to get each gem), packaging/tray/autostart.
 
-UI language: pt-BR, strings written inline in the components (no i18n framework). Game names
+UI language (0.4.0): Portuguese or English, config.language "auto" (Windows language: pt-* -> pt, else en) / "pt" / "en".
+Strings stay inline as tr("texto", "text") pairs (src/shared/i18n.ts, no keys, no framework); the module defaults to
+"pt" (tests and pure code stay stable), the hub sets it from the config, every window from the state (useHubState).
+Module-level label tables must be functions (they run once at import). Diagnostic lines (core/diag, diag.add) stay
+pt-BR: the report goes to the owner. Route instructions: pt through routePtBR, English as in the data. Map mods in
+English = the game's own mod line (searchRegex mapModLabel).
+Donations: src/shared/links.ts DONATE_URL ("" = no link anywhere in the app; HubApi.openDonate opens only that fixed
+https link) and docs/index.html const DONATE_URL ("" = the "Apoie" section stays hidden). Voluntary support only:
+every feature stays free, nothing is unlocked by donating (GGG: their IP can't generate commercial revenue).
+Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
+Old note: pt-BR strings were written inline in the components (no i18n framework). Game names
 (zones, quests, bosses, items, gems) stay in English to match the owner's English client. Route
 instruction text is translated through `src/shared/routePtBR.ts`; `test/routePtBR.test.ts` fails if
 the route data gains a piece without a translation. `shared/render.ts` (stepText) stays English for tests.

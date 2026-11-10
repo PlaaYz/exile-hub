@@ -1,4 +1,5 @@
 import type { MapAggregate, MapStats } from "../core/maps";
+import { locale, tr } from "../shared/i18n";
 import { fmtMs } from "./hooks";
 
 function perHour(a: MapAggregate): string {
@@ -12,26 +13,26 @@ function Aggregate({ title, a }: { title: string; a: MapAggregate | null }) {
       {a ? (
         <>
           <div className="big-sm">{a.maps}</div>
-          <div className="muted small">mapas</div>
+          <div className="muted small">{tr("mapas", "maps")}</div>
           <div className="map-agg-row">
             <span>{fmtMs(a.avgMapMs)}</span>
-            <span className="muted small">média no mapa</span>
+            <span className="muted small">{tr("média no mapa", "avg in map")}</span>
           </div>
           <div className="map-agg-row">
             <span>{perHour(a)}</span>
-            <span className="muted small">mapas/hora</span>
+            <span className="muted small">{tr("mapas/hora", "maps/hour")}</span>
           </div>
           <div className="map-agg-row">
             <span>{fmtMs(a.ms - a.inMapMs)}</span>
-            <span className="muted small">fora do mapa</span>
+            <span className="muted small">{tr("fora do mapa", "out of maps")}</span>
           </div>
           <div className="map-agg-row">
             <span className={a.deaths ? "warn-text" : ""}>{a.deaths}</span>
-            <span className="muted small">mortes</span>
+            <span className="muted small">{tr("mortes", "deaths")}</span>
           </div>
         </>
       ) : (
-        <div className="muted small">nenhum mapa</div>
+        <div className="muted small">{tr("nenhum mapa", "no maps")}</div>
       )}
     </div>
   );
@@ -56,9 +57,9 @@ export function MapHint({ maps }: { maps: MapStats }) {
       )}
       {s && (
         <div className="ov-map-stats muted">
-          sessão: {s.maps} {s.maps === 1 ? "mapa" : "mapas"} · média {fmtMs(s.avgMapMs)}
+          {tr("sessão", "session")}: {s.maps} {s.maps === 1 ? tr("mapa", "map") : tr("mapas", "maps")} · {tr("média", "avg")} {fmtMs(s.avgMapMs)}
           {s.mapsPerHour ? ` · ${s.mapsPerHour.toFixed(1)}/h` : ""}
-          {maps.today && maps.today.maps !== s.maps ? ` · hoje ${maps.today.maps}` : ""}
+          {maps.today && maps.today.maps !== s.maps ? ` · ${tr("hoje", "today")} ${maps.today.maps}` : ""}
         </div>
       )}
     </div>
@@ -67,7 +68,7 @@ export function MapHint({ maps }: { maps: MapStats }) {
 
 export function MapsPanelBody({ maps }: { maps: MapStats }) {
   if (!maps.allTime) {
-    return <p className="muted">Nenhum mapa no Client.txt ainda. Abra um mapa e ele aparece aqui sozinho.</p>;
+    return <p className="muted">{tr("Nenhum mapa no Client.txt ainda. Abra um mapa e ele aparece aqui sozinho.", "No maps in Client.txt yet. Open a map and it shows up here on its own.")}</p>;
   }
   const c = maps.current;
   const deadliest = [...maps.byMap].filter((m) => m.count >= 3).sort((a, b) => b.deathsPerRun - a.deathsPerRun)[0];
@@ -76,12 +77,12 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
       {c && (
         <div className={`map-current${c.inside ? " inside" : ""}`}>
           <div>
-            <b>{c.name}</b> <span className="muted">T{c.tier} · nível {c.level}</span>
+            <b>{c.name}</b> <span className="muted">T{c.tier} · {tr("nível", "level")} {c.level}</span>
           </div>
           <div className="big">{fmtMs(c.inMapMs)}</div>
           <div className="muted small">
-            {c.inside ? "dentro do mapa" : "no hideout (o tempo fora não conta)"}
-            {c.deaths ? ` · ${c.deaths} morte(s)` : ""}
+            {c.inside ? tr("dentro do mapa", "inside the map") : tr("no hideout (o tempo fora não conta)", "in the hideout (time outside does not count)")}
+            {c.deaths ? ` · ${c.deaths} ${tr("morte(s)", "death(s)")}` : ""}
           </div>
           {c.mechanics.length > 0 && (
             <div className="chips-row">
@@ -95,12 +96,12 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
         </div>
       )}
       <div className="map-aggs">
-        <Aggregate title="Sessão atual" a={maps.session} />
-        <Aggregate title="Hoje" a={maps.today} />
-        <Aggregate title={`Desde ${new Date(maps.allTime.since).toLocaleDateString("pt-BR")}`} a={maps.allTime} />
+        <Aggregate title={tr("Sessão atual", "Current session")} a={maps.session} />
+        <Aggregate title={tr("Hoje", "Today")} a={maps.today} />
+        <Aggregate title={`${tr("Desde", "Since")} ${new Date(maps.allTime.since).toLocaleDateString(locale())}`} a={maps.allTime} />
       </div>
 
-      <h3>Últimos mapas</h3>
+      <h3>{tr("Últimos mapas", "Recent maps")}</h3>
       <table className="farm-items">
         <tbody>
           {maps.recent.map((r) => (
@@ -113,7 +114,7 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
               <td className="num-cell">{fmtMs(r.inMapMs)}</td>
               <td className={`num-cell${r.deaths ? " warn-text" : " muted"}`}>{r.deaths ? `${r.deaths}✝` : "—"}</td>
               <td className="num-cell muted small">
-                {new Date(r.start).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                {new Date(r.start).toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
               </td>
             </tr>
           ))}
@@ -122,15 +123,15 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
 
       {maps.mechanics.length > 0 && (
         <>
-          <h3>Mecânicas nos seus mapas</h3>
-          <div className="muted small">Só as que têm NPC falando (Niko, Einhar, Alva, Jun, Cassia, Envoy...): essências, strongboxes etc. não aparecem no log.</div>
+          <h3>{tr("Mecânicas nos seus mapas", "Mechanics in your maps")}</h3>
+          <div className="muted small">{tr("Só as que têm NPC falando (Niko, Einhar, Alva, Jun, Cassia, Envoy...): essências, strongboxes etc. não aparecem no log.", "Only the ones with a talking NPC (Niko, Einhar, Alva, Jun, Cassia, Envoy...): essences, strongboxes etc. do not show in the log.")}</div>
           <table className="farm-items">
             <tbody>
               {maps.mechanics.map((m) => (
                 <tr key={m.name}>
                   <td>{m.name}</td>
-                  <td className="num-cell">{m.maps} mapas</td>
-                  <td className="num-cell muted">{Math.round(m.share * 100)}% dos mapas</td>
+                  <td className="num-cell">{m.maps} {tr("mapas", "maps")}</td>
+                  <td className="num-cell muted">{Math.round(m.share * 100)}% {tr("dos mapas", "of maps")}</td>
                 </tr>
               ))}
             </tbody>
@@ -138,14 +139,14 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
         </>
       )}
 
-      <h3>Mapas que você mais roda</h3>
+      <h3>{tr("Mapas que você mais roda", "Your most-run maps")}</h3>
       <table className="farm-items">
         <thead>
           <tr>
-            <th>Mapa</th>
-            <th className="num-cell">Vezes</th>
-            <th className="num-cell">Tempo médio</th>
-            <th className="num-cell">Mortes/mapa</th>
+            <th>{tr("Mapa", "Map")}</th>
+            <th className="num-cell">{tr("Vezes", "Runs")}</th>
+            <th className="num-cell">{tr("Tempo médio", "Avg time")}</th>
+            <th className="num-cell">{tr("Mortes/mapa", "Deaths/map")}</th>
           </tr>
         </thead>
         <tbody>
@@ -161,13 +162,15 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
       </table>
       {deadliest && deadliest.deathsPerRun > 0 && (
         <p className="muted small">
-          Onde você mais morre: <b>{deadliest.name}</b> ({deadliest.deathsPerRun.toFixed(2)} mortes por mapa em{" "}
-          {deadliest.count} runs).
+          {tr("Onde você mais morre:", "Where you die the most:")} <b>{deadliest.name}</b> ({deadliest.deathsPerRun.toFixed(2)}{" "}
+          {tr("mortes por mapa em", "deaths per map over")} {deadliest.count} runs).
         </p>
       )}
       <p className="muted small">
-        Tudo lido do Client.txt: cada instância de mapa conta uma vez (voltar pelo portal é o mesmo mapa); o tempo no
-        hideout entre portais fica fora do "tempo no mapa".
+        {tr(
+          'Tudo lido do Client.txt: cada instância de mapa conta uma vez (voltar pelo portal é o mesmo mapa); o tempo no hideout entre portais fica fora do "tempo no mapa".',
+          'All read from Client.txt: each map instance counts once (going back through the portal is the same map); hideout time between portals stays out of the "time in map".',
+        )}
       </p>
     </>
   );

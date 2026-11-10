@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { farmEv, profitChance, riskOf, type FarmLine, type FarmOverrides, type FarmPrice, type FarmRisk } from "../core/farm";
 import { FARM_BOSSES, FARM_POOLS, type FarmBoss } from "../shared/farmData";
+import { tr } from "../shared/i18n";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { fmtChaos } from "./PriceView";
@@ -12,20 +13,22 @@ const LS_RANK = "exile-hub.farmRank";
 /** Runs in the "chance to profit" batch (same idea as the usual boss calculators). */
 const kChanceRuns = 10;
 
-const RISK_LABEL: Record<FarmRisk, string> = {
-  safe: "Seguro",
-  low: "Risco baixo",
-  medium: "Risco médio",
-  high: "Risco alto",
-  negative: "Prejuízo",
-};
-const RISK_HINT: Record<FarmRisk, string> = {
-  safe: "95%+ de chance de lucro em 10 runs",
-  low: "80–95% de chance de lucro em 10 runs",
-  medium: "60–80% de chance de lucro em 10 runs",
-  high: "menos de 60% de chance de lucro em 10 runs",
-  negative: "perde currency na média",
-};
+const riskLabel = (r: FarmRisk) =>
+  ({
+    safe: tr("Seguro", "Safe"),
+    low: tr("Risco baixo", "Low risk"),
+    medium: tr("Risco médio", "Medium risk"),
+    high: tr("Risco alto", "High risk"),
+    negative: tr("Prejuízo", "Loss"),
+  })[r];
+const riskHint = (r: FarmRisk) =>
+  ({
+    safe: tr("95%+ de chance de lucro em 10 runs", "95%+ chance of profit over 10 runs"),
+    low: tr("80–95% de chance de lucro em 10 runs", "80–95% chance of profit over 10 runs"),
+    medium: tr("60–80% de chance de lucro em 10 runs", "60–80% chance of profit over 10 runs"),
+    high: tr("menos de 60% de chance de lucro em 10 runs", "under 60% chance of profit over 10 runs"),
+    negative: tr("perde currency na média", "loses currency on average"),
+  })[r];
 const RISKS: FarmRisk[] = ["safe", "low", "medium", "high", "negative"];
 
 type AllOverrides = Record<string, FarmOverrides>;
@@ -103,11 +106,11 @@ function ItemRow({
   onPrice: (v: number | undefined) => void;
 }) {
   const notes: string[] = [];
-  if (!l.priceManual && livePrice?.source === "trade") notes.push(`preço do trade (${livePrice.listings ?? "?"} anúncios)`);
-  if (!l.priceManual && livePrice?.variants && livePrice.variants > 1) notes.push(`${livePrice.variants} variantes (mediana)`);
-  if (l.lowConfidence) notes.push("poucos anúncios");
-  if (suspect && l.price === null) notes.push("preço do poe.ninja absurdo, ignorado");
-  if (l.price === null) notes.push("sem preço: digite");
+  if (!l.priceManual && livePrice?.source === "trade") notes.push(tr(`preço do trade (${livePrice.listings ?? "?"} anúncios)`, `trade site price (${livePrice.listings ?? "?"} listings)`));
+  if (!l.priceManual && livePrice?.variants && livePrice.variants > 1) notes.push(tr(`${livePrice.variants} variantes (mediana)`, `${livePrice.variants} variants (median)`));
+  if (l.lowConfidence) notes.push(tr("poucos anúncios", "few listings"));
+  if (suspect && l.price === null) notes.push(tr("preço do poe.ninja absurdo, ignorado", "absurd poe.ninja price, ignored"));
+  if (l.price === null) notes.push(tr("sem preço: digite", "no price: type one"));
   return (
     <tr>
       <td>
@@ -134,6 +137,21 @@ function ItemRow({
   );
 }
 
+/** The drop table notes are written in Portuguese (farmData): their few words, in English. */
+const NOTE_EN: [RegExp, string][] = [
+  [/com 100% de quantidade de itens no mapa/, "with 100% item quantity on the map"],
+  [/estimativa sem amostra grande/, "estimate without a large sample"],
+  [/taxas publicadas/, "published rates"],
+  [/\(pós-rebalance\)/, "(after the rebalance)"],
+  [/\(conteúdo novo\)/, "(new content)"],
+  [/comunidade/, "community"],
+  [/aproximado/, "approximate"],
+  [/(\d)\.(\d{3})/g, "$1,$2"],
+];
+function sourceNote(note: string): string {
+  return tr(note, NOTE_EN.reduce((t, [re, en]) => t.replace(re, en), note));
+}
+
 /** 2.5 -> "2:30" */
 function fmtMin(min: number): string {
   const s = Math.round(min * 60);
@@ -143,7 +161,7 @@ function fmtMin(min: number): string {
 function fmtAgo(ts: number | null): string {
   if (!ts) return "";
   const d = Math.round((Date.now() - ts) / 86_400_000);
-  return d <= 0 ? "hoje" : d === 1 ? "ontem" : `há ${d} dias`;
+  return d <= 0 ? tr("hoje", "today") : d === 1 ? tr("ontem", "yesterday") : tr(`há ${d} dias`, `${d} days ago`);
 }
 
 type Measured = { runs: number; minutes: number | null; deaths: number | null; lastRunAt: number | null };
@@ -232,40 +250,40 @@ export function FarmPanelBody({
     return out;
   };
 
-  if (!data) return <p className="muted">{loading ? "Carregando preços do poe.ninja…" : "—"}</p>;
+  if (!data) return <p className="muted">{loading ? tr("Carregando preços do poe.ninja…", "Loading poe.ninja prices…") : "—"}</p>;
 
   const ov = overrides[cur.boss.id] ?? {};
   return (
     <>
       <div className="row">
         <span className="muted small">
-          liga {data.league ?? "?"}
-          {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""} · preços do poe.ninja e do trade
-          {data.tradePending > 0 ? ` · buscando ${data.tradePending} preço(s) no trade…` : ""}
+          {tr("liga", "league")} {data.league ?? "?"}
+          {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""} · {tr("preços do poe.ninja e do trade", "poe.ninja and trade site prices")}
+          {data.tradePending > 0 ? tr(` · buscando ${data.tradePending} preço(s) no trade…`, ` · looking up ${data.tradePending} price(s) on the trade site…`) : ""}
         </span>
         <button disabled={loading} onClick={() => void refresh()}>
-          {loading ? "Atualizando…" : "Atualizar preços"}
+          {loading ? tr("Atualizando…", "Updating…") : tr("Atualizar preços", "Update prices")}
         </button>
       </div>
-      {data.error && <div className="warn">Erro ao buscar preços: {data.error}</div>}
+      {data.error && <div className="warn">{tr("Erro ao buscar preços:", "Could not fetch prices:")} {data.error}</div>}
 
       <div className="row farm-controls">
-        <span className="muted small">Ordenar por</span>
+        <span className="muted small">{tr("Ordenar por", "Sort by")}</span>
         <button className={`chip${rank === "hour" ? " on" : ""}`} onClick={() => setRank("hour")}>
-          Lucro/hora
+          {tr("Lucro/hora", "Profit/hour")}
         </button>
         <button className={`chip${rank === "kill" ? " on" : ""}`} onClick={() => setRank("kill")}>
-          Lucro/kill
+          {tr("Lucro/kill", "Profit/kill")}
         </button>
         <span className="muted small">·</span>
         <button className={`chip${riskFilter === "all" ? " on" : ""}`} onClick={() => setRiskFilter("all")}>
-          Todos {computed.length}
+          {tr("Todos", "All")} {computed.length}
         </button>
         {RISKS.map((k) => {
           const n = computed.filter((x) => x.risk === k).length;
           return n ? (
-            <button key={k} className={`chip risk-chip ${k}${riskFilter === k ? " on" : ""}`} title={RISK_HINT[k]} onClick={() => setRiskFilter(k)}>
-              {RISK_LABEL[k]} {n}
+            <button key={k} className={`chip risk-chip ${k}${riskFilter === k ? " on" : ""}`} title={riskHint(k)} onClick={() => setRiskFilter(k)}>
+              {riskLabel(k)} {n}
             </button>
           ) : null;
         })}
@@ -275,14 +293,14 @@ export function FarmPanelBody({
         <thead>
           <tr>
             <th>Boss</th>
-            <th className="num-cell" title="chance de terminar 10 runs no lucro">
+            <th className="num-cell" title={tr("chance de terminar 10 runs no lucro", "chance that 10 runs end in profit")}>
               Chance (10 runs)
             </th>
-            <th className="num-cell">Entrada</th>
-            <th className="num-cell">Lucro/kill</th>
-            <th className="num-cell">Lucro/h</th>
-            <th className="num-cell" title="tempo por run usado no lucro/hora">
-              Tempo/run
+            <th className="num-cell">{tr("Entrada", "Entry")}</th>
+            <th className="num-cell">{tr("Lucro/kill", "Profit/kill")}</th>
+            <th className="num-cell">{tr("Lucro/h", "Profit/h")}</th>
+            <th className="num-cell" title={tr("tempo por run usado no lucro/hora", "time per run used for profit/hour")}>
+              {tr("Tempo/run", "Time/run")}
             </th>
           </tr>
         </thead>
@@ -295,10 +313,10 @@ export function FarmPanelBody({
             >
               <td>
                 {boss.name}
-                {r.missing.length > 0 && <span className="muted small"> · {r.missing.length} sem preço</span>}
+                {r.missing.length > 0 && <span className="muted small"> · {r.missing.length} {tr("sem preço", "unpriced")}</span>}
               </td>
               <td className="num-cell">
-                <span className={`risk-badge ${risk}`} title={RISK_HINT[risk]}>
+                <span className={`risk-badge ${risk}`} title={riskHint(risk)}>
                   {chance === null ? "—" : `${Math.round(chance * 100)}%`}
                 </span>
               </td>
@@ -308,14 +326,14 @@ export function FarmPanelBody({
               <td className="num-cell">
                 {minutes ? fmtMin(minutes) : "—"}{" "}
                 {minutesFrom === "medido" ? (
-                  <span className="time-src log" title="medido nas suas runs do Client.txt">
-                    seu log · {runs[boss.id].runs} run{runs[boss.id].runs > 1 ? "s" : ""}
+                  <span className="time-src log" title={tr("medido nas suas runs do Client.txt", "measured from your runs in Client.txt")}>
+                    {tr("seu log", "your log")} · {runs[boss.id].runs} run{runs[boss.id].runs > 1 ? "s" : ""}
                   </span>
                 ) : minutesFrom === "você" ? (
-                  <span className="time-src typed">digitado</span>
+                  <span className="time-src typed">{tr("digitado", "typed")}</span>
                 ) : (
-                  <span className="time-src" title="ainda sem run deste boss no seu log: clique e digite um tempo, se quiser">
-                    sem run
+                  <span className="time-src" title={tr("ainda sem run deste boss no seu log: clique e digite um tempo, se quiser", "no run of this boss in your log yet: click it and type a time if you want")}>
+                    {tr("sem run", "no runs")}
                   </span>
                 )}
               </td>
@@ -324,14 +342,15 @@ export function FarmPanelBody({
         </tbody>
       </table>
       <p className="muted small">
-        Chance = quantas vezes 10 runs seguidas terminam no lucro (simulação com as taxas e os preços da tabela). Tempo/run: o app
-        mede sozinho as suas runs no Client.txt (<b>seu log</b>; nos T17, o tempo médio dentro do mapa). Boss que você ainda não
-        fez fica sem lucro/hora até a primeira run; se quiser, clique nele e digite um tempo.
+        {tr(
+          "Chance = quantas vezes 10 runs seguidas terminam no lucro (simulação com as taxas e os preços da tabela). Tempo/run: o app mede sozinho as suas runs no Client.txt (seu log; nos T17, o tempo médio dentro do mapa). Boss que você ainda não fez fica sem lucro/hora até a primeira run; se quiser, clique nele e digite um tempo.",
+          "Chance = how often 10 runs in a row end in profit (a simulation with the table's rates and prices). Time/run: the app measures your runs in Client.txt on its own (your log; for T17 maps, the average time inside the map). A boss you have not run yet has no profit/hour until the first run; click it and type a time if you want.",
+        )}
       </p>
 
       <h3>{cur.boss.name}</h3>
       <div className="row">
-        <span className="muted">Minutos por run</span>
+        <span className="muted">{tr("Minutos por run", "Minutes per run")}</span>
         <NumInput
           value={ov.minutesPerRun ?? undefined}
           placeholder={runs[cur.boss.id]?.minutes != null ? String(runs[cur.boss.id].minutes) : "—"}
@@ -340,17 +359,17 @@ export function FarmPanelBody({
         />
         <span className="muted small">
           {runs[cur.boss.id]
-            ? `medido no seu Client.txt: ${runs[cur.boss.id].runs} ${cur.boss.mapName ? "mapa(s)" : "run(s)"}, ${runs[cur.boss.id].minutes} min/run${runs[cur.boss.id].deaths !== null ? `, ${runs[cur.boss.id].deaths} morte(s)` : ""}${runs[cur.boss.id].lastRunAt ? `, última ${fmtAgo(runs[cur.boss.id].lastRunAt)}` : ""}`
-            : "nenhuma run deste boss no seu Client.txt ainda: sem lucro/hora até a primeira (ou digite um tempo)"}
+            ? `${tr("medido no seu Client.txt", "measured in your Client.txt")}: ${runs[cur.boss.id].runs} ${cur.boss.mapName ? tr("mapa(s)", "map(s)") : "run(s)"}, ${runs[cur.boss.id].minutes} min/run${runs[cur.boss.id].deaths !== null ? `, ${runs[cur.boss.id].deaths} ${tr("morte(s)", "death(s)")}` : ""}${runs[cur.boss.id].lastRunAt ? `, ${tr("última", "last")} ${fmtAgo(runs[cur.boss.id].lastRunAt)}` : ""}`
+            : tr("nenhuma run deste boss no seu Client.txt ainda: sem lucro/hora até a primeira (ou digite um tempo)", "no run of this boss in your Client.txt yet: no profit/hour until the first one (or type a time)")}
         </span>
       </div>
       <table className="farm-items">
         <thead>
           <tr>
-            <th>Entrada</th>
-            <th>Qtd</th>
-            <th>Preço (c)</th>
-            <th className="num-cell">Custo</th>
+            <th>{tr("Entrada", "Entry")}</th>
+            <th>{tr("Qtd", "Qty")}</th>
+            <th>{tr("Preço (c)", "Price (c)")}</th>
+            <th className="num-cell">{tr("Custo", "Cost")}</th>
           </tr>
         </thead>
         <tbody>
@@ -370,9 +389,9 @@ export function FarmPanelBody({
         <thead>
           <tr>
             <th>Drop</th>
-            <th>Por 100 kills</th>
-            <th>Preço (c)</th>
-            <th className="num-cell">Média/run</th>
+            <th>{tr("Por 100 kills", "Per 100 kills")}</th>
+            <th>{tr("Preço (c)", "Price (c)")}</th>
+            <th className="num-cell">{tr("Média/run", "Avg/run")}</th>
           </tr>
         </thead>
         <tbody>
@@ -394,11 +413,11 @@ export function FarmPanelBody({
       </table>
       <div className="row">
         <b>
-          Lucro esperado por run: <span className={cur.r.profit < 0 ? "warn-text" : "good"}>{money(cur.r.profit, cpd)}</span>
+          {tr("Lucro esperado por run:", "Expected profit per run:")} <span className={cur.r.profit < 0 ? "warn-text" : "good"}>{money(cur.r.profit, cpd)}</span>
         </b>
         <span className={`risk-badge ${cur.risk}`}>
-          {RISK_LABEL[cur.risk]}
-          {cur.chance !== null ? ` · ${Math.round(cur.chance * 100)}% de lucro em 10 runs` : ""}
+          {riskLabel(cur.risk)}
+          {cur.chance !== null ? ` · ${Math.round(cur.chance * 100)}% ${tr("de lucro em 10 runs", "profit over 10 runs")}` : ""}
         </span>
         <button
           className="danger"
@@ -410,13 +429,17 @@ export function FarmPanelBody({
             })
           }
         >
-          Restaurar padrão
+          {tr("Restaurar padrão", "Reset to default")}
         </button>
       </div>
       <p className="muted small">
-        Chances de drop: <b>estimativa da comunidade</b>, não dado oficial (a GGG não publica). Fonte:{" "}
-        {cur.boss.source.url.replace(/^https:\/\//, "")} ({cur.boss.source.note}). Campos em amarelo foram editados por
-        você. Itens sem preço contam como 0. É a média de longo prazo: em poucas runs o resultado varia muito.
+        {tr("Chances de drop:", "Drop rates:")} <b>{tr("estimativa da comunidade", "community estimate")}</b>
+        {tr(", não dado oficial (a GGG não publica). Fonte:", ", not official data (GGG does not publish them). Source:")}{" "}
+        {cur.boss.source.url.replace(/^https:\/\//, "")} ({sourceNote(cur.boss.source.note)}).{" "}
+        {tr(
+          "Campos em amarelo foram editados por você. Itens sem preço contam como 0. É a média de longo prazo: em poucas runs o resultado varia muito.",
+          "Yellow fields were edited by you. Items without a price count as 0. This is the long-run average: over a few runs the result varies a lot.",
+        )}
       </p>
     </>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { MAP_MODS, chromaticSearch, kSearchMax, linkSearchCounts, mapSearch, movementSearch, type SearchString } from "../core/searchRegex";
+import { MAP_MODS, chromaticSearch, kSearchMax, linkSearchCounts, mapModLabel, mapSearch, movementSearch, type SearchString } from "../core/searchRegex";
+import { tr } from "../shared/i18n";
 
 interface LinkPrefs {
   n: number;
@@ -10,7 +11,11 @@ interface LinkPrefs {
 const DEFAULT_LINKS: LinkPrefs = { n: 4, r: 0, g: 0, b: 0 };
 
 function socketsLabel(l: LinkPrefs): string {
-  const parts = [l.r && `${l.r} vermelho${l.r > 1 ? "s" : ""}`, l.g && `${l.g} verde${l.g > 1 ? "s" : ""}`, l.b && `${l.b} azu${l.b > 1 ? "is" : "l"}`];
+  const parts = [
+    l.r && tr(`${l.r} vermelho${l.r > 1 ? "s" : ""}`, `${l.r} red`),
+    l.g && tr(`${l.g} verde${l.g > 1 ? "s" : ""}`, `${l.g} green`),
+    l.b && tr(`${l.b} azu${l.b > 1 ? "is" : "l"}`, `${l.b} blue`),
+  ];
   return parts.filter(Boolean).join(", ");
 }
 import type { AppState } from "../shared/types";
@@ -54,19 +59,19 @@ function CopyBox({ s, title }: { s: SearchString; title: string }) {
       <div className="row">
         <code className={`search-code${s.ok ? "" : " over"}`}>{s.text}</code>
         <button disabled={!s.ok} onClick={() => copy(s.text)}>
-          {copied === s.text ? "Copiado!" : "Copiar"}
+          {copied === s.text ? tr("Copiado!", "Copied!") : tr("Copiar", "Copy")}
         </button>
       </div>
       <div className={`small ${s.ok ? "muted" : "warn-text"}`}>
-        {s.length}/{kSearchMax} caracteres
-        {!s.ok && terms.length > 1 ? " — não cabe: copie as partes separadas abaixo, uma de cada vez" : ""}
-        {!s.ok && terms.length === 1 ? " — não cabe: desmarque algum mod" : ""}
+        {s.length}/{kSearchMax} {tr("caracteres", "characters")}
+        {!s.ok && terms.length > 1 ? tr(" — não cabe: copie as partes separadas abaixo, uma de cada vez", " — too long: copy the parts below one at a time") : ""}
+        {!s.ok && terms.length === 1 ? tr(" — não cabe: desmarque algum mod", " — too long: untick a mod") : ""}
       </div>
       {!s.ok && terms.length > 1 && (
         <div className="row buttons">
           {terms.map((t) => (
             <button key={t} disabled={t.length > kSearchMax} onClick={() => copy(t)}>
-              {copied === t ? "Copiado!" : `Copiar ${t.slice(0, 18)}…`}
+              {copied === t ? tr("Copiado!", "Copied!") : `${tr("Copiar", "Copy")} ${t.slice(0, 18)}…`}
             </button>
           ))}
         </div>
@@ -98,15 +103,16 @@ function TradeButton({ prefs }: { prefs: Prefs }) {
       corrupted: prefs.corrupted ?? "any",
     });
     setBusy(false);
-    if (!r.ok) return setMsg({ text: r.error ?? "não foi possível abrir o trade", warn: true });
-    const parts = [r.total !== undefined ? `trade aberto no navegador: ${r.total} mapas à venda` : "trade aberto no navegador"];
-    if (r.missing.length) parts.push(`sem filtro no trade para: ${r.missing.join(", ")}`);
+    if (!r.ok) return setMsg({ text: r.error ?? tr("não foi possível abrir o trade", "could not open the trade site"), warn: true });
+    const opened = tr("trade aberto no navegador", "trade site opened in the browser");
+    const parts = [r.total !== undefined ? `${opened}: ${r.total} ${tr("mapas à venda", "maps for sale")}` : opened];
+    if (r.missing.length) parts.push(`${tr("sem filtro no trade para", "no trade filter for")}: ${r.missing.join(", ")}`);
     setMsg({ text: parts.join(" · "), warn: r.missing.length > 0 });
   };
   return (
     <div className="row">
       <button className="primary" disabled={busy} onClick={() => void open()}>
-        {busy ? "Abrindo…" : "Comprar no trade com estes filtros"}
+        {busy ? tr("Abrindo…", "Opening…") : tr("Comprar no trade com estes filtros", "Buy on the trade site with these filters")}
       </button>
       {msg && <span className={`small ${msg.warn ? "warn-text" : "muted"}`}>{msg.text}</span>}
     </div>
@@ -134,40 +140,42 @@ export function SearchPanelBody({ state }: { state: AppState }) {
   return (
     <>
       <p className="muted small">
-        No jogo: abra o baú ou o vendedor, clique na busca (Ctrl+F) e cole (Ctrl+V). O app só copia o texto; nada é
-        digitado no jogo por ele.
+        {tr(
+          "No jogo: abra o baú ou o vendedor, clique na busca (Ctrl+F) e cole (Ctrl+V). O app só copia o texto; nada é digitado no jogo por ele.",
+          "In game: open the stash or the vendor, click the search box (Ctrl+F) and paste (Ctrl+V). The app only copies the text; it types nothing into the game.",
+        )}
       </p>
 
-      <h3>Mapas</h3>
+      <h3>{tr("Mapas", "Maps")}</h3>
       <div className="row">
         <span className="muted small">Tier</span>
-        <input className="num narrow" type="number" min="1" max="17" placeholder="mín" value={prefs.tierMin ?? ""}
+        <input className="num narrow" type="number" min="1" max="17" placeholder={tr("mín", "min")} value={prefs.tierMin ?? ""}
           onChange={(e) => setPrefs((p) => ({ ...p, tierMin: e.target.value === "" ? null : Number(e.target.value) }))} />
-        <input className="num narrow" type="number" min="1" max="17" placeholder="máx" value={prefs.tierMax ?? ""}
+        <input className="num narrow" type="number" min="1" max="17" placeholder={tr("máx", "max")} value={prefs.tierMax ?? ""}
           onChange={(e) => setPrefs((p) => ({ ...p, tierMax: e.target.value === "" ? null : Number(e.target.value) }))} />
-        <span className="muted small">Pack size mín.</span>
+        <span className="muted small">{tr("Pack size mín.", "Min pack size")}</span>
         <input className="num narrow" type="number" min="0" placeholder="%" value={prefs.minPack ?? ""}
           onChange={(e) => setPrefs((p) => ({ ...p, minPack: e.target.value === "" ? null : Number(e.target.value) }))} />
         <select className="narrow-select" value={prefs.rarity ?? "any"} onChange={(e) => setPrefs((p) => ({ ...p, rarity: e.target.value as Prefs["rarity"] }))}>
-          <option value="any">qualquer raridade</option>
-          <option value="rare">raro</option>
-          <option value="magic">mágico</option>
+          <option value="any">{tr("qualquer raridade", "any rarity")}</option>
+          <option value="rare">{tr("raro", "rare")}</option>
+          <option value="magic">{tr("mágico", "magic")}</option>
           <option value="normal">normal</option>
         </select>
         <select className="narrow-select" value={prefs.corrupted ?? "any"} onChange={(e) => setPrefs((p) => ({ ...p, corrupted: e.target.value as Prefs["corrupted"] }))}>
-          <option value="any">corrompido ou não</option>
-          <option value="no">não corrompido</option>
-          <option value="yes">só corrompido</option>
+          <option value="any">{tr("corrompido ou não", "corrupted or not")}</option>
+          <option value="no">{tr("não corrompido", "not corrupted")}</option>
+          <option value="yes">{tr("só corrompido", "corrupted only")}</option>
         </select>
       </div>
       <div className="row">
-        <span className="muted small">Quantidade de itens mínima</span>
+        <span className="muted small">{tr("Quantidade de itens mínima", "Min item quantity")}</span>
         <input
           className="num"
           type="number"
           min="0"
           max="200"
-          placeholder="ex.: 70"
+          placeholder={tr("ex.: 70", "e.g. 70")}
           value={prefs.minQuant ?? ""}
           onChange={(e) => setPrefs((p) => ({ ...p, minQuant: e.target.value === "" ? null : Number(e.target.value) }))}
         />
@@ -176,31 +184,32 @@ export function SearchPanelBody({ state }: { state: AppState }) {
         {sorted.map((m) => (
           <label key={m.id} className="check small">
             <input type="checkbox" checked={prefs.exclude.includes(m.id)} onChange={() => toggle(m.id)} />
-            {m.label}
+            {mapModLabel(m)}
           </label>
         ))}
       </div>
-      <CopyBox s={map} title="Mapas sem os mods marcados (busca no seu baú)" />
+      <CopyBox s={map} title={tr("Mapas sem os mods marcados (busca no seu baú)", "Maps without the ticked mods (stash search)")} />
       <TradeButton prefs={prefs} />
       <p className="muted small">
-        O botão abre o site oficial de trade com os mesmos filtros (tier, quantidade, pack size, raridade e "nenhum
-        destes mods"), do mais barato para o mais caro. No trade não existe limite de 50 caracteres: todos os mods
-        marcados entram.
+        {tr(
+          'O botão abre o site oficial de trade com os mesmos filtros (tier, quantidade, pack size, raridade e "nenhum destes mods"), do mais barato para o mais caro. No trade não existe limite de 50 caracteres: todos os mods marcados entram.',
+          'The button opens the official trade site with the same filters (tier, quantity, pack size, rarity and "none of these mods"), cheapest first. The trade site has no 50-character limit: every ticked mod is included.',
+        )}
       </p>
 
-      <h3>Vendedor</h3>
+      <h3>{tr("Vendedor", "Vendor")}</h3>
       <div className="row">
         <span className="muted small">Links</span>
         <select className="narrow-select" value={lp.n} onChange={(e) => setLinks({ n: Number(e.target.value) })}>
           {[2, 3, 4, 5, 6].map((n) => (
             <option key={n} value={n}>
-              {n} ligados
+              {n} {tr("ligados", "linked")}
             </option>
           ))}
         </select>
         {(["r", "g", "b"] as const).map((c) => (
           <label key={c} className="small">
-            <span className={`sock sock-${c}`}>{c === "r" ? "vermelho" : c === "g" ? "verde" : "azul"}</span>{" "}
+            <span className={`sock sock-${c}`}>{c === "r" ? tr("vermelho", "red") : c === "g" ? tr("verde", "green") : tr("azul", "blue")}</span>{" "}
             <input
               className="num narrow"
               type="number"
@@ -214,21 +223,21 @@ export function SearchPanelBody({ state }: { state: AppState }) {
         {links && links.colors.length >= 2 && (
           <button
             className="small"
-            title={`Cores do build importado: ${links.gems.slice(0, 6).join(", ")}`}
+            title={`${tr("Cores do build importado", "Colors of the imported build")}: ${links.gems.slice(0, 6).join(", ")}`}
             onClick={() => {
               const cs = links.colors.slice(0, 6);
               const count = (c: string) => cs.filter((x) => x === c).length;
               setLinks({ n: Math.max(2, cs.length), r: count("r"), g: count("g"), b: count("b") });
             }}
           >
-            usar as cores do build
+            {tr("usar as cores do build", "use the build's colors")}
           </button>
         )}
       </div>
-      {lp.r + lp.g + lp.b > lp.n && <div className="warn small">Mais cores do que sockets: só as primeiras {lp.n} contam.</div>}
-      <CopyBox s={linkS} title={`${lp.n} sockets ligados${lp.r + lp.g + lp.b ? ` com ${socketsLabel(lp)}` : ""}`} />
-      <CopyBox s={chromaticSearch()} title="Vermelho + verde + azul ligados (Chromatic Orb no vendedor)" />
-      <CopyBox s={movementSearch()} title="Botas com velocidade de movimento" />
+      {lp.r + lp.g + lp.b > lp.n && <div className="warn small">{tr(`Mais cores do que sockets: só as primeiras ${lp.n} contam.`, `More colors than sockets: only the first ${lp.n} count.`)}</div>}
+      <CopyBox s={linkS} title={`${lp.n} ${tr("sockets ligados", "linked sockets")}${lp.r + lp.g + lp.b ? ` ${tr("com", "with")} ${socketsLabel(lp)}` : ""}`} />
+      <CopyBox s={chromaticSearch()} title={tr("Vermelho + verde + azul ligados (Chromatic Orb no vendedor)", "Red + green + blue linked (Chromatic Orb at the vendor)")} />
+      <CopyBox s={movementSearch()} title={tr("Botas com velocidade de movimento", "Boots with movement speed")} />
     </>
   );
 }

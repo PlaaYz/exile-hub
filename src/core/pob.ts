@@ -3,6 +3,7 @@
 // Pure JS (fflate) instead of node:zlib so the same code runs in Node, Electron and a webview.
 import { inflateSync, strFromU8, unzlibSync } from "fflate";
 import type { PobBuild, PobGem, PobSkillGroup } from "../shared/types";
+import { tr } from "../shared/i18n";
 
 function base64Bytes(b64: string): Uint8Array {
   const bin = atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, "="));
@@ -13,12 +14,12 @@ function base64Bytes(b64: string): Uint8Array {
 
 export function decodePobCode(code: string): string {
   const b64 = code.trim().replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
-  if (!b64) throw new Error("código do PoB vazio");
+  if (!b64) throw new Error(tr("código do PoB vazio", "empty PoB code"));
   let bytes: Uint8Array;
   try {
     bytes = base64Bytes(b64);
   } catch {
-    throw new Error("não é um código do PoB válido (falha ao descompactar)");
+    throw new Error(tr("não é um código do PoB válido (falha ao descompactar)", "not a valid PoB code (could not decompress)"));
   }
   try {
     return strFromU8(unzlibSync(bytes));
@@ -26,7 +27,7 @@ export function decodePobCode(code: string): string {
     try {
       return strFromU8(inflateSync(bytes));
     } catch {
-      throw new Error("não é um código do PoB válido (falha ao descompactar)");
+      throw new Error(tr("não é um código do PoB válido (falha ao descompactar)", "not a valid PoB code (could not decompress)"));
     }
   }
 }
@@ -47,7 +48,7 @@ function attrs(s: string): Record<string, string> {
 }
 
 export function parsePobXml(xml: string): PobBuild {
-  if (!/<PathOfBuilding/.test(xml)) throw new Error("não é uma exportação do Path of Building");
+  if (!/<PathOfBuilding/.test(xml)) throw new Error(tr("não é uma exportação do Path of Building", "not a Path of Building export"));
 
   const buildTag = /<Build\b([^>]*)>/.exec(xml);
   const b = buildTag ? attrs(buildTag[1]) : {};
