@@ -42,7 +42,7 @@ function line(item: FarmItem, perKill: number, prices: Map<string, FarmPrice>, o
   const amount = edited ? ov.amounts![item.name] : item.amount;
   const manual = ov.prices?.[item.name];
   const live = prices.get(item.name);
-  const price = manual ?? live?.chaos ?? null;
+  const price = manual ?? live?.chaos ?? item.price ?? null;
   return {
     name: item.name,
     amount,
@@ -73,8 +73,9 @@ export function farmEv(boss: FarmBoss, prices: Map<string, FarmPrice>, ov: FarmO
   };
 }
 
+/** Names to price on the market (items with a fixed price, like a T17 map, are not looked up). */
 export function farmItemNames(bosses: FarmBoss[]): string[] {
-  return [...new Set(bosses.flatMap((b) => [...b.entry, ...b.drops].map((i) => i.name)))];
+  return [...new Set(bosses.flatMap((b) => [...b.entry, ...b.drops].filter((i) => i.price === undefined).map((i) => i.name)))];
 }
 
 // ---- risk: how often a batch of runs ends up ahead -------------------------------------------

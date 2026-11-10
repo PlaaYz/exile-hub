@@ -274,8 +274,11 @@ Farm tab like bossofexile.com (2026-11-09, owner's request; their numbers were N
   Oshabi, Esh-Tul, Zorath. No T17 maps (no source with rates).
 - FARM_POOLS = items that exclude each other (unique pool, astrolabe); core/farm profitChance =
   Monte Carlo of 10 runs (seeded, 2000 trials in the tab) -> riskOf groups safe/low/medium/high/
-  negative (95/80/60%). FARM_DEFAULT_MINUTES = the owner's own kill times (user > measured > default),
-  so the list can rank by profit/hour (marked * when estimated).
+  negative (95/80/60%). Time per run = typed > measured in Client.txt, nothing else (owner, 2026-11-09:
+  no default times); bosses without a run have no profit/hour and sort after the timed ones.
+- T17 nightmare maps (Citadel, Sanctuary, Ziggurat, Fortress, Abomination): rates from bossofexile.com
+  (owner asked, 2026-11-09), entry "Nightmare Map (T17)" fixed 50c (FarmItem.price, not looked up);
+  FarmBoss.mapName -> time per run = the map tracker's average for maps of that name.
 - Arenas verified in the owner's log by "You have entered": BetrayalMastermindFight (Mastermind's
   Lair, Catarina), MapWorldsMemoryBoss1/2/3 (Moment of Trauma/Loneliness/Reverence = Fear/Neglect/
   Dread), MapWorldsPrimordialBoss1 (Seething Chyme, Infinite Hunger), 2 (Polaric Void, Black Star).

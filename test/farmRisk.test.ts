@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { farmEv, profitChance, riskOf, type FarmPrice } from "../src/core/farm";
-import { FARM_BOSSES, FARM_DEFAULT_MINUTES, FARM_POOLS, type FarmBoss } from "../src/shared/farmData";
+import { farmItemNames } from "../src/core/farm";
+import { FARM_BOSSES, FARM_POOLS, type FarmBoss } from "../src/shared/farmData";
 
 const boss = (drops: { name: string; amount: number }[], entry = 10): FarmBoss => ({
   id: "t",
@@ -39,9 +40,11 @@ describe("farm risk", () => {
     expect(riskOf(r2.profit, null)).toBe("negative");
   });
 
-  it("every boss has a default time and its pools name real drops", () => {
+  it("every pool names real drops; a T17 map has a fixed entry price and is not looked up", () => {
+    const t17 = FARM_BOSSES.find((b) => b.id === "t17-citadel")!;
+    expect(farmEv(t17, prices({})).entryCost).toBe(50);
+    expect(farmItemNames(FARM_BOSSES)).not.toContain("Nightmare Map (T17)");
     for (const b of FARM_BOSSES) {
-      expect(FARM_DEFAULT_MINUTES[b.id], b.id).toBeGreaterThan(0);
       const names = new Set(b.drops.map((d) => d.name));
       for (const pool of FARM_POOLS[b.id] ?? []) for (const n of pool) expect(names.has(n), `${b.id}: ${n}`).toBe(true);
     }

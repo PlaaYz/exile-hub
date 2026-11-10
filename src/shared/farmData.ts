@@ -7,6 +7,8 @@ export interface FarmItem {
   name: string;
   /** expected count per 100 kills (drops) or quantity per run (entry) */
   amount: number;
+  /** chaos used when no market price exists (a T17 map has no single price); editable in the tab */
+  price?: number;
 }
 
 export interface FarmBoss {
@@ -16,6 +18,8 @@ export interface FarmBoss {
   entry: FarmItem[];
   drops: FarmItem[];
   source: { url: string; note: string };
+  /** T17 nightmare maps: the time per run comes from the map tracker (maps of this name) */
+  mapName?: string;
 }
 
 /** The Incarnations' astrolabes: one of the ten per kill (Templar is the common one). */
@@ -591,6 +595,78 @@ export const FARM_BOSSES: FarmBoss[] = [
     ],
     source: { url: `${FOE}zorath-vile-assembled-farm`, note: "wiki, 3.29.0, 311 kills (conteúdo novo)" },
   },
+  // ---- T17 nightmare maps: rates as listed by bossofexile.com (2026-11-09, at the owner's request)
+  {
+    id: "t17-citadel",
+    name: "Citadel (T17)",
+    uber: false,
+    entry: [{ name: "Nightmare Map (T17)", amount: 1, price: 50 }],
+    drops: [
+      { name: "Cosmic Fragment", amount: 100 },
+      { name: "Synthesising Fragment", amount: 100 },
+      { name: "Manastorm", amount: 5 },
+      { name: "Cast on Ward Break Support", amount: 5 },
+    ],
+    source: { url: "https://www.bossofexile.com/", note: "bossofexile.com, com 100% de quantidade de itens no mapa" },
+    mapName: "Citadel",
+  },
+  {
+    id: "t17-sanctuary",
+    name: "Sanctuary (T17)",
+    uber: false,
+    entry: [{ name: "Nightmare Map (T17)", amount: 1, price: 50 }],
+    drops: [
+      { name: "Lonely Fragment", amount: 67 },
+      { name: "Traumatic Fragment", amount: 67 },
+      { name: "Reverent Fragment", amount: 67 },
+      { name: "The Dark Seer", amount: 5 },
+      { name: "Scornful Herald Support", amount: 5 },
+    ],
+    source: { url: "https://www.bossofexile.com/", note: "bossofexile.com, com 100% de quantidade de itens no mapa" },
+    mapName: "Sanctuary",
+  },
+  {
+    id: "t17-ziggurat",
+    name: "Ziggurat (T17)",
+    uber: false,
+    entry: [{ name: "Nightmare Map (T17)", amount: 1, price: 50 }],
+    drops: [
+      { name: "Blazing Fragment", amount: 100 },
+      { name: "Devouring Fragment", amount: 100 },
+      { name: "Wraithlord", amount: 5 },
+      { name: "Minion Pact Support", amount: 5 },
+    ],
+    source: { url: "https://www.bossofexile.com/", note: "bossofexile.com, com 100% de quantidade de itens no mapa" },
+    mapName: "Ziggurat",
+  },
+  {
+    id: "t17-fortress",
+    name: "Fortress (T17)",
+    uber: false,
+    entry: [{ name: "Nightmare Map (T17)", amount: 1, price: 50 }],
+    drops: [
+      { name: "Decaying Fragment", amount: 100 },
+      { name: "Synthesising Fragment", amount: 100 },
+      { name: "Yoke of Suffering", amount: 5 },
+      { name: "Overloaded Intensity Support", amount: 5 },
+    ],
+    source: { url: "https://www.bossofexile.com/", note: "bossofexile.com, com 100% de quantidade de itens no mapa" },
+    mapName: "Fortress",
+  },
+  {
+    id: "t17-abomination",
+    name: "Abomination (T17)",
+    uber: false,
+    entry: [{ name: "Nightmare Map (T17)", amount: 1, price: 50 }],
+    drops: [
+      { name: "Awakening Fragment", amount: 100 },
+      { name: "Reality Fragment", amount: 100 },
+      { name: "Malachai's Mark", amount: 5 },
+      { name: "Unholy Trinity Support", amount: 5 },
+    ],
+    source: { url: "https://www.bossofexile.com/", note: "bossofexile.com, com 100% de quantidade de itens no mapa" },
+    mapName: "Abomination",
+  },
 ];
 
 /**
@@ -632,42 +708,10 @@ export const FARM_POOLS: Record<string, string[][]> = {
   "esh-tul": [
     ["Hand of the Lords", "The Will of Esh", "The Will of Tul", "The Will of Xoph", "The Will of Uul-Netol", "The Sundered Will", "The Grey Wind", "Uul-Netol's Vow"],
   ],
+  "t17-citadel": [["Manastorm", "Cast on Ward Break Support"]],
+  "t17-sanctuary": [["The Dark Seer", "Scornful Herald Support"]],
+  "t17-ziggurat": [["Wraithlord", "Minion Pact Support"]],
+  "t17-fortress": [["Yoke of Suffering", "Overloaded Intensity Support"]],
+  "t17-abomination": [["Malachai's Mark", "Unholy Trinity Support"]],
   zorath: [["Subsume the Source", "Spinesnatch", "Baleful Dominion", "Destructive Aspiration", "Extinguishing Grasp", "Festering Vengeance"]],
-};
-
-/**
- * Minutes per run when neither the player nor Client.txt gave one: the owner's own kill times
- * (2026-11-09; Zorath, not in their list, is an estimate). Edit it in the tab, or let the log
- * measure it.
- */
-export const FARM_DEFAULT_MINUTES: Record<string, number> = {
-  shaper: 4,
-  "uber-shaper": 5,
-  elder: 1 + 50 / 60,
-  "uber-elder": 3,
-  "uber-uber-elder": 4,
-  sirus: 3.5,
-  "uber-sirus": 4.5,
-  venarius: 2.5,
-  "uber-venarius": 3.5,
-  "incarnation-dread": 3 + 20 / 60,
-  "uber-incarnation-dread": 4.5,
-  "incarnation-neglect": 1,
-  "uber-incarnation-neglect": 2,
-  "incarnation-fear": 1,
-  "uber-incarnation-fear": 2,
-  maven: 4,
-  "uber-maven": 5,
-  "black-star": 0.5,
-  exarch: 1.5,
-  eater: 0.75,
-  "uber-exarch": 3,
-  "uber-eater": 2.5,
-  "infinite-hunger": 0.5,
-  "king-in-the-mists": 0.75,
-  catarina: 2,
-  oshabi: 1,
-  "esh-tul": 3,
-  "uber-atziri": 2.5,
-  zorath: 4,
 };

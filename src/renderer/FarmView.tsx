@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { farmEv, profitChance, riskOf, type FarmLine, type FarmOverrides, type FarmPrice, type FarmRisk } from "../core/farm";
-import { FARM_BOSSES, FARM_DEFAULT_MINUTES, FARM_POOLS, type FarmBoss } from "../shared/farmData";
+import { FARM_BOSSES, FARM_POOLS, type FarmBoss } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { fmtChaos } from "./PriceView";
@@ -146,7 +146,27 @@ function fmtAgo(ts: number | null): string {
   return d <= 0 ? "hoje" : d === 1 ? "ontem" : `há ${d} dias`;
 }
 
-export function FarmPanelBody({ runs, pricesVersion }: { runs: AppState["farmRuns"]; pricesVersion: number }) {
+type Measured = { runs: number; minutes: number | null; deaths: number | null; lastRunAt: number | null };
+
+export function FarmPanelBody({
+  runs: bossRuns,
+  maps,
+  pricesVersion,
+}: {
+  runs: AppState["farmRuns"];
+  maps: AppState["maps"]["byMap"];
+  pricesVersion: number;
+}) {
+  // what Client.txt measured: boss arenas, and T17 maps from the map tracker (average time in the map)
+  const runs = useMemo(() => {
+    const out: Record<string, Measured> = {};
+    for (const [id, r] of Object.entries(bossRuns)) out[id] = { runs: r.runs, minutes: r.minutes, deaths: r.deaths, lastRunAt: r.lastRunAt };
+    for (const b of FARM_BOSSES) {
+      const m = b.mapName ? maps.find((x) => x.name === b.mapName) : undefined;
+      if (m && m.count > 0) out[b.id] = { runs: m.count, minutes: Math.round((m.avgMs / 60000) * 10) / 10, deaths: null, lastRunAt: null };
+    }
+    return out;
+  }, [bossRuns, maps]);
   const [data, setData] = useState<FarmPricesResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [overrides, setOverrides] = useState<AllOverrides>(() => load(LS_OVERRIDES, {}));
@@ -177,10 +197,10 @@ export function FarmPanelBody({ runs, pricesVersion }: { runs: AppState["farmRun
     () =>
       FARM_BOSSES.map((b) => {
         const ov = overrides[b.id] ?? {};
-        // minutes per run: what the user typed, else what Client.txt measured, else our estimate
+        // minutes per run: what the player typed, else what Client.txt measured; nothing else is guessed
         const measured = runs[b.id]?.minutes ?? null;
-        const minutes = ov.minutesPerRun ?? measured ?? FARM_DEFAULT_MINUTES[b.id] ?? null;
-        const minutesFrom: "você" | "medido" | "estimado" = ov.minutesPerRun != null ? "você" : measured != null ? "medido" : "estimado";
+        const minutes = ov.minutesPerRun ?? measured ?? null;
+        const minutesFrom: "você" | "medido" | null = ov.minutesPerRun != null ? "você" : measured != null ? "medido" : null;
         const r = farmEv(b, prices, { ...ov, minutesPerRun: minutes });
         const chance = profitChance(r, FARM_POOLS[b.id], kChanceRuns, 2000);
         return { boss: b, r, chance, risk: riskOf(r.profit, chance), minutes, minutesFrom };
@@ -191,7 +211,14 @@ export function FarmPanelBody({ runs, pricesVersion }: { runs: AppState["farmRun
     () =>
       [...computed]
         .filter((x) => riskFilter === "all" || x.risk === riskFilter)
-        .sort((a, b) => (rank === "hour" ? (b.r.profitPerHour ?? -Infinity) - (a.r.profitPerHour ?? -Infinity) : b.r.profit - a.r.profit)),
+        .sort((a, b) => {
+          if (rank === "kill") return b.r.profit - a.r.profit;
+          // bosses without a time yet go after the timed ones, by profit per kill
+          const ah = a.r.profitPerHour;
+          const bh = b.r.profitPerHour;
+          if (ah === null || bh === null) return ah === null && bh === null ? b.r.profit - a.r.profit : ah === null ? 1 : -1;
+          return bh - ah;
+        }),
     [computed, rank, riskFilter],
   );
   const cur = computed.find((x) => x.boss.id === selected) ?? results[0] ?? computed[0];
@@ -287,8 +314,8 @@ export function FarmPanelBody({ runs, pricesVersion }: { runs: AppState["farmRun
                 ) : minutesFrom === "você" ? (
                   <span className="time-src typed">digitado</span>
                 ) : (
-                  <span className="time-src" title="ainda sem run deste boss no seu log">
-                    padrão
+                  <span className="time-src" title="ainda sem run deste boss no seu log: clique e digite um tempo, se quiser">
+                    sem run
                   </span>
                 )}
               </td>
@@ -298,8 +325,8 @@ export function FarmPanelBody({ runs, pricesVersion }: { runs: AppState["farmRun
       </table>
       <p className="muted small">
         Chance = quantas vezes 10 runs seguidas terminam no lucro (simulação com as taxas e os preços da tabela). Tempo/run: o app
-        mede sozinho as suas runs no Client.txt (<b>seu log</b>) e usa esse tempo assim que você faz o boss; antes disso usa o
-        tempo <b>padrão</b>. Para usar outro, clique no boss e digite.
+        mede sozinho as suas runs no Client.txt (<b>seu log</b>; nos T17, o tempo médio dentro do mapa). Boss que você ainda não
+        fez fica sem lucro/hora até a primeira run; se quiser, clique nele e digite um tempo.
       </p>
 
       <h3>{cur.boss.name}</h3>
@@ -307,14 +334,14 @@ export function FarmPanelBody({ runs, pricesVersion }: { runs: AppState["farmRun
         <span className="muted">Minutos por run</span>
         <NumInput
           value={ov.minutesPerRun ?? undefined}
-          placeholder={runs[cur.boss.id]?.minutes != null ? String(runs[cur.boss.id].minutes) : String(Math.round((FARM_DEFAULT_MINUTES[cur.boss.id] ?? 4) * 100) / 100)}
+          placeholder={runs[cur.boss.id]?.minutes != null ? String(runs[cur.boss.id].minutes) : "—"}
           edited={ov.minutesPerRun != null}
           onChange={(v) => patch(cur.boss, (o) => ({ ...o, minutesPerRun: v ?? null }))}
         />
         <span className="muted small">
           {runs[cur.boss.id]
-            ? `medido no seu Client.txt: ${runs[cur.boss.id].runs} run(s), ${runs[cur.boss.id].minutes} min/run, ${runs[cur.boss.id].deaths} morte(s), última ${fmtAgo(runs[cur.boss.id].lastRunAt)}`
-            : `nenhuma run deste boss no seu Client.txt ainda: usando ${Math.round((FARM_DEFAULT_MINUTES[cur.boss.id] ?? 0) * 100) / 100} min (seu tempo padrão), digite o seu tempo`}
+            ? `medido no seu Client.txt: ${runs[cur.boss.id].runs} ${cur.boss.mapName ? "mapa(s)" : "run(s)"}, ${runs[cur.boss.id].minutes} min/run${runs[cur.boss.id].deaths !== null ? `, ${runs[cur.boss.id].deaths} morte(s)` : ""}${runs[cur.boss.id].lastRunAt ? `, última ${fmtAgo(runs[cur.boss.id].lastRunAt)}` : ""}`
+            : "nenhuma run deste boss no seu Client.txt ainda: sem lucro/hora até a primeira (ou digite um tempo)"}
         </span>
       </div>
       <table className="farm-items">
