@@ -1,0 +1,67 @@
+# Tests on every push / pull request; the Windows installer when started by hand (Actions > Build >
+# Run workflow). The installer is signed for the app's own updater with the TAURI_SIGNING_PRIVATE_KEY
+# secret (the contents of the key file, never committed). Code signing (SignPath) comes later: it
+# needs this build to happen here instead of on a developer's PC.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Release notes for latest.json"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  installer:
+    needs: test
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Build the installer
+        run: npx tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+      - name: Release files (installer, .sig, latest.json, latest.yml)
+        # the notes go through an env var, never straight into the script
+        run: node scripts/tauri-release.mjs "$env:RELEASE_NOTES"
+        env:
+          RELEASE_NOTES: ${{ inputs.notes }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exile-hub-installer
+          path: release/
+          if-no-files-found: error

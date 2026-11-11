@@ -24,7 +24,7 @@ writeFileSync(`${dest}.sig`, signature);
 
 const latestJson = {
   version,
-  notes: process.argv[2] ?? `Exile Hub ${version}`,
+  notes: process.argv[2] || `Exile Hub ${version}`,
   pub_date: now,
   platforms: { "windows-x86_64": { signature, url } },
 };
