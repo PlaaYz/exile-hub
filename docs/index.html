@@ -249,6 +249,26 @@ nav.top .links + .lang-toggle { margin-left: 0; }
 }
 .lang-toggle button[aria-pressed="true"] { background: var(--panel2); color: var(--accent2); }
 @media (max-width: 600px) { nav.top .links + .lang-toggle { margin-left: auto; } nav.top .wrap { gap: 10px; } .eyebrow { letter-spacing: .03em; font-size: 12px; } }
+
+/* Windows SmartScreen guide */
+.smartscreen { display: grid; grid-template-columns: 1fr 1.1fr; gap: 32px; align-items: center; margin-top: 28px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.smartscreen h3 { margin: 0 0 8px; font-size: 20px; }
+.smartscreen p { color: var(--muted); margin: 0 0 10px; }
+.smartscreen ol { margin: 0 0 10px; padding-left: 22px; }
+.smartscreen li { padding: 3px 0; }
+.ss-mock { background: #0b5cad; color: #fff; border-radius: 6px; padding: 22px 22px 16px; font-family: "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 16px 40px rgba(0,0,0,.4); max-width: 420px; justify-self: center; width: 100%; }
+.ss-mock .t { font-size: 22px; font-weight: 300; margin-bottom: 10px; line-height: 1.25; }
+.ss-mock .d { font-size: 12.5px; opacity: .92; margin-bottom: 8px; }
+.ss-mock .more { font-size: 12.5px; text-decoration: underline; position: relative; display: inline-block; }
+.ss-mock .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.ss-mock .btns > span { border: 2px solid rgba(255,255,255,.7); padding: 5px 16px; font-size: 12.5px; }
+.ss-mock .hl { outline: 3px solid var(--accent2); outline-offset: 3px; border-radius: 2px; }
+.ss-mock .n { position: absolute; top: -13px; left: -13px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent2);
+  color: #17130a; font-size: 12px; font-weight: 700; display: grid; place-items: center; text-decoration: none; }
+.ss-mock .btns > span.hl { position: relative; }
+@media (max-width: 900px) { .smartscreen { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -616,6 +636,37 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       <div class="card"><h3><span class="pt">Configure</span><span class="en">Set up</span></h3><p class="pt">A tela de boas-vindas encontra o <code>Client.txt</code> (Steam ou standalone) e mostra os atalhos.</p><p class="en">The welcome screen finds <code>Client.txt</code> (Steam or standalone) and shows the hotkeys.</p></div>
       <div class="card"><h3><span class="pt">Jogue</span><span class="en">Play</span></h3><p class="pt">Use tela cheia em janela para o overlay aparecer por cima. O painel abre no segundo monitor.</p><p class="en">Use windowed fullscreen so the overlay shows on top. The dashboard opens on the second monitor.</p></div>
     </div>
+
+    <div class="smartscreen" id="aviso-windows">
+      <div>
+        <h3><span class="pt">Apareceu uma tela azul do Windows?</span><span class="en">Got a blue Windows screen?</span></h3>
+        <p class="pt">Na primeira instalação, o Windows pode mostrar "O Windows protegeu o computador". Para continuar:</p>
+        <p class="en">On the first install, Windows may show "Windows protected your PC". To go on:</p>
+        <ol class="pt">
+          <li>Clique em <b>Mais informações</b>.</li>
+          <li>Clique em <b>Executar assim mesmo</b>.</li>
+        </ol>
+        <ol class="en">
+          <li>Click <b>More info</b>.</li>
+          <li>Click <b>Run anyway</b>.</li>
+        </ol>
+        <p class="pt">O aviso aparece porque o instalador ainda não tem assinatura digital (um certificado pago que projetos
+          pequenos e gratuitos costumam não ter), e não porque foi encontrado algum problema nele. O código é aberto e pode
+          ser conferido no GitHub. As atualizações automáticas não mostram esse aviso.</p>
+        <p class="en">The warning shows because the installer has no digital signature yet (a paid certificate that small
+          free projects often lack), not because anything was found in it. The code is open and can be checked on GitHub.
+          Automatic updates do not show this warning.</p>
+      </div>
+      <div class="ss-mock" aria-hidden="true">
+        <div class="t"><span class="pt">O Windows protegeu o computador</span><span class="en">Windows protected your PC</span></div>
+        <div class="d"><span class="pt">O Microsoft Defender SmartScreen impediu a inicialização de um aplicativo não reconhecido.</span><span class="en">Microsoft Defender SmartScreen prevented an unrecognized app from starting.</span></div>
+        <span class="more hl"><span class="pt">Mais informações</span><span class="en">More info</span><span class="n">1</span></span>
+        <div class="btns">
+          <span class="hl"><span class="pt">Executar assim mesmo</span><span class="en">Run anyway</span><span class="n">2</span></span>
+          <span><span class="pt">Não executar</span><span class="en">Don't run</span></span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -635,6 +686,11 @@ nav.top .links + .lang-toggle { margin-left: 0; }
         <p>O app segue as regras que a GGG publica para ferramentas de terceiros: lê só o log e APIs públicas, não lê a
           memória do jogo e cada atalho faz uma única ação. É o mesmo tipo de acesso de ferramentas conhecidas como o
           Awakened PoE Trade. Ainda assim, ele não é oficial nem aprovado pela GGG.</p>
+      </details>
+      <details>
+        <summary>O Windows mostrou um aviso azul ao instalar. É seguro?</summary>
+        <p>Sim. O aviso aparece porque o instalador ainda não tem assinatura digital, e não por causa de algum problema
+          encontrado. Clique em "Mais informações" e em "Executar assim mesmo". Veja o <a href="#aviso-windows">passo a passo</a>.</p>
       </details>
       <details>
         <summary>Funciona com Path of Exile 2?</summary>
@@ -684,6 +740,11 @@ nav.top .links + .lang-toggle { margin-left: 0; }
         <p>The app follows the rules GGG publishes for third-party tools: it only reads the log and public APIs, never
           reads the game's memory, and every hotkey does a single action. That is the same kind of access as well-known
           tools like Awakened PoE Trade. Still, it is not official or approved by GGG.</p>
+      </details>
+      <details>
+        <summary>Windows showed a blue warning when installing. Is it safe?</summary>
+        <p>Yes. The warning shows because the installer has no digital signature yet, not because of a problem found in
+          it. Click "More info" and then "Run anyway". See the <a href="#aviso-windows">steps</a>.</p>
       </details>
       <details>
         <summary>Does it work with Path of Exile 2?</summary>
@@ -749,7 +810,7 @@ nav.top .links + .lang-toggle { margin-left: 0; }
 
 <footer>
   <div class="wrap">
-    <div>Exile Hub · <a href="https://github.com/PlaaYz/exile-hub"><span class="pt">código aberto</span><span class="en">open source</span></a></div>
+    <div>Exile Hub · <a href="https://github.com/PlaaYz/exile-hub"><span class="pt">código aberto</span><span class="en">open source</span></a> · <a href="https://github.com/PlaaYz/exile-hub/blob/main/LICENSE">MIT</a></div>
     <div>This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</div>
   </div>
 </footer>

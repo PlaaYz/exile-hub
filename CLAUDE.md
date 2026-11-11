@@ -159,6 +159,11 @@ English = the game's own mod line (searchRegex mapModLabel).
 Donations: src/shared/links.ts DONATE_URL ("" = no link anywhere in the app; HubApi.openDonate opens only that fixed
 https link) and docs/index.html const DONATE_URL ("" = the "Apoie" section stays hidden). Voluntary support only:
 every feature stays free, nothing is unlocked by donating (GGG: their IP can't generate commercial revenue).
+License: MIT (LICENSE, 2026-11-10, owner's choice; copyright "PlaaYz"). Windows SmartScreen ("Windows protected
+your PC") shows on first installs because the installer is unsigned; site (#aviso-windows) and README explain "More
+info > Run anyway". Signing options weighed 2026-11-10: SignPath Foundation (free, needs OSI license + CI build on
+GitHub + approval; publisher "SignPath Foundation"), Certum Open Source (~EUR 49/yr, owner's real name), Azure
+Trusted Signing (individuals only US/Canada). Owner has not decided on CI/signing yet.
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
 Old note: pt-BR strings were written inline in the components (no i18n framework). Game names
 (zones, quests, bosses, items, gems) stay in English to match the owner's English client. Route

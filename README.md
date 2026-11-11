@@ -101,6 +101,12 @@ Baixe `ExileHub-Setup-<versão>.exe` na página de
 [Releases](https://github.com/PlaaYz/exile-hub/releases) e execute. A instalação é por usuário e
 não precisa de administrador.
 
+**Apareceu uma tela azul "O Windows protegeu o computador"?** Clique em **Mais informações** e depois
+em **Executar assim mesmo**. O aviso aparece porque o instalador ainda não tem assinatura digital
+(um certificado pago que projetos pequenos e gratuitos costumam não ter), e não porque foi
+encontrado algum problema nele. O código é aberto e pode ser conferido aqui no GitHub. O aviso só
+aparece na primeira instalação: as atualizações automáticas não passam por ele.
+
 O app se atualiza sozinho: a versão nova baixa em segundo plano e instala quando você sai do app,
 ou na hora com "Reiniciar e atualizar" no rodapé.
 
@@ -200,6 +206,11 @@ Download `ExileHub-Setup-<version>.exe` from the
 [Releases](https://github.com/PlaaYz/exile-hub/releases) page and run it. It is a per-user install
 and needs no admin rights.
 
+**Got a blue "Windows protected your PC" screen?** Click **More info**, then **Run anyway**. The
+warning shows because the installer has no digital signature yet (a paid certificate that small free
+projects often lack), not because anything was found in it. The code is open and can be checked
+here on GitHub. It only shows on the first install: automatic updates do not go through it.
+
 The app updates itself: new versions download in the background and install when you quit, or right
 away with "Restart and update" in the footer.
 
@@ -228,4 +239,6 @@ Bump `version` in package.json, then (with the updater signing key in TAURI_SIGN
 
 `latest.json` updates Tauri installs; `latest.yml` moves old Electron (0.2.x) installs to the new installer.
 
-Route data: exile-leveling (MIT), see `data/LICENSE-exile-leveling`.
+## License
+
+MIT, see [LICENSE](LICENSE). Route data: exile-leveling (MIT), see `data/LICENSE-exile-leveling`.
