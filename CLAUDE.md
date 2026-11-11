@@ -163,7 +163,12 @@ License: MIT (LICENSE, 2026-11-10, owner's choice; copyright "PlaaYz"). Windows 
 your PC") shows on first installs because the installer is unsigned; site (#aviso-windows) and README explain "More
 info > Run anyway". Signing options weighed 2026-11-10: SignPath Foundation (free, needs OSI license + CI build on
 GitHub + approval; publisher "SignPath Foundation"), Certum Open Source (~EUR 49/yr, owner's real name), Azure
-Trusted Signing (individuals only US/Canada). Owner has not decided on CI/signing yet.
+Trusted Signing (individuals only US/Canada).
+CI (2026-11-10): .github/workflows/build.yml = typecheck + tests on every push/PR (windows-latest); "Run workflow"
+builds the installer and uploads release/ as the artifact "exile-hub-installer". Secret TAURI_SIGNING_PRIVATE_KEY =
+the key FILE's contents (set with gh secret set ... < file from Git Bash: PowerShell 5.1 piping added a UTF-8 BOM and
+the build failed "Invalid symbol 239"). First CI installer verified: signed with the app's updater key (id e22d8ef4...).
+Releases are still built on the owner's PC; next step = apply to SignPath (owner), then sign in CI.
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
 Old note: pt-BR strings were written inline in the components (no i18n framework). Game names
 (zones, quests, bosses, items, gems) stay in English to match the owner's English client. Route
