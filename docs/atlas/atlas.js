@@ -43,6 +43,8 @@ let hover = null;
 let preview = null; // { add: Set } or { remove: Set }
 let hits = [];
 let hitAt = -1;
+let showBg = true;
+try { showBg = localStorage.getItem("exile-hub.atlas.bg") !== "0"; } catch { /* storage blocked */ }
 let focus = -1; // highlighted mechanic (index in T.mechanics)
 // language of the node texts (names stay in English, like the game), remembered in this browser
 let L = "pt";
@@ -230,7 +232,7 @@ const lineWidth = (k) => Math.max(14, 1.6 / k);
 function drawStatic(g, k, rect) {
   const inside = rect ? (x, y, m) => x + m > rect.x && x - m < rect.x + rect.w && y + m > rect.y && y - m < rect.y + rect.h : () => true;
   const b = T.sprites.background;
-  if (b && ready(img.bg)) {
+  if (b && showBg && ready(img.bg)) {
     const sq = bgSquare();
     // only the part of the (5184 px) picture that is on screen
     const x0 = Math.max(sq.x, rect ? rect.x : sq.x), y0 = Math.max(sq.y, rect ? rect.y : sq.y);
@@ -238,11 +240,10 @@ function drawStatic(g, k, rect) {
     if (x1 > x0 && y1 > y0) {
       const f = b[2] / sq.size;
       g.drawImage(img.bg, b[0] + (x0 - sq.x) * f, b[1] + (y0 - sq.y) * f, (x1 - x0) * f, (y1 - y0) * f, x0, y0, x1 - x0, y1 - y0);
-      
     }
   }
   for (const [x, y, ...r] of T.groups) if (inside(x, y, r[2] * S)) sprite(g, img.group, r, x, y);
-  g.strokeStyle = "#4a3f2c";
+  g.strokeStyle = "#8a7450";
   g.lineWidth = lineWidth(k);
   // a link is skipped when both ends are far off screen (arcs bulge at most ~900 units)
   const near = (id) => { const n = byId.get(id); return inside(n.x, n.y, 900); };
@@ -313,8 +314,8 @@ function render() {
   const on = (id) => id === T.start || picked.has(id);
   const soon = preview?.add ?? new Set();
   const cut = preview?.remove ?? new Set();
-  ctx.lineWidth = lineWidth(k) * 1.4;
-  ctx.strokeStyle = "#e8c060";
+  ctx.lineWidth = lineWidth(k) * 2.2; // stands out from the brighter unallocated links
+  ctx.strokeStyle = "#ffd76a";
   linkPath(ctx, (a, b) => on(a) && on(b));
   ctx.stroke();
   if (soon.size) {
@@ -752,6 +753,17 @@ $("out").onclick = () => zoomAt(1 / 1.4, ...center());
 $("fit").onclick = () => animateTo(fit(), 300);
 $("clear").onclick = () => { picked.clear(); choice.clear(); buildName = ""; changed(); };
 $("panelBtn").onclick = () => { $("panel").classList.toggle("hidden"); $("panelBtn").classList.toggle("on"); };
+// "Fundo": the round background picture on/off, remembered in this browser
+const bgBtn = $("bg");
+bgBtn.classList.toggle("on", showBg);
+bgBtn.onclick = () => {
+  showBg = !showBg;
+  try { localStorage.setItem("exile-hub.atlas.bg", showBg ? "1" : "0"); } catch { /* storage blocked */ }
+  bgBtn.classList.toggle("on", showBg);
+  buildCache();
+  draw();
+};
+
 const langBtn = $("lang");
 const showLang = () => {
   langBtn.textContent = L === "pt" ? "PT" : "EN";
