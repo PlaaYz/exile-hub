@@ -222,6 +222,8 @@ global nodes have none). Page: mechanic highlight (panel list allocated/total, o
 trees in localStorage ("exile-hub.atlas.builds", per browser), PT/EN toggle for node texts ("exile-hub.atlas.lang";
 the page chrome stays pt-BR), search in both languages. Mechanic keywords stay in English inside the pt texts
 (Threads, Shrine, Strongbox, Breach...; atlas-build.mts KEEP table, owner 2026-11-12): add new ones there.
+Bump the "?v=" of atlas.js (index.html) and of the json fetch (atlas.js) on every atlas change: Pages caches 10 min and
+a new page with a cached old script showed an empty saved-builds list.
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
