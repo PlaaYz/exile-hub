@@ -29,8 +29,6 @@ button:hover { border-color: var(--accent); }
 button.on { border-color: var(--accent); color: var(--accent2); }
 input[type=search] { padding: 4px 8px; width: 220px; }
 #hits, #pct { color: var(--muted); font-size: 12px; min-width: 40px; }
-#points { font-weight: 600; }
-#points.full { color: var(--red); }
 canvas#map { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; touch-action: none; cursor: grab; display: block; background: #0a0b14; }
 canvas#map.drag { cursor: grabbing; }
 canvas#map.over { cursor: pointer; }
@@ -105,7 +103,6 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
     <button id="fit" title="Mostrar a árvore inteira (0)">Ajustar</button>
   </div>
   <div class="group">
-    <span id="points"></span>
     <button id="lang">PT</button>
     <button id="bg" title="Mostrar ou esconder a imagem de fundo">Fundo</button>
     <button id="panelBtn" class="on">Painel</button>
@@ -127,6 +124,6 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
 <div id="tip"></div>
 <footer>Dados e imagens oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>
 <!-- bump ?v= on every change: GitHub Pages lets browsers keep old copies for 10 min, and a new page with an old script breaks -->
-<script src="atlas.js?v=5"></script>
+<script src="atlas.js?v=6"></script>
 </body>
 </html>
