@@ -130,8 +130,8 @@ export function MapsPanelBody({ maps }: { maps: MapStats }) {
               {maps.mechanics.map((m) => (
                 <tr key={m.name}>
                   <td>{m.name}</td>
-                  <td className="num-cell">{m.maps} {tr("mapas", "maps")}</td>
-                  <td className="num-cell muted">{Math.round(m.share * 100)}% {tr("dos mapas", "of maps")}</td>
+                  <td className="num-cell">{m.maps} {m.maps === 1 ? tr("mapa", "map") : tr("mapas", "maps")}</td>
+                  <td className="num-cell muted">{m.share > 0 && m.share < 0.005 ? "<1" : Math.round(m.share * 100)}% {tr("dos mapas", "of maps")}</td>
                 </tr>
               ))}
             </tbody>

@@ -26,12 +26,13 @@ const kMaxTradeCards = 6;
 const kTradeCardMs = 15 * 60 * 1000;
 import { ChallengeService } from "./challengeService";
 import { ConfigStore } from "./config";
-import { kIssuesUrl, kPobFetchTimeoutMs, kProgressSaveMs } from "./constants";
+import { kIssuesUrl, kPobFetchTimeoutMs, kProgressSaveMs, kSessionSummaryPopup } from "./constants";
 
 /** Session earnings: farm prices are refreshed this often, and retried at most this often. */
 const kFarmPricesMaxAgeMs = 3600 * 1000;
 const kFarmPricesRetryMs = 60 * 1000;
 import { Diagnostics } from "./diagnostics";
+import { GearService } from "./gearService";
 import { LogService } from "./logService";
 import type { Platform } from "./platform";
 import { PriceService } from "./priceService";
@@ -46,6 +47,7 @@ export class Hub {
   private build: PobBuild | null = null;
   /** what the build wears, for "compare with my item" */
   private equipped: EquippedItem[] = [];
+  private gear!: GearService;
   private buildInfo: AppState["buildInfo"] = null;
   /** from "[WINDOW] Gained/Lost focus" in Client.txt; unknown at start = treat as focused */
   private gameFocused = true;
@@ -123,11 +125,19 @@ export class Hub {
           this.diag.add("clipboard", r.ok ? "build importado do clipboard" : `não era um build válido (${r.error})`),
         );
       },
-      equipped: () => this.equipped,
+      equipped: () => this.gear.merged(this.equipped),
+      gearItem: (text) => {
+        if (!this.gear.register) return false;
+        const slot = this.gear.add(text);
+        this.diag.add("clipboard", slot ? `equipamento registrado: ${slot}` : "item copiado no registro de equipamento, mas não é um item que se equipa");
+        return true;
+      },
     });
     this.tree = new TreeService(p, broadcast);
     this.challenges = new ChallengeService(p);
     p.diag = addDiag;
+    this.gear = new GearService(p, () => this.broadcast());
+    await this.gear.load();
     await this.loadProgress();
     await this.loadBuild();
     this.startWithWindowsCache = await p.shell.startWithWindows().catch(() => false);
@@ -359,6 +369,7 @@ export class Hub {
     if (ev.focused && !this.gameRunning) {
       this.gameRunning = true;
       this.p.shell.gameRunningChanged?.(true);
+      this.p.shell.hideSessionSummary?.(); // a new game session: last one's summary is old news
       if (this.config.showDashboardOnGameStart) this.p.shell.showDashboard(false);
     }
   }
@@ -380,7 +391,7 @@ export class Hub {
       const value = cpd && Math.abs(v.earnings.chaos) >= cpd ? `${(v.earnings.chaos / cpd).toFixed(1)} div` : `${Math.round(v.earnings.chaos)}c`;
       parts.push(`${tr("rendimento esperado (bosses/T17)", "expected earnings (bosses/T17)")}: ${v.earnings.chaos >= 0 ? "+" : ""}${value}`);
     }
-    this.p.shell.notify(tr("Sessão encerrada", "Session ended"), parts.join(" · "));
+    if (kSessionSummaryPopup) this.p.shell.showSessionSummary?.();
     this.diag.add("jogo", `sessão encerrada: ${parts.join(" · ")}`);
   }
 
@@ -482,6 +493,10 @@ export class Hub {
       this.p.shell.setTradeCards?.(this.trades.length);
     }
     this.broadcast();
+  }
+
+  closeSessionSummary(): void {
+    this.p.shell.hideSessionSummary?.();
   }
 
   closePricePopup(): void {
@@ -628,6 +643,14 @@ export class Hub {
    * "Reportar problema": copies the diagnostic report and opens a new GitHub issue, where the player
    * pastes it (nothing is sent by the app itself).
    */
+  setGearRegister(on: boolean): void {
+    this.gear.setRegister(on);
+  }
+
+  removeGear(slot: string): void {
+    this.gear.remove(slot);
+  }
+
   /** The donation page, a fixed link of the project (nothing from the renderer reaches the URL). */
   async openDonate(): Promise<void> {
     if (DONATE_URL.startsWith("https://")) this.p.openExternal(DONATE_URL);
@@ -731,6 +754,7 @@ export class Hub {
       knownCharacters: [...this.log.characters]
         .sort((a, b) => (b[1].ts ?? 0) - (a[1].ts ?? 0))
         .map(([name, c]) => ({ name, className: c.className, level: c.level })),
+      gear: this.gear.view(),
       chat: {
         supported: !!this.p.setCommandKeys && !!this.p.sendChat,
         active: this.commandKeys !== "",

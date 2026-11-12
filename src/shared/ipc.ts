@@ -49,6 +49,11 @@ export interface HubApi {
   reportProblem(): Promise<void>;
   /** Opens the donation page (only when the app has one; voluntary, unlocks nothing). */
   openDonate(): Promise<void>;
+  /** "register my equipment" on/off: while on, items copied in game are kept as what you wear */
+  setGearRegister(on: boolean): Promise<void>;
+  /** closes the session summary window */
+  closeSessionSummary(): Promise<void>;
+  removeGear(slot: string): Promise<void>;
   farmPrices(): Promise<FarmPricesResult>;
   setStartWithWindows(on: boolean): Promise<void>;
   copyDiagReport(): Promise<void>;

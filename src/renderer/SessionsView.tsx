@@ -1,4 +1,6 @@
 import { locale, tr } from "../shared/i18n";
+import { DONATE_URL } from "../shared/links";
+import { useHubState } from "./hooks";
 import type { AppState, SessionView } from "../shared/types";
 import { fmtChaos } from "./PriceView";
 
@@ -75,6 +77,66 @@ function EarningsText({ e, cpd }: { e: Earnings; cpd: number | null }) {
   );
 }
 
+/** The small window that opens when the game closes: the session that just ended. */
+export function SessionSummaryApp() {
+  const state = useHubState();
+  if (!state) return null;
+  const s = state.sessions.recent[0];
+  const cpd = state.sessions.chaosPerDivine ?? state.price?.chaosPerDivine ?? null;
+  const close = () => void window.hub.closeSessionSummary();
+  return (
+    <div className="summary">
+      <div className="summary-bar" data-tauri-drag-region>
+        <b data-tauri-drag-region>{tr("Sessão encerrada", "Session ended")}</b>
+        <button className="small" title={tr("Fechar", "Close")} onClick={close}>
+          ✕
+        </button>
+      </div>
+      {s ? (
+        <div className="summary-body">
+          <div className="big">{dur(s.durationMs)}</div>
+          <div className="muted small">{when(s.start)}</div>
+          <div className="session-stats">
+            <span>
+              <b>{s.maps}</b> {tr("mapas", "maps")}
+            </span>
+            <span>
+              <b>{s.bossRuns}</b> bosses
+            </span>
+            <span className={s.deaths ? "warn-text" : ""}>
+              <b>{s.deaths}</b> {tr("mortes", "deaths")}
+            </span>
+            <span>
+              <b>{s.zones}</b> {tr("zonas", "zones")}
+            </span>
+            <span>
+              <b>{s.priceChecks}</b> {tr("itens precificados", "items priced")}
+            </span>
+          </div>
+          {s.characters.some((c) => c.to > c.from) && <div className="small">{chars(s)}</div>}
+          {s.bestPrice && (
+            <div className="small">
+              {tr("Item mais valioso que você copiou:", "Most valuable item you copied:")} <b>{s.bestPrice.name}</b> ({fmtChaos(s.bestPrice.chaos, cpd)})
+            </div>
+          )}
+          {s.earnings && (
+            <div className="small">
+              {tr("Rendimento esperado (bosses e T17):", "Expected earnings (bosses and T17):")} <b><EarningsText e={s.earnings} cpd={cpd} /></b>
+            </div>
+          )}
+          {DONATE_URL && (
+            <button className="link small summary-support" onClick={() => void window.hub.openDonate()}>
+              {tr("Gostou do Exile Hub? Apoie o projeto", "Enjoying Exile Hub? Support the project")}
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="muted small">{tr("Nenhuma sessão ainda.", "No session yet.")}</p>
+      )}
+    </div>
+  );
+}
+
 export function SessionsPanelBody({ state }: { state: AppState }) {
   const cur = state.sessions.current;
   const cpd = state.sessions.chaosPerDivine ?? state.price?.chaosPerDivine ?? null;
@@ -124,8 +186,8 @@ export function SessionsPanelBody({ state }: { state: AppState }) {
       )}
       <p className="muted small">
         {tr(
-          'Uma sessão vai de abrir o jogo até fechá-lo, tudo lido do Client.txt (por isso as antigas também aparecem). Ao fechar o jogo, o resumo aparece numa notificação do Windows. "Sem fechamento" = o jogo travou ou foi encerrado à força. Itens precificados só contam enquanto o Exile Hub estava aberto. Rendimento = valor esperado (média da aba Farm, com preços de agora) dos bosses e mapas T17 que você fez; os outros mapas não entram, porque o log não mostra os drops.',
-          'A session runs from starting the game to closing it, all read from Client.txt (so old ones show up too). When the game closes, a Windows notification shows the summary. "No clean exit" = the game crashed or was killed. Priced items only count while Exile Hub was running. Earnings = expected value (Farm tab average, at current prices) of the bosses and T17 maps you ran; other maps are left out because the log does not show drops.',
+          'Uma sessão vai de abrir o jogo até fechá-lo, tudo lido do Client.txt (por isso as antigas também aparecem). "Sem fechamento" = o jogo travou ou foi encerrado à força. Itens precificados só contam enquanto o Exile Hub estava aberto. Rendimento = valor esperado (média da aba Farm, com preços de agora) dos bosses e mapas T17 que você fez; os outros mapas não entram, porque o log não mostra os drops.',
+          'A session runs from starting the game to closing it, all read from Client.txt (so old ones show up too). "No clean exit" = the game crashed or was killed. Priced items only count while Exile Hub was running. Earnings = expected value (Farm tab average, at current prices) of the bosses and T17 maps you ran; other maps are left out because the log does not show drops.',
         )}
       </p>
     </>

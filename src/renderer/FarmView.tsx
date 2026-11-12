@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { farmEv, profitChance, riskOf, type FarmLine, type FarmOverrides, type FarmPrice, type FarmRisk } from "../core/farm";
 import { FARM_BOSSES, FARM_POOLS, type FarmBoss } from "../shared/farmData";
-import { tr } from "../shared/i18n";
+import { locale, tr } from "../shared/i18n";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { fmtChaos } from "./PriceView";
@@ -127,7 +127,7 @@ function ItemRow({
       <td>
         <NumInput
           value={l.priceManual ? (l.price ?? undefined) : undefined}
-          placeholder={livePrice ? String(Math.round(livePrice.chaos * 10) / 10) : "?"}
+          placeholder={livePrice ? String(Math.round(livePrice.chaos * 10) / 10) : l.price !== null && !l.priceManual ? String(l.price) : "?"}
           onChange={onPrice}
           edited={l.priceManual}
         />
@@ -359,7 +359,7 @@ export function FarmPanelBody({
         />
         <span className="muted small">
           {runs[cur.boss.id]
-            ? `${tr("medido no seu Client.txt", "measured in your Client.txt")}: ${runs[cur.boss.id].runs} ${cur.boss.mapName ? tr("mapa(s)", "map(s)") : "run(s)"}, ${runs[cur.boss.id].minutes} min/run${runs[cur.boss.id].deaths !== null ? `, ${runs[cur.boss.id].deaths} ${tr("morte(s)", "death(s)")}` : ""}${runs[cur.boss.id].lastRunAt ? `, ${tr("última", "last")} ${fmtAgo(runs[cur.boss.id].lastRunAt)}` : ""}`
+            ? `${tr("medido no seu Client.txt", "measured in your Client.txt")}: ${runs[cur.boss.id].runs} ${cur.boss.mapName ? tr("mapa(s)", "map(s)") : "run(s)"}, ${runs[cur.boss.id].minutes?.toLocaleString(locale())} min/run${runs[cur.boss.id].deaths !== null ? `, ${runs[cur.boss.id].deaths} ${tr("morte(s)", "death(s)")}` : ""}${runs[cur.boss.id].lastRunAt ? `, ${tr("última", "last")} ${fmtAgo(runs[cur.boss.id].lastRunAt)}` : ""}`
             : tr("nenhuma run deste boss no seu Client.txt ainda: sem lucro/hora até a primeira (ou digite um tempo)", "no run of this boss in your Client.txt yet: no profit/hour until the first one (or type a time)")}
         </span>
       </div>

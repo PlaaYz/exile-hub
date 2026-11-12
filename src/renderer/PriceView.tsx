@@ -9,8 +9,12 @@ export function fmtChaos(chaos: number, chaosPerDivine: number | null): string {
     const d = chaos / chaosPerDivine;
     return `${d >= 10 ? Math.round(d) : d.toFixed(1)} div`;
   }
+  if (chaos > 0 && chaos < 0.1) return "<0.1 c";
   return `${chaos >= 10 ? Math.round(chaos) : chaos.toFixed(1)} c`;
 }
+
+/** "~3 c", but "<0.1 c" already says it is approximate. */
+const approx = (text: string, sign: string) => (text.startsWith("<") ? text : sign + text);
 
 function fmtAmount(amount: number, currency: string): string {
   return `${amount} ${CURRENCY_SHORT[currency] ?? currency}`;
@@ -89,7 +93,7 @@ export function PriceSummary({ p }: { p: PriceView }) {
               <span className="muted">{tr("nenhum anúncio parecido", "no similar listings")}</span>
             ) : (
               <span>
-                {p.trade.medianChaos !== null ? <b>~{fmtChaos(p.trade.medianChaos, cpd)}</b> : null}
+                {p.trade.medianChaos !== null ? <b>{approx(fmtChaos(p.trade.medianChaos, cpd), "~")}</b> : null}
                 <span className="muted">
                   {" "}
                   · {tr("mais barato", "cheapest")} {fmtAmount(p.trade.listings[0].amount, p.trade.listings[0].currency)} · {p.trade.total}{" "}
@@ -403,6 +407,24 @@ function ModTiers({ p }: { p: PriceView }) {
   );
 }
 
+/** The comparison's totals in Portuguese (the mod lines themselves stay as the game writes them). */
+const TOTAL_PT: [RegExp, string][] = [
+  [/total Elemental Resistance/, "resistência elemental total"],
+  [/Chaos Resistance/, "resistência a caos"],
+  [/to all Attributes/, "todos os atributos"],
+  [/total maximum Life/, "vida máxima total"],
+  [/total maximum Energy Shield/, "energy shield máximo total"],
+  [/total maximum Mana/, "mana máxima total"],
+  [/total to Strength/, "força total"],
+  [/total to Dexterity/, "destreza total"],
+  [/total to Intelligence/, "inteligência total"],
+  [/increased Movement Speed/, "velocidade de movimento"],
+];
+const totalLabel = (label: string) => {
+  const hit = TOTAL_PT.find(([re]) => re.test(label));
+  return hit ? tr(hit[1].charAt(0).toUpperCase() + hit[1].slice(1), label) : label;
+};
+
 const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}`;
 
 /** The checked item against what the imported PoB build wears in the same slot. */
@@ -419,7 +441,8 @@ function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
       {p.compare.map((c) => (
         <div key={c.slot} className="compare">
           <div className="small">
-            <b>{c.slot}</b> <span className="muted">· {c.name}</span>
+            <b>{slotLabel(c.slot)}</b> <span className="muted">· {c.name}</span>{" "}
+            <span className={`time-src${c.fromGame ? " log" : ""}`}>{c.fromGame ? tr("registrado no jogo", "registered in game") : tr("do build do PoB", "from the PoB build")}</span>
           </div>
           {c.rows.length > 0 && (
             <table className="farm-items compare-rows">
@@ -428,7 +451,7 @@ function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
                   const d = r.candidate - r.equipped;
                   return (
                     <tr key={r.label}>
-                      <td>{r.label}</td>
+                      <td>{totalLabel(r.label)}</td>
                       <td className="muted">{Math.round(r.equipped * 10) / 10}</td>
                       <td>→ {Math.round(r.candidate * 10) / 10}</td>
                       <td className={d > 0 ? "good-text" : d < 0 ? "warn-text" : "muted"}>{d === 0 ? "=" : signed(d)}</td>
@@ -438,19 +461,93 @@ function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
               </tbody>
             </table>
           )}
-          {c.onlyCandidate.length > 0 && (
-            <div className="small">
-              <span className="good-text">{tr("só neste:", "only on this one:")}</span> {c.onlyCandidate.join(" · ")}
-            </div>
-          )}
-          {c.onlyEquipped.length > 0 && (
-            <div className="small">
-              <span className="warn-text">{tr("você perde:", "you lose:")}</span> {c.onlyEquipped.join(" · ")}
-            </div>
+          {c.onlyCandidate.length + c.onlyEquipped.length > 0 && (
+            <details className="compare-mods small">
+              <summary className="muted">
+                {tr("Outros mods", "Other mods")}:{" "}
+                {c.onlyCandidate.length > 0 && <span className="good-text">{c.onlyCandidate.length} {tr("só neste", "only on this one")}</span>}
+                {c.onlyCandidate.length > 0 && c.onlyEquipped.length > 0 && " · "}
+                {c.onlyEquipped.length > 0 && <span className="warn-text">{c.onlyEquipped.length} {tr("que você perde", "you lose")}</span>}
+              </summary>
+              {c.onlyCandidate.length > 0 && (
+                <ul>
+                  {c.onlyCandidate.map((l) => (
+                    <li key={l} className="good-text">+ {l}</li>
+                  ))}
+                </ul>
+              )}
+              {c.onlyEquipped.length > 0 && (
+                <ul>
+                  {c.onlyEquipped.map((l) => (
+                    <li key={l} className="warn-text">− {l}</li>
+                  ))}
+                </ul>
+              )}
+            </details>
           )}
         </div>
       ))}
     </>
+  );
+}
+
+const slotLabel = (s: string) =>
+  ({
+    "Weapon 1": tr("Arma", "Weapon"),
+    "Weapon 2": tr("Segunda mão", "Off hand"),
+    Helmet: tr("Elmo", "Helmet"),
+    "Body Armour": tr("Armadura", "Body armour"),
+    Gloves: tr("Luvas", "Gloves"),
+    Boots: tr("Botas", "Boots"),
+    Belt: tr("Cinto", "Belt"),
+    Amulet: tr("Amuleto", "Amulet"),
+    "Ring 1": tr("Anel 1", "Ring 1"),
+    "Ring 2": tr("Anel 2", "Ring 2"),
+  })[s] ?? s;
+
+/** "Register my equipment": what is registered, and the switch that makes Ctrl+C register instead of price check. */
+export function GearBlock({ gear }: { gear: { register: boolean; items: { slot: string; name: string; rarity: string }[] } }) {
+  const on = gear.register;
+  return (
+    <div className={`gear${on ? " on" : ""}`}>
+      <div className="row" style={{ margin: 0 }}>
+        <b style={{ flex: 1 }}>
+          {tr("Seu equipamento", "Your equipment")} <span className="muted small">({gear.items.length}/10)</span>
+        </b>
+        <button className={on ? "primary" : ""} onClick={() => void window.hub.setGearRegister(!on)}>
+          {on ? tr("Terminar registro", "Finish registering") : gear.items.length ? tr("Registrar de novo", "Register again") : tr("Registrar meu equipamento", "Register my equipment")}
+        </button>
+      </div>
+      {on ? (
+        <p className="small" style={{ margin: "6px 0" }}>
+          {tr(
+            "No jogo: abra a tela do personagem (I) e dê Ctrl+C em cada item equipado. Enquanto isso o price check fica pausado. O primeiro anel vira Anel 1 e o segundo Anel 2; a segunda arma de uma mão vira a segunda mão.",
+            "In game: open the character screen (I) and press Ctrl+C on each equipped item. Price checks pause meanwhile. The first ring is Ring 1 and the second Ring 2; a second one-handed weapon goes to the off hand.",
+          )}
+        </p>
+      ) : (
+        !gear.items.length && (
+          <p className="muted small" style={{ margin: "6px 0" }}>
+            {tr(
+              "Registre o que você está usando para o price check comparar com os seus itens de verdade, inclusive DPS e defesas.",
+              "Register what you wear so price checks compare with your real items, DPS and defences included.",
+            )}
+          </p>
+        )
+      )}
+      {gear.items.length > 0 && (
+        <div className="gear-items">
+          {gear.items.map((g) => (
+            <span key={g.slot} className="gear-item" title={`${g.name} (${g.rarity})`}>
+              <span className="muted">{slotLabel(g.slot)}:</span> {g.name}
+              <button className="link small" title={tr("Remover", "Remove")} onClick={() => void window.hub.removeGear(g.slot)}>
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -529,7 +626,7 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
             {p.trade.listings.map((l, i) => (
               <tr key={i}>
                 <td>{fmtAmount(l.amount, l.currency)}</td>
-                <td className="muted">{l.chaos !== null && l.currency !== "chaos" ? `≈ ${fmtChaos(l.chaos, null)}` : ""}</td>
+                <td className="muted">{l.chaos !== null && l.currency !== "chaos" ? approx(fmtChaos(l.chaos, null), "≈ ") : ""}</td>
                 <td>
                   <span className={`seller ${l.status}`} title={`${l.seller} · ${statusLabel(l.status)}`}>
                     {l.character ?? l.seller}

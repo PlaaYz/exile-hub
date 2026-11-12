@@ -33,6 +33,11 @@ export function OverlayApp() {
           <TierSummary p={price} />
         </div>
       )}
+      {state.gear.register && (
+        <div className="ov-warn">
+          {tr("Registrando equipamento: Ctrl+C em cada item equipado", "Registering equipment: Ctrl+C on each equipped item")} ({state.gear.items.length}/10)
+        </div>
+      )}
       <MapHint maps={state.maps} />
       {state.endgame ? endgameView() : campaignView()}
 

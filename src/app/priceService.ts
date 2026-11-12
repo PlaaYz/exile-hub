@@ -12,6 +12,7 @@ import { StatIndex, type TradeStatsData } from "../core/stats";
 import {
   TradeClient,
   defaultLeague,
+  isChallengeLeague,
   fetchItemsData,
   fetchLeagues,
   fetchStatic,
@@ -24,7 +25,7 @@ import {
 import { FARM_BOSSES } from "../shared/farmData";
 import type { FarmPricesResult } from "../shared/ipc";
 import type { AppConfig, PriceRecent, PriceSearchPatch, PriceView } from "../shared/types";
-import { kClipboardPollMs, kLeagueRefreshMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
+import { kClipboardPollMs, kLeagueRefreshMs, kLeagueWaitMs, kStatsMaxAgeMs, kTradeSite } from "./constants";
 import type { Platform } from "./platform";
 import { tr } from "../shared/i18n";
 
@@ -36,6 +37,8 @@ export interface PriceContext {
   onPobText(text: string): void;
   /** what the imported PoB build wears (compare with my item) */
   equipped(): readonly EquippedItem[];
+  /** item text copied while "register my equipment" is on: true = it was taken (no price check) */
+  gearItem(text: string): boolean;
 }
 
 /** Items kept in the "recent checks" list. */
@@ -199,9 +202,21 @@ export class PriceService {
         void this.farmPrices().then(() => this.ctx.broadcast());
       }
       this.ctx.broadcast();
+      if (!this.leagues.some(isChallengeLeague)) this.retryLeagues();
     } catch (e) {
       console.error("could not load leagues", e);
+      this.retryLeagues();
     }
+  }
+
+  private leagueRetry: ReturnType<typeof setTimeout> | null = null;
+
+  private retryLeagues(): void {
+    if (this.leagueRetry) return;
+    this.leagueRetry = setTimeout(() => {
+      this.leagueRetry = null;
+      void this.loadLeagues();
+    }, kLeagueWaitMs);
   }
 
   /** Trade stat list (~2 MB): cached in the user folder, refreshed daily. */
@@ -292,6 +307,14 @@ export class PriceService {
     if (text === this.lastClipboard && !this.hotkey) return;
     this.lastClipboard = text;
     // only item text copied from the game and Path of Building codes/links are looked at
+    if (/^Item Class: /.test(text) && this.ctx.gearItem(text)) {
+      const hk = this.hotkey;
+      if (hk) {
+        this.cancelHotkey();
+        if (hk.before && hk.before !== text) void this.writeClipboard(hk.before).catch(() => {});
+      }
+      return;
+    }
     const league = this.league();
     if (league && this.checker.check(text, league)) {
       this.lastUserTradeAt = Date.now();

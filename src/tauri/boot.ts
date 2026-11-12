@@ -1,6 +1,7 @@
 // Starts Exile Hub inside Tauri. The dashboard webview runs the app (src/app on TauriPlatform) and
 // exposes window.hub to its own React UI; the overlay webview gets a window.hub that forwards a few
 // calls to the dashboard through events and receives the state the same way.
+import { GEAR_SLOTS } from "../core/itemCompare";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { register } from "@tauri-apps/plugin-global-shortcut";
@@ -27,6 +28,8 @@ const OVERLAY_CALLS = new Set<keyof HubApi>([
   "priceRecheck",
   "closePricePopup",
   "tradeAction",
+  "closeSessionSummary",
+  "openDonate",
 ]);
 
 interface CallMsg {
@@ -74,6 +77,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     copyDiagReport: () => hub.copyDiagReport(),
     getTreeLayout: () => hub.getTreeLayout(),
     closePricePopup: async () => hub.closePricePopup(),
+    closeSessionSummary: async () => hub.closeSessionSummary(),
     tradeAction: async (id, action) => {
       const ok = ["invite", "trade", "thanks", "sold", "kick", "dismiss"];
       if (typeof id === "string" && id.length < 20 && ok.includes(action)) await hub.tradeAction(id, action);
@@ -84,6 +88,10 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     },
     reportProblem: () => hub.reportProblem(),
     openDonate: () => hub.openDonate(),
+    setGearRegister: async (on) => hub.setGearRegister(on === true),
+    removeGear: async (slot) => {
+      if (typeof slot === "string" && GEAR_SLOTS.includes(slot)) hub.removeGear(slot);
+    },
     setCharacter: async (name) => {
       if (typeof name === "string" && name.length <= 40) hub.setCharacter(name);
     },
@@ -131,7 +139,7 @@ async function overlayApi(): Promise<HubApi> {
 }
 
 export async function installTauriHub(mode: string | null): Promise<void> {
-  if (mode === "overlay" || mode === "price" || mode === "trades") {
+  if (mode === "overlay" || mode === "price" || mode === "trades" || mode === "summary") {
     window.hub = await overlayApi();
     return;
   }

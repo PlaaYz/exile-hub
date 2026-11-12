@@ -3,7 +3,7 @@ import { parseItem } from "../src/core/item";
 import { NinjaClient, pickGem, pickUnique, type FetchFn, type StashLine } from "../src/core/ninja";
 import { PriceChecker, median } from "../src/core/pricecheck";
 import { StatIndex, template } from "../src/core/stats";
-import { TradeClient, buildQuery, defaultFilters, defaultLeague, defaultMin, type TradeFetch } from "../src/core/trade";
+import { TradeClient, buildQuery, defaultFilters, defaultLeague, defaultMin, isChallengeLeague, type TradeFetch } from "../src/core/trade";
 import type { PriceView } from "../src/shared/types";
 
 const sep = "--------";
@@ -125,6 +125,10 @@ describe("trade query", () => {
   it("picks the challenge league", () => {
     expect(defaultLeague(["Allflame", "Hardcore Allflame", "Standard", "Hardcore"])).toBe("Allflame");
     expect(defaultLeague(["Standard", "Hardcore"])).toBe("Standard");
+    // between leagues (2026-11-11: only the permanent ones listed) there is no challenge league yet
+    expect(["Standard", "Hardcore", "Ruthless", "Hardcore Ruthless"].some(isChallengeLeague)).toBe(false);
+    expect(isChallengeLeague("Allflame")).toBe(true);
+    expect(isChallengeLeague("HC Ruthless Allflame")).toBe(false);
   });
 
   it("median", () => {

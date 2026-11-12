@@ -11,7 +11,7 @@ import { SessionsPanelBody } from "./SessionsView";
 import { FarmPanelBody } from "./FarmView";
 import { MapsPanelBody } from "./MapsView";
 import { TreePanel } from "./TreeView";
-import { PricePanelBody } from "./PriceView";
+import { GearBlock, PricePanelBody } from "./PriceView";
 import { Frags, StepView } from "./StepView";
 
 const ALL_PANELS: { id: Panel; label: () => string }[] = [
@@ -99,6 +99,20 @@ function CampaignPanel({ state }: { state: AppState }) {
       </PanelBox>
     );
   }
+  // after a restart the log may not say who is playing: an endgame player in their hideout would
+  // otherwise see "Act 1, find and kill Hillock" (a new character still starts in act 1 zones)
+  if (!state.characterName && state.knownCharacters.length > 0 && t.cursor === 0 && state.areaId && !/^1_1_/.test(state.areaId)) {
+    return (
+      <PanelBox title={tr("Campanha", "Campaign")}>
+        <div className="muted">
+          {tr(
+            'Ainda não sei qual personagem você está jogando: o jogo só informa quando ele sobe de nível ou morre. Escolha no topo, em "quem está jogando?", para ver a rota e os tempos dele.',
+            'I do not know which character you are playing yet: the game only says when it levels up or dies. Pick it at the top, in "who is playing?", to see its route and timers.',
+          )}
+        </div>
+      </PanelBox>
+    );
+  }
   return (
     <PanelBox title={`${tr("Campanha — Ato", "Campaign — Act")} ${t.act || "–"}`}>
       <div className="row">
@@ -148,6 +162,7 @@ function PricePanel({ state }: { state: AppState }) {
         <div className="warn">{tr("Price check desligado nas configurações.", "Price check is off in the settings.")}</div>
       )}
       {state.config.priceCheckEnabled && !state.league && <div className="warn">{tr("Carregando ligas…", "Loading leagues…")}</div>}
+      <GearBlock gear={state.gear} />
       <PricePanelBody p={state.price} recent={state.priceRecent} hasBuild={!!state.build} />
     </PanelBox>
   );

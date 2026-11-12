@@ -379,6 +379,8 @@ export interface AppState {
   trades: TradeCard[];
   /** the account's characters seen leveling up in the log, most recent first (to pick who is playing) */
   knownCharacters: { name: string; className: string; level: number }[];
+  /** equipment registered from the game (Ctrl+C on each item) for "compare with my item" */
+  gear: { register: boolean; items: { slot: string; name: string; rarity: string }[] };
   /** chat commands on keys: supported by this build, keys registered now, last whisperer */
   chat: { supported: boolean; active: boolean; lastWhisper: string | null };
   /** what the app understood recently (Diagnóstico tab) */

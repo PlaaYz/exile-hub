@@ -47,7 +47,9 @@ entrada sintética são atalhos que você mesmo aperta: uma tecla equivale a uma
   calcula DPS de armas e defesas em qualidade 20 e mostra o tier de cada mod.
 - Você escolhe o tipo de venda (compra instantânea, online etc.). A busca começa sempre em compra
   instantânea.
-- Compara o item com o que você usa no mesmo slot na build importada.
+- Compara o item com o que você está usando. Registre seu equipamento uma vez (botão "Registrar meu
+  equipamento" e Ctrl+C em cada item na tela do personagem) e veja o que ganha e perde, inclusive DPS e defesas.
+  Sem registro, compara com o build importado do PoB.
 - Com poucos resultados, o app procura itens parecidos com mínimos 20% menores.
 - Moedas em quantidade usam a troca em massa do trade e marcam como "suspeito" as ofertas muito
   abaixo do poe.ninja.
@@ -82,7 +84,7 @@ entrada sintética são atalhos que você mesmo aperta: uma tecla equivale a uma
 - Uma sessão vai de quando o jogo abre até quando ele fecha.
 - Cada sessão mostra tempo, mapas, bosses e o **rendimento esperado** dos bosses e mapas T17 que
   você fez. Mapas comuns não entram, porque o log não mostra drops.
-- Ao fechar o jogo, uma notificação traz o resumo da sessão.
+- O resumo de cada sessão fica guardado na aba Sessões.
 
 ### Buscas
 - Gera textos de busca para usar dentro do jogo (até 50 caracteres): exclusão de mods de mapa e
@@ -157,7 +159,9 @@ hotkeys you press yourself, one key = one action.
 - Rares are searched on the official trade site. The app builds pseudo totals (resistances, life,
   attributes), computes weapon DPS and defences at quality 20 and shows each mod's tier.
 - You pick the sale type (instant buyout, online...). Every search starts at instant buyout.
-- It compares the item with what you wear in the same slot in the imported build.
+- It compares the item with what you wear. Register your gear once ("Register my equipment", then Ctrl+C on each
+  item on the character screen) and see what you gain and lose, DPS and defences included. Without it, it compares
+  with the imported PoB build.
 - With few results, it searches similar items with minimums 20% lower.
 - Bulk currency uses the trade bulk exchange and flags offers far below poe.ninja as suspicious.
 - The last 10 checks are kept for a one-click recheck.
@@ -188,7 +192,7 @@ hotkeys you press yourself, one key = one action.
 - A session runs from game start to game close.
 - Each session shows time, maps, bosses and the **expected earnings** of the bosses and T17 maps
   you ran. Normal maps are not valued, because the log has no drops.
-- When the game closes, a notification summarizes the session.
+- Each session's summary is kept in the Sessions tab.
 
 ### Searches
 - Builds in-game search strings (up to 50 characters): map mod exclusions and vendor socket/link

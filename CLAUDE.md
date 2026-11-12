@@ -169,6 +169,30 @@ builds the installer and uploads release/ as the artifact "exile-hub-installer".
 the key FILE's contents (set with gh secret set ... < file from Git Bash: PowerShell 5.1 piping added a UTF-8 BOM and
 the build failed "Invalid symbol 239"). First CI installer verified: signed with the app's updater key (id e22d8ef4...).
 Releases are still built on the owner's PC; next step = apply to SignPath (owner), then sign in CI.
+0.4.1 (2026-11-11): between leagues the trade API lists only Standard & co. (seen 2026-11-11, before 3.30): while no
+challenge league is listed, or after a failed read, PriceService.loadLeagues retries every 5 min (kLeagueWaitMs)
+instead of hourly, so launch-day price checks switch to the new league within minutes (core/trade isChallengeLeague).
+Register my equipment (0.4.1, owner's idea 2026-11-11): GearService (src/app/gearService.ts) + Price panel "Seu
+equipamento". While on, items copied in game ("Item Class:" text) are stored by slot in userData/gear.json instead of
+price checked (core/itemCompare gearSlotFor: 1st ring = Ring 1, 2nd = Ring 2, 2nd one-hander = Weapon 2; flasks/jewels
+ignored); turns itself off after 3 min idle; overlay shows a line meanwhile. Compare = registered items first, PoB build
+for the other slots (EquippedItem.fromGame / ItemComparison.fromGame tag), and DPS/defence rows (Q20) when both items
+have them (game text does, PoB raw items do not). core/item parseItem skips reminder text in parentheses
+(also over two lines) and a unique's flavour text (flavourSection: last plain-text section after the mods), and strips
+single-bound rolls "41(50)%". The compare block shows only the totals (labels in pt via PriceView TOTAL_PT); other mod
+differences are folded in a <details> ("Outros mods: N só neste · M que você perde"). Totals: "total resistance"
+(ele + chaos, only present with chaos res) shows as chaos resistance alone; equal str/dex/int on both sides = one "all
+attributes" row (itemCompare totalRows). Listing chaos values below 1 keep two significant digits (pricecheck withChaos). The GGG character API needs OAuth (closed); the legacy
+character-window endpoint answered 403 with a bot challenge (2026-11-11): never work around it.
+Session summary window (PARKED: constants kSessionSummaryPopup = false, nothing pops up at game close; owner 2026-11-11: no Windows toasts, "a small window like PoE Overlay"; NO ads, GGG
+forbids commercial use of their IP): "summary" window (create:false, bottom right of the primary monitor, not
+focused), shown by Hub.announceSessionEnd through Shell.showSessionSummary (notification only as fallback), hidden by
+its close button (bridge call closeSessionSummary) or when the game starts again. SessionsView SessionSummaryApp shows
+the last ended session, plus a support link only when DONATE_URL is set. Every window MUST carry the same
+additionalBrowserArgs as the others (else WebView2 fails "0x8007139F ... not in the correct state"), and boot.ts must
+list every secondary mode (else that window starts a second Hub: it failed on ACL "primary_monitor not allowed").
+Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
+names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
 Old note: pt-BR strings were written inline in the components (no i18n framework). Game names
 (zones, quests, bosses, items, gems) stay in English to match the owner's English client. Route

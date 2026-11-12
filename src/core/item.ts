@@ -180,16 +180,25 @@ export function parseItem(text: string): ParsedItem | null {
     }
   });
 
-  // Mods live in the sections after "Item Level"; anything else there (flavour text, notes) is
-  // kept too and later dropped when it does not match a known trade stat.
+  // Mods live in the sections after "Item Level". Not mods: reminder text in parentheses ("(Attributes
+  // are Strength, ...)", sometimes over two lines) and a unique's flavour text (its last section of
+  // plain text, after the mods).
   let header: ModHeader | null = null;
   let prefixes = 0;
   let suffixes = 0;
   let sawHeaders = false;
   if (ilvlSection >= 0) {
-    for (const sec of sections.slice(ilvlSection + 1)) {
+    const modSections = sections.slice(ilvlSection + 1);
+    const flavour = rarity === "Unique" ? flavourSection(modSections) : -1;
+    let reminder = false;
+    for (const [si, sec] of modSections.entries()) {
+      if (si === flavour) continue;
       header = null; // a header only covers lines of its own section
       for (let l of sec) {
+        if (reminder || /^\(/.test(l)) {
+          reminder = !l.endsWith(")");
+          continue;
+        }
         if (l.startsWith("{")) {
           header = parseModHeader(l);
           sawHeaders = true;
@@ -209,7 +218,8 @@ export function parseItem(text: string): ParsedItem | null {
         }
         // Ctrl+Alt+C adds roll ranges: "+38(30-39) to maximum Life"
         const roll = rollOf(l);
-        l = l.replace(/(\d)\((-?[\d.]+)-(-?[\d.]+)\)/g, "$1").replace(/ — Unscalable Value$/, "");
+        // ...or a single bound on uniques: "41(50)% of your Resistances"
+        l = l.replace(/(\d)\((-?[\d.]+)-(-?[\d.]+)\)/g, "$1").replace(/(\d)\((-?[\d.]+)\)/g, "$1").replace(/ — Unscalable Value$/, "");
         const mod: ItemMod = { text: l, kind };
         if (header) {
           if (header.affix) mod.affix = header.affix;
@@ -244,6 +254,22 @@ export function parseItem(text: string): ParsedItem | null {
     item.affixes = { prefix: prefixes, suffix: suffixes, maxPrefix: max, maxSuffix: max };
   }
   return item;
+}
+
+const META_LINE = /^(Corrupted|Mirrored|Unidentified|Split|Fractured Item|Synthesised Item|Searing Exarch Item|Eater of Worlds Item|Note:|Requires|Requirements:|Level:|Str:|Dex:|Int:|\{)/;
+
+/**
+ * A unique's flavour text: the last section of plain lines (no numbers, no mod header) that comes
+ * after another mod section. -1 when there is none.
+ */
+function flavourSection(sections: string[][]): number {
+  const isText = (sec: string[]) =>
+    sec.length > 0 && sec.every((l) => !/\d/.test(l) && !META_LINE.test(l) && !NON_MOD_LINES.has(l) && !/ Item$/.test(l));
+  for (let i = sections.length - 1; i > 0; i--) {
+    if (sections[i].every((l) => META_LINE.test(l) || NON_MOD_LINES.has(l) || / Item$/.test(l))) continue; // trailing meta lines
+    return isText(sections[i]) && sections.slice(0, i).some((s) => s.some((l) => !META_LINE.test(l))) ? i : -1;
+  }
+  return -1;
 }
 
 interface ModHeader {

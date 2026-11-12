@@ -54,7 +54,8 @@ textarea { resize: vertical; font-family: Consolas, monospace; font-size: 12px; 
   border-bottom: 1px solid var(--border); background: var(--panel);
 }
 .brand { font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
-.status { flex: 1; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.status { flex: 1; color: var(--muted); display: flex; align-items: center; gap: 8px; white-space: nowrap; min-width: 0; }
+.status .char-pick { max-width: 260px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; }
 .dot.watching { background: #3fb950; }
 .dot.waiting { background: #d29922; }
@@ -329,3 +330,22 @@ button.link { background: none; border: none; padding: 0; color: var(--accent); 
 .time-src { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 2px; }
 .time-src.log { color: #3fb950; border-color: #3fb950; }
 .time-src.typed { color: var(--quest); border-color: var(--quest); }
+
+/* "your equipment" (registered from the game) */
+.gear { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }
+.gear.on { border-color: var(--accent); background: rgba(200, 162, 74, 0.08); }
+.gear-items { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; margin-top: 4px; }
+.gear-item button.link { padding: 0 2px; margin-left: 2px; }
+.compare-mods { margin: 4px 0 8px; }
+.compare-mods summary { cursor: pointer; }
+.compare-mods ul { margin: 4px 0 0; padding-left: 18px; list-style: none; }
+.compare-mods li { padding: 1px 0; }
+
+/* session summary window (opens when the game closes) */
+body.mode-summary { background: var(--bg); overflow: hidden; }
+.summary { height: 100vh; display: flex; flex-direction: column; border: 1px solid var(--accent); }
+.summary-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--panel);
+  border-bottom: 1px solid var(--border); color: var(--accent); cursor: move; }
+.summary-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.summary .session-stats { margin: 4px 0; }
+.summary-support { align-self: flex-start; margin-top: 4px; }

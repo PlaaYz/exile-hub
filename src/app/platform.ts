@@ -37,6 +37,9 @@ export interface Shell {
   /** the full price check next to the item, over the game (Ctrl+D); optional */
   showPricePopup?(): Promise<void>;
   hidePricePopup?(): void;
+  /** the session summary window (game closed); optional: without it the summary is a notification */
+  showSessionSummary?(): void;
+  hideSessionSummary?(): void;
   /** the buy request cards window: shown while there are cards (`count` sizes it) */
   setTradeCards?(count: number): void;
   /** the game opened/closed (Client.txt): a shell may prepare or release the overlay window */

@@ -14,6 +14,12 @@ export const kTradeSite = "https://www.pathofexile.com/trade/";
 export function readJsonText<T>(text: string): T {
   return JSON.parse(text) as T;
 }
+// The session summary window when the game closes: parked (owner, 2026-11-11: "deixar oculto por hora",
+// to be polished later). false = nothing pops up; the summary stays in the Sessões tab.
+export const kSessionSummaryPopup = false;
 export const kLeagueRefreshMs = 3600 * 1000; // league list re-read (new league on launch day)
+// between leagues (only Standard & co. listed) or after a failed read: look again this often, so the
+// new league is used minutes after it opens, not up to an hour later
+export const kLeagueWaitMs = 5 * 60 * 1000;
 /** "Reportar problema" opens a new issue here (the player pastes the copied report). */
 export const kIssuesUrl = "https://github.com/PlaaYz/exile-hub/issues/new";

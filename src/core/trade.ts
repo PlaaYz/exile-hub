@@ -382,10 +382,14 @@ export async function fetchLeagues(fetchFn: TradeFetch, userAgent: string): Prom
   return j.result.filter((l) => !l.realm || l.realm === "pc").map((l) => l.id);
 }
 
+/** The softcore trade challenge league (not Standard & co., not HC / Ruthless / SSF variants). */
+export function isChallengeLeague(league: string): boolean {
+  return !/^(Standard|Hardcore|Ruthless|Hardcore Ruthless)$/.test(league) && !/Hardcore|Ruthless|HC|SSF/.test(league);
+}
+
 /** First pc league that is not a permanent one: the current challenge league. */
 export function defaultLeague(leagues: string[]): string | null {
-  const permanent = /^(Standard|Hardcore|Ruthless|Hardcore Ruthless)$/;
-  return leagues.find((l) => !permanent.test(l) && !/Hardcore|Ruthless|HC|SSF/.test(l)) ?? leagues[0] ?? null;
+  return leagues.find(isChallengeLeague) ?? leagues[0] ?? null;
 }
 
 export async function fetchStats(fetchFn: TradeFetch, userAgent: string): Promise<unknown> {

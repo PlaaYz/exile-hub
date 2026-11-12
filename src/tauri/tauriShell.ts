@@ -103,6 +103,7 @@ export class TauriShell implements Shell {
     if (this.overlayVisible && this.overlay) void emitTo("overlay", "state", state);
     if (this.priceVisible) void emitTo("price", "state", state);
     if (this.tradesVisible) void emitTo("trades", "state", state);
+    if (this.summaryVisible) void emitTo("summary", "state", state);
   }
 
   // ---- price popup (Ctrl+D) -------------------------------------------------------------------
@@ -184,6 +185,41 @@ export class TauriShell implements Shell {
       if (this.lastState) void emitTo("trades", "state", this.lastState);
       await invoke("window_show", { label: "trades", activate: false });
     })();
+  }
+
+  // ---- session summary (game closed) -----------------------------------------------------------
+
+  private summaryVisible = false;
+  private summaryReady: Promise<Window | null> | null = null;
+
+  /** Bottom right of the primary monitor (where the game was), like a toast but our own window. */
+  showSessionSummary(): void {
+    void (async () => {
+      this.summaryReady ??= (async () => {
+        await invoke("window_open", { label: "summary" });
+        return Window.getByLabel("summary");
+      })().catch((e: unknown) => {
+        this.summaryReady = null;
+        console.error("could not open the summary window", e);
+        return null;
+      });
+      const w = await this.summaryReady;
+      const m = await primaryMonitor();
+      if (!w || !m) return;
+      const wa = m.workArea ?? { position: m.position, size: m.size };
+      const size = await w.outerSize();
+      const gap = Math.round(24 * m.scaleFactor);
+      await w.setPosition(new PhysicalPosition(wa.position.x + wa.size.width - size.width - gap, wa.position.y + wa.size.height - size.height - gap));
+      this.summaryVisible = true;
+      if (this.lastState) void emitTo("summary", "state", this.lastState);
+      await invoke("window_show", { label: "summary", activate: false });
+    })();
+  }
+
+  hideSessionSummary(): void {
+    if (!this.summaryVisible) return;
+    this.summaryVisible = false;
+    void invoke("window_hide", { label: "summary" }).catch(() => {});
   }
 
   hidePricePopup(): void {

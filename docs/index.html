@@ -269,6 +269,16 @@ nav.top .links + .lang-toggle { margin-left: 0; }
   color: #17130a; font-size: 12px; font-weight: 700; display: grid; place-items: center; text-decoration: none; }
 .ss-mock .btns > span.hl { position: relative; }
 @media (max-width: 900px) { .smartscreen { grid-template-columns: 1fr; } }
+
+/* real screenshots */
+.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.shots figure { margin: 0; }
+.shots a { display: block; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--panel);
+  transition: border-color .15s, transform .15s; }
+.shots a:hover { border-color: var(--accent); transform: translateY(-2px); }
+.shots img { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 860; object-fit: cover; object-position: top; }
+.shots figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
+@media (max-width: 900px) { .shots { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -422,6 +432,31 @@ nav.top .links + .lang-toggle { margin-left: 0; }
   </div>
 </section>
 
+<section id="telas">
+  <div class="wrap">
+    <h2><span class="pt">O app de verdade</span><span class="en">The real app</span></h2>
+    <p class="sub pt">Prints do painel com dados reais de jogo. Clique para ver em tamanho cheio.</p>
+    <p class="sub en">Dashboard screenshots with real play data. Click to see them full size.</p>
+    <div class="shots">
+      <figure>
+        <a class="pt" href="img/farm-pt.png" target="_blank" rel="noopener"><img src="img/farm-pt.png" alt="Farm de bosses: lucro por hora com os seus tempos" loading="lazy" width="1280" height="860"></a>
+        <a class="en" href="img/farm-en.png" target="_blank" rel="noopener"><img src="img/farm-en.png" alt="Boss farming: profit per hour with your own times" loading="lazy" width="1280" height="860"></a>
+        <figcaption><span class="pt">Farm de bosses: lucro por hora com os seus tempos</span><span class="en">Boss farming: profit per hour with your own times</span></figcaption>
+      </figure>
+      <figure>
+        <a class="pt" href="img/maps-pt.png" target="_blank" rel="noopener"><img src="img/maps-pt.png" alt="Mapas: tempo, mortes e mapas por hora" loading="lazy" width="1280" height="860"></a>
+        <a class="en" href="img/maps-en.png" target="_blank" rel="noopener"><img src="img/maps-en.png" alt="Maps: time, deaths and maps per hour" loading="lazy" width="1280" height="860"></a>
+        <figcaption><span class="pt">Mapas: tempo, mortes e mapas por hora</span><span class="en">Maps: time, deaths and maps per hour</span></figcaption>
+      </figure>
+      <figure>
+        <a class="pt" href="img/sessions-pt.png" target="_blank" rel="noopener"><img src="img/sessions-pt.png" alt="Sessões: cada vez que você jogou, com o rendimento" loading="lazy" width="1280" height="860"></a>
+        <a class="en" href="img/sessions-en.png" target="_blank" rel="noopener"><img src="img/sessions-en.png" alt="Sessions: every time you played, with earnings" loading="lazy" width="1280" height="860"></a>
+        <figcaption><span class="pt">Sessões: cada vez que você jogou, com o rendimento</span><span class="en">Sessions: every time you played, with earnings</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
 <section>
   <div class="wrap">
 
@@ -476,14 +511,14 @@ nav.top .links + .lang-toggle { margin-left: 0; }
         <ul class="pt">
           <li>Moedas, cartas, únicos e gemas pelo poe.ninja, com tendência de 7 dias</li>
           <li>Raros no trade oficial: totais de resistência e vida, DPS da arma e defesas em qualidade 20</li>
-          <li>Tier de cada mod e comparação com o item que você usa no mesmo slot</li>
+          <li>Tier de cada mod e comparação com o que você está usando: registre seu equipamento com Ctrl+C e veja o que ganha e perde, inclusive DPS e defesas</li>
           <li>Tipo de venda à escolha, sempre começando em compra instantânea</li>
           <li>Itens parecidos quando há poucos resultados e as últimas 10 buscas guardadas</li>
         </ul>
         <ul class="en">
           <li>Currency, cards, uniques and gems from poe.ninja, with a 7-day trend</li>
           <li>Rares on the official trade site: resistance and life totals, weapon DPS and defences at quality 20</li>
-          <li>Each mod's tier and a comparison with the item you wear in the same slot</li>
+          <li>Each mod's tier and a comparison with what you wear: register your gear with Ctrl+C and see what you gain and lose, DPS and defences included</li>
           <li>Pick the sale type, always starting at instant buyout</li>
           <li>Similar items when results are few, and your last 10 checks kept</li>
         </ul>
@@ -494,9 +529,9 @@ nav.top .links + .lang-toggle { margin-left: 0; }
           <div style="font-weight:600;color:#e3c25b">Doom Loop</div>
           <div class="dim" style="font-size:11.5px">Amethyst Ring · <span class="pt">raro</span><span class="en">rare</span> · ilvl 84</div>
           <div style="margin:10px 0 6px" class="dim"><span class="pt">Totais</span><span class="en">Totals</span></div>
-          <div class="row"><span><span class="pt">+# de resistência elemental total</span><span class="en">+#% total elemental resistance</span></span><span>98%</span></div>
-          <div class="row"><span><span class="pt">+# de vida máxima</span><span class="en">+# to maximum life</span></span><span>71</span></div>
-          <div class="row"><span><span class="pt">Comparado ao seu Ring 1</span><span class="en">Compared with your Ring 1</span></span><span class="good"><span class="pt">+32 res · +18 vida</span><span class="en">+32 res · +18 life</span></span></div>
+          <div class="row"><span><span class="pt">Resistência elemental total</span><span class="en">Total elemental resistance</span></span><span>98%</span></div>
+          <div class="row"><span><span class="pt">Vida máxima total</span><span class="en">Total maximum life</span></span><span>71</span></div>
+          <div class="row"><span><span class="pt">Comparado ao seu Anel 1</span><span class="en">Compared with your Ring 1</span></span><span class="good"><span class="pt">+32 res · +18 vida</span><span class="en">+32 res · +18 life</span></span></div>
           <div style="margin:10px 0 6px" class="dim"><span class="pt">Venda: compra instantânea · 37 resultados</span><span class="en">Sale: instant buyout · 37 results</span></div>
           <table class="mini">
             <tr><td>4 chaos</td><td class="dim"><span class="pt">compra instantânea</span><span class="en">instant buyout</span></td></tr>
@@ -550,8 +585,8 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       <div class="text">
         <div class="tag"><span class="pt">Mapas · sessões</span><span class="en">Maps · sessions</span></div>
         <h3><span class="pt">Seu ritmo de jogo, em números</span><span class="en">Your play pace, in numbers</span></h3>
-        <p class="pt">Cada mapa e cada vez que você abre o jogo ficam registrados. No fim da sessão, uma notificação traz o resumo.</p>
-        <p class="en">Every map and every time you start the game are recorded. When the session ends, a notification sums it up.</p>
+        <p class="pt">Cada mapa e cada vez que você abre o jogo ficam registrados, com o resumo de cada sessão na aba Sessões.</p>
+        <p class="en">Every map and every time you start the game are recorded, with a summary of each session in the Sessions tab.</p>
         <ul class="pt">
           <li>Tempo por mapa, tier, mortes, mapas por hora e médias por sessão</li>
           <li>Portais e subáreas contam no mesmo mapa</li>

@@ -304,6 +304,8 @@ export class PriceChecker {
 function withChaos(listings: TradeListing[], rates: Map<string, number> | null): PriceListing[] {
   return listings.map((l) => {
     const rate = l.currency === "chaos" ? 1 : rates?.get(l.currency);
-    return { ...l, chaos: rate !== undefined ? Math.round(l.amount * rate * 10) / 10 : null };
+    // below 1 chaos keep two significant digits: 1 alch in Standard is 0.0006 c, not 0
+    const c = rate !== undefined ? l.amount * rate : null;
+    return { ...l, chaos: c === null ? null : c < 1 ? Number(c.toPrecision(2)) : Math.round(c * 10) / 10 };
   });
 }
