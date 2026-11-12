@@ -14,7 +14,10 @@
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
   color: var(--text);
+  /* native controls (dropdown lists, scrollbars, number spinners) in the app's dark palette */
+  color-scheme: dark;
 }
+option { background: var(--panel); color: var(--text); }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; height: 100%; }
 body.mode-dashboard { background: var(--bg); }

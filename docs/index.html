@@ -27,6 +27,7 @@
   --green: #7ee787;
   --purple: #b392f0;
   --radius: 12px;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -279,6 +280,14 @@ nav.top .links + .lang-toggle { margin-left: 0; }
 .shots img { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 860; object-fit: cover; object-position: top; }
 .shots figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
 @media (max-width: 900px) { .shots { grid-template-columns: 1fr; } }
+/* enlarged screenshot over the page (no navigation: the page stays where it was) */
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(5, 7, 10, .88); display: none;
+  align-items: center; justify-content: center; padding: 56px 16px 16px; cursor: zoom-out; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; border: 1px solid var(--border); cursor: default; }
+.lightbox button { position: absolute; top: 12px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-size: 20px; cursor: pointer; }
+.lightbox button:hover { border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -439,18 +448,18 @@ nav.top .links + .lang-toggle { margin-left: 0; }
     <p class="sub en">Dashboard screenshots with real play data. Click to see them full size.</p>
     <div class="shots">
       <figure>
-        <a class="pt" href="img/farm-pt.png" target="_blank" rel="noopener"><img src="img/farm-pt.png" alt="Farm de bosses: lucro por hora com os seus tempos" loading="lazy" width="1280" height="860"></a>
-        <a class="en" href="img/farm-en.png" target="_blank" rel="noopener"><img src="img/farm-en.png" alt="Boss farming: profit per hour with your own times" loading="lazy" width="1280" height="860"></a>
+        <a class="pt" href="img/farm-pt.png" data-shot><img src="img/farm-pt.png" alt="Farm de bosses: lucro por hora com os seus tempos" loading="lazy" width="1280" height="860"></a>
+        <a class="en" href="img/farm-en.png" data-shot><img src="img/farm-en.png" alt="Boss farming: profit per hour with your own times" loading="lazy" width="1280" height="860"></a>
         <figcaption><span class="pt">Farm de bosses: lucro por hora com os seus tempos</span><span class="en">Boss farming: profit per hour with your own times</span></figcaption>
       </figure>
       <figure>
-        <a class="pt" href="img/maps-pt.png" target="_blank" rel="noopener"><img src="img/maps-pt.png" alt="Mapas: tempo, mortes e mapas por hora" loading="lazy" width="1280" height="860"></a>
-        <a class="en" href="img/maps-en.png" target="_blank" rel="noopener"><img src="img/maps-en.png" alt="Maps: time, deaths and maps per hour" loading="lazy" width="1280" height="860"></a>
+        <a class="pt" href="img/maps-pt.png" data-shot><img src="img/maps-pt.png" alt="Mapas: tempo, mortes e mapas por hora" loading="lazy" width="1280" height="860"></a>
+        <a class="en" href="img/maps-en.png" data-shot><img src="img/maps-en.png" alt="Maps: time, deaths and maps per hour" loading="lazy" width="1280" height="860"></a>
         <figcaption><span class="pt">Mapas: tempo, mortes e mapas por hora</span><span class="en">Maps: time, deaths and maps per hour</span></figcaption>
       </figure>
       <figure>
-        <a class="pt" href="img/sessions-pt.png" target="_blank" rel="noopener"><img src="img/sessions-pt.png" alt="Sessões: cada vez que você jogou, com o rendimento" loading="lazy" width="1280" height="860"></a>
-        <a class="en" href="img/sessions-en.png" target="_blank" rel="noopener"><img src="img/sessions-en.png" alt="Sessions: every time you played, with earnings" loading="lazy" width="1280" height="860"></a>
+        <a class="pt" href="img/sessions-pt.png" data-shot><img src="img/sessions-pt.png" alt="Sessões: cada vez que você jogou, com o rendimento" loading="lazy" width="1280" height="860"></a>
+        <a class="en" href="img/sessions-en.png" data-shot><img src="img/sessions-en.png" alt="Sessions: every time you played, with earnings" loading="lazy" width="1280" height="860"></a>
         <figcaption><span class="pt">Sessões: cada vez que você jogou, com o rendimento</span><span class="en">Sessions: every time you played, with earnings</span></figcaption>
       </figure>
     </div>
@@ -843,6 +852,11 @@ nav.top .links + .lang-toggle { margin-left: 0; }
   </div>
 </section>
 
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada / Enlarged screenshot">
+  <button type="button" aria-label="Fechar / Close">✕</button>
+  <img alt="">
+</div>
+
 <footer>
   <div class="wrap">
     <div>Exile Hub · <a href="https://github.com/PlaaYz/exile-hub"><span class="pt">código aberto</span><span class="en">open source</span></a> · <a href="https://github.com/PlaaYz/exile-hub/blob/main/LICENSE">MIT</a></div>
@@ -885,6 +899,21 @@ function setLang(lang, remember) {
   });
 }
 document.querySelectorAll("[data-set-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.setLang, true)));
+
+// Screenshots open enlarged over the page; ✕, Esc or a click outside the picture closes it.
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = lightbox.querySelector("img");
+const closeLightbox = () => { lightbox.classList.remove("open"); lightboxImg.src = ""; };
+document.querySelectorAll("a[data-shot]").forEach((a) =>
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    lightboxImg.src = a.href;
+    lightboxImg.alt = a.querySelector("img").alt;
+    lightbox.classList.add("open");
+  }),
+);
+lightbox.addEventListener("click", (e) => { if (e.target !== lightboxImg) closeLightbox(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
 
 // Donation link: empty = the support section and its menu link stay hidden.
 const DONATE_URL = "";

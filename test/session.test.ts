@@ -148,27 +148,30 @@ describe("Session", () => {
     expect(s.tracker.cursor).toBe(cursor);
   });
 
-  it("a login (character select) forgets the character; the area it logs into can tell who it is", () => {
+  it("after a login the last character stays as a guess; the area it logs into can tell who it is", () => {
     const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
+    const mapArea = (id: string, level: number) =>
+      `2026/11/08 12:00:00 1 a [DEBUG Client 1] Generating level ${level} area "${id}" with seed 1`;
     const s = new Session(lookups, routes, true);
     s.applyLine(lvlOf("Camp", "Witch", 6, "12:00:00"));
     s.applyLine(area("1_1_town"));
-    s.applyLine(login); // switch to an endgame character
-    expect(s.characterName).toBeNull();
-    expect(s.characterLevel).toBeNull();
+    s.applyLine(login); // game restart or character select: most players keep the same character
+    expect(s).toMatchObject({ characterName: "Camp", characterLevel: 6 });
     s.applyLine(area("HideoutCourts"));
-    expect(s.characterName).toBeNull(); // nobody known was there
+    expect(s.characterName).toBe("Camp"); // a shared hideout says nothing either way
     s.applyLine(lvlOf("Mapper", "Duelist", 95));
     expect(s.characterName).toBe("Mapper");
     s.applyLine(login); // back to the campaign character, who logs in where they left
     s.applyLine(area("1_1_town"));
     expect(s).toMatchObject({ characterName: "Camp", characterLevel: 6 });
-    s.applyLine(login); // and back to the mapper, in the hideout: shared by the whole account, no guess
+    s.applyLine(login);
     s.applyLine(area("HideoutCourts"));
-    expect(s.characterName).toBeNull();
+    expect(s.characterName).toBe("Camp"); // still the guess...
+    s.applyLine(mapArea("MapWorldsStrand", 83));
+    expect(s.characterName).toBeNull(); // ...until a level 6 character cannot be where the player is
   });
 
-  it("never assumes a character in an area far above its level, nor guesses by a shared hideout", () => {
+  it("never assumes a character in an area far above its level", () => {
     const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
     const lvlArea = (id: string, level: number) =>
       `2026/11/08 12:00:00 1 a [DEBUG Client 1] Generating level ${level} area "${id}" with seed 1`;
@@ -183,11 +186,23 @@ describe("Session", () => {
     t.applyLine(lvlArea("HideoutCourts", 60));
     expect(t.characterName).toBe("Low"); // hideouts do not count
     t.applyLine(login);
-    t.applyLine(lvlArea("HideoutCourts", 60)); // the hideout is shared by every character
+    t.applyLine(lvlArea("1_5_town", 45)); // not where Low can be
     expect(t.characterName).toBeNull();
-    t.applyLine(login);
-    t.applyLine(lvlArea("1_1_town", 13)); // not where Low logged out either
-    expect(t.characterName).toBeNull();
+  });
+
+  it("a guessed character's saved progress is not overwritten by someone else's play", () => {
+    const login = "2026/11/08 12:00:00 1 a [INFO Client 1] Async connecting to sao.login.pathofexile.com:20492";
+    const s = new Session(lookups, routes, true);
+    s.applyLine(lvlOf("Main", "Witch", 8));
+    s.applyLine(area("1_1_2"));
+    const saved = s.exportProgress().characters.Main.cursor;
+    s.applyLine(login); // actually an alt logs in, in the hideout
+    s.applyLine(area("HideoutCourts"));
+    s.applyLine(area("1_1_3")); // the alt walks on: Main is only a guess, its progress stays
+    expect(s.exportProgress().characters.Main.cursor).toBe(saved);
+    s.applyLine(lvlOf("Alt", "Ranger", 9)); // the log names the alt
+    expect(s.characterName).toBe("Alt");
+    expect(s.exportProgress().characters.Main.cursor).toBe(saved);
   });
 
   it("backfill remembers the area a character logged out from", () => {
@@ -205,9 +220,9 @@ describe("Session", () => {
     s.applyLine(lvlOf("Camp", "Witch", 6));
     s.applyLine(login);
     s.applyLine(area("HideoutCourts"));
-    expect(s.characterName).toBeNull();
+    expect(s.characterName).toBe("Camp"); // the guess
     expect(s.applyLine(slain("SomeoneElse"))).toBe(false); // a party member: not one of ours
-    expect(s.characterName).toBeNull();
+    expect(s.characterName).toBe("Camp");
     expect(s.applyLine(slain("OldMapper"))).toBe(true);
     expect(s).toMatchObject({ characterName: "OldMapper", className: "Ascendant", characterLevel: 96 });
   });
@@ -222,5 +237,14 @@ describe("Session", () => {
     s.backfill([area("1_1_2")]);
     s.rebuild(false);
     expect(s.tracker.view().areaId).toBe("1_1_2");
+  });
+});
+
+describe("Session after a restart", () => {
+  it("knows it is endgame from earlier areas even when the last one is a hideout", () => {
+    const lvlArea = (id: string, level: number) => `2026/11/08 12:00:00 1 a [DEBUG Client 1] Generating level ${level} area "${id}" with seed 1`;
+    const s = new Session(lookups, routes, true);
+    s.backfill([lvlArea("MapWorldsStrand", 83), lvlArea("HideoutCourts", 60)]);
+    expect(s.endgame).toBe(true);
   });
 });

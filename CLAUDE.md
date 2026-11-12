@@ -191,6 +191,12 @@ its close button (bridge call closeSessionSummary) or when the game starts again
 the last ended session, plus a support link only when DONATE_URL is set. Every window MUST carry the same
 additionalBrowserArgs as the others (else WebView2 fails "0x8007139F ... not in the correct state"), and boot.ts must
 list every secondary mode (else that window starts a second Hub: it failed on ACL "primary_monitor not allowed").
+0.4.2 (2026-11-11): who is playing survives restarts and logins. Session.onLogin keeps the last character as a guess
+(`assumed`): undone by another character's level-up/death, the area-level check (kLevelSlack) or the logged-out-area
+match; while assumed, its saved progress is never overwritten (saveCurrent). The owner's pick in the header is saved
+as progress.json "current". backfill also updates `endgame` (updateEndgame), so a restart in the hideout still knows.
+Native controls use the dark palette (color-scheme: dark in styles.css and the site). Site screenshots open in an
+in-page lightbox (no new tab: the owner got stuck on the bare image).
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.

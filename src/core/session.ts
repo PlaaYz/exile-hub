@@ -61,6 +61,12 @@ export class Session {
   /** a login just happened: the next area tells where that character is */
   private loginPending = false;
   /**
+   * The character is a guess: the one from before a login (character select, game restart), kept
+   * until the log says otherwise (another character levels up or dies, an area too high for it).
+   * Meanwhile its saved progress is not overwritten: what happens may belong to someone else.
+   */
+  private assumed = false;
+  /**
    * The account's own characters with their last known class/level (every level-up in the whole
    * log). Set by the app once the full log is read; other players never level up in this log.
    */
@@ -102,7 +108,7 @@ export class Session {
 
   exportProgress(now: number = Date.now()): ProgressData {
     const characters = { ...this.characters };
-    if (this.characterName) characters[this.characterName] = this.snapshot(now);
+    if (this.characterName && !this.assumed) characters[this.characterName] = this.snapshot(now);
     return { version: 1, current: this.characterName, characters };
   }
 
@@ -136,15 +142,23 @@ export class Session {
    * not the one we think is playing, X is who is playing (a switch the log did not name).
    */
   private onDeath(name: string, now: number): boolean {
-    if (name === this.characterName || !this.known(name)) return false;
+    if (name === this.characterName) {
+      this.assumed = false; // our guess died: it was right
+      return false;
+    }
+    if (!this.known(name)) return false;
     this.identify(name, now);
     return true;
   }
 
   /** This known character is the one playing (its saved progress comes back). */
   identify(name: string, now: number = Date.now()): void {
-    if (name === this.characterName) return;
-    if (this.characterName) this.characters[this.characterName] = this.snapshot(now);
+    if (name === this.characterName) {
+      this.assumed = false;
+      return;
+    }
+    this.saveCurrent(now);
+    this.assumed = false;
     const saved = this.characters[name];
     if (saved) this.restore(name, saved, now);
     else {
@@ -164,15 +178,19 @@ export class Session {
 
   // ---- events -----------------------------------------------------------------
 
+  /** The current character's progress, unless it is only a guess. */
+  private saveCurrent(now: number): void {
+    if (this.characterName && !this.assumed) this.characters[this.characterName] = this.snapshot(now);
+  }
+
   /**
-   * Login server connection: game start or back to character select. Whoever logs in is unknown
-   * until a level-up names them; the first area may already tell (see onFirstAreaAfterLogin).
+   * Login server connection: game start or back to character select. The last character stays as a
+   * guess (most players keep playing the same one) until the log says otherwise; the first area may
+   * already tell (see onFirstAreaAfterLogin).
    */
   private onLogin(now: number): void {
-    if (this.characterName) this.characters[this.characterName] = this.snapshot(now);
-    this.characterName = null;
-    this.className = null;
-    this.characterLevel = null;
+    this.saveCurrent(now);
+    if (this.characterName) this.assumed = true;
     this.freshRun = false;
     this.loginPending = true;
   }
@@ -187,7 +205,10 @@ export class Session {
     const here = Object.entries(this.characters).filter(
       ([, p]) => p.lastArea === areaId && (p.level === null || areaLevel <= p.level + kLevelSlack),
     );
-    if (here.length === 1) this.restore(here[0][0], here[0][1], now);
+    if (here.length === 1) {
+      this.restore(here[0][0], here[0][1], now);
+      this.assumed = false;
+    }
   }
 
   /**
@@ -202,13 +223,14 @@ export class Session {
       this.characterName = null;
       this.className = null;
       this.characterLevel = null;
+      this.assumed = false;
     }
   }
 
   private onLevelUp(ev: { character: string; className: string; level: number }, now: number): void {
     if (ev.character !== this.characterName) {
       const prev = this.characterName;
-      if (prev) this.characters[prev] = this.snapshot(now);
+      this.saveCurrent(now);
       const saved = this.characters[ev.character];
       if (this.freshRun) {
         // the run in progress belongs to this character (a new run that just started): keep it
@@ -224,12 +246,14 @@ export class Session {
       this.characterName = ev.character;
     }
     this.freshRun = false;
+    this.assumed = false;
     this.className = ev.className;
     this.characterLevel = ev.level;
   }
 
   private onNewRun(now: number): void {
-    if (this.characterName) this.characters[this.characterName] = this.snapshot(now);
+    this.saveCurrent(now);
+    this.assumed = false;
     this.reset();
     this.characterName = null;
     this.className = null;
@@ -251,11 +275,7 @@ export class Session {
         this.checkLevelFits(ev.areaId, ev.areaLevel);
         const known = this.lookups.areas[ev.areaId];
         this.areaName = known?.name ?? ev.areaId;
-        // the zone data also has "act 11" (Karui Shores, the endgame town): only acts 1-10 are campaign
-        const info = known && known.act <= kLastCampaignAct ? known : undefined;
-        // hideouts/towns say nothing about which kind of character is playing
-        if (info) this.endgame = false;
-        else if (known || (!isHideoutOrTown(ev.areaId) && (isMapArea(ev.areaId) || ev.areaLevel >= kEndgameAreaLevel))) this.endgame = true;
+        const info = this.updateEndgame(ev.areaId, ev.areaLevel);
         if (info) {
           this.tracker.onArea(ev.areaId);
           this.timer.onArea(info.act, ts);
@@ -282,6 +302,19 @@ export class Session {
     }
   }
 
+  /**
+   * Campaign zone = not endgame; a map or a non-campaign area of level 68+ = endgame; hideouts and
+   * towns say nothing. Returns the zone's campaign info (acts 1-10; Karui Shores is "act 11" in the
+   * zone data: the endgame town).
+   */
+  private updateEndgame(areaId: string, areaLevel: number) {
+    const known = this.lookups.areas[areaId];
+    const info = known && known.act <= kLastCampaignAct ? known : undefined;
+    if (info) this.endgame = false;
+    else if (known || (!isHideoutOrTown(areaId) && (isMapArea(areaId) || areaLevel >= kEndgameAreaLevel))) this.endgame = true;
+    return info;
+  }
+
   applyLine(line: string, now: number = Date.now()): boolean {
     const ev = parseLine(line);
     return ev ? this.apply(ev, now) : false;
@@ -300,6 +333,7 @@ export class Session {
         this.areaId = ev.areaId; // snapshots taken at a later login must see where the character was
         if (this.loginPending) this.onFirstAreaAfterLogin(ev.areaId, ev.areaLevel, now);
         this.checkLevelFits(ev.areaId, ev.areaLevel);
+        this.updateEndgame(ev.areaId, ev.areaLevel); // so a restart in the hideout still knows it is endgame
       } else if (ev.type === "enter") enteredName = ev.name;
       else if (ev.type === "levelup") this.onLevelUp(ev, now);
       else if (ev.type === "login") this.onLogin(now);

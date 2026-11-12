@@ -632,7 +632,8 @@ export function DashboardApp() {
           {state.areaName ?? tr("nenhuma zona ainda", "no zone yet")}
           {" · "}
           <CharacterPicker state={state} />
-          {state.characterLevel !== null ? ` · ${tr("nível", "level")} ${state.characterLevel}` : ""}
+          {/* the picker already shows "Name (Class level)" */}
+          {state.characterLevel !== null && !state.knownCharacters.length ? ` · ${tr("nível", "level")} ${state.characterLevel}` : ""}
         </div>
         <div className="chips">
           {/* act timers only mean something in the campaign: no button for them in endgame */}
