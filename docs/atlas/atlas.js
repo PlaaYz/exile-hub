@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=8`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=9`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -99,7 +99,8 @@ const MIN_W = 500, MAX_W = 60000;
 
 function setView(v) {
   view = v;
-  $("pct").textContent = Math.round(((box().width || innerWidth) / view.w) * 1000) / 10 + "%";
+  const pct = Math.round(((box().width || innerWidth) / view.w) * 1000) / 10;
+  $("pct").textContent = Number.isFinite(pct) && pct > 0 ? pct + "%" : ""; // a page opened hidden has no size yet
   draw();
 }
 
@@ -870,9 +871,12 @@ function layout() {
   canvas.style.top = top + "px";
   canvas.style.height = innerHeight - top + "px";
   if (innerWidth > 700) $("panel").style.top = top + "px";
-  if (T) draw();
+  // a page opened in a background tab had no size when it loaded: fit it once it gets one
+  if (T && !Number.isFinite(view?.w) && box().width > 0) setView(fit());
+  else if (T) draw();
 }
 addEventListener("resize", layout);
+document.addEventListener("visibilitychange", layout);
 layout();
 
 // "#data:1,2.0,3" = tree and allocated nodes ("id.choice" for nodes with options)
