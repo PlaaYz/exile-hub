@@ -197,6 +197,11 @@ match; while assumed, its saved progress is never overwritten (saveCurrent). The
 as progress.json "current". backfill also updates `endgame` (updateEndgame), so a restart in the hideout still knows.
 Native controls use the dark palette (color-scheme: dark in styles.css and the site). Site screenshots open in an
 in-page lightbox (no new tab: the owner got stuck on the bare image).
+Verified in game by the owner (2026-11-11, 0.4.x): overlay hides on alt-tab (overlayHideUnfocused on), Ctrl+D popup
+(opens, drags, Esc, clipboard restored), F5 /hideout, equipment registration. Still untested: trade cards with a real
+whisper, autostart after a reboot, the updater on a real update. SignPath Foundation: owner applied 2026-11-11
+(answers in Claude outputs/signpath-pedido.md); when approved, sign in CI with their GitHub action, then add the Tauri
+updater .sig of the SIGNED exe. Donations: owner cannot open a PayPal (Ko-fi's default), DONATE_URL still empty.
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
