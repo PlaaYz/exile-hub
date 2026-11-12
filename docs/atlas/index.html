@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- not linked from the site yet: kept out of search engines until it is released -->
+<meta name="robots" content="noindex, nofollow">
+<title>Árvore do Atlas · Exile Hub</title>
+<meta name="description" content="Planejador da árvore do Atlas do Path of Exile em português, com os dados oficiais da GGG.">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" href="../icon.png">
+<style>
+:root {
+  --bg: #0e1116; --panel: #161b22; --panel2: #1b212a; --border: #2a313c; --text: #d8dee9; --muted: #8b95a5;
+  --accent: #c8a24a; --accent2: #e3c25b; --blue: #6cb6ff; --green: #7ee787; --red: #f0716b; --purple: #b392f0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 14px; overflow: hidden; }
+header { position: fixed; inset: 0 0 auto 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+  padding: 8px 12px; background: rgba(14,17,22,.94); border-bottom: 1px solid var(--border); }
+header a.home { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; font-weight: 700; }
+header a.home img { width: 24px; height: 24px; }
+.title { color: var(--accent2); font-weight: 600; }
+.group { display: flex; gap: 4px; align-items: center; }
+button, select, input { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; }
+button { padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.on { border-color: var(--accent); color: var(--accent2); }
+input[type=search] { padding: 4px 8px; width: 220px; }
+#hits, #pct { color: var(--muted); font-size: 12px; min-width: 40px; }
+#points { font-weight: 600; }
+#points.full { color: var(--red); }
+svg { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; touch-action: none; cursor: grab; display: block; }
+svg.drag { cursor: grabbing; }
+.e { fill: none; stroke: #3a3328; stroke-width: 14; }
+.e.on { stroke: var(--accent2); stroke-width: 22; }
+.e.soon { stroke: var(--green); stroke-width: 22; }
+.n { fill: #2c3340; stroke: #59606c; stroke-width: 8; }
+.n.k1 { fill: #3b3322; stroke: var(--accent); stroke-width: 10; }
+.n.k2 { fill: #45351c; stroke: var(--accent2); stroke-width: 14; }
+.n.k3 { fill: #1b212a; stroke: var(--accent2); stroke-width: 14; }
+.n.k4 { fill: #2b2140; stroke: var(--purple); stroke-width: 10; }
+.n.on { fill: var(--accent2); stroke: #fff3cf; }
+.n.soon { fill: #2f5a32; stroke: var(--green); }
+.n.cut { fill: #5a2a28; stroke: var(--red); }
+.n.need { stroke: #e07a30; stroke-width: 18; }
+.n.hit { stroke: var(--blue); stroke-width: 20; }
+.n.cur { stroke: #fff; stroke-width: 24; }
+aside { position: fixed; right: 0; bottom: 0; width: 340px; z-index: 4; background: rgba(22,27,34,.97); border-left: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 14px; }
+aside.hidden { display: none; }
+aside h3 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+aside ul { margin: 0; padding: 0; list-style: none; }
+aside li { padding: 3px 0; border-bottom: 1px solid #1f252e; display: flex; gap: 6px; align-items: baseline; }
+aside li .x { margin-left: auto; color: var(--muted); }
+aside li select { margin-left: auto; max-width: 150px; font-size: 12px; }
+aside .name { cursor: pointer; }
+aside .name:hover { color: var(--accent2); }
+aside .k1 { color: var(--accent2); }
+aside .k2 { color: #ffd77a; font-weight: 600; }
+.empty { color: var(--muted); }
+#tip { position: fixed; z-index: 10; pointer-events: none; max-width: 360px; background: #0b0e13; border: 1px solid var(--accent);
+  border-radius: 8px; padding: 10px 12px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+#tip b { color: var(--accent2); display: block; margin-bottom: 4px; }
+#tip .s { margin: 2px 0; }
+#tip .v { margin: 6px 0 2px; color: var(--muted); font-size: 12px; }
+#tip .v div { color: var(--text); padding-left: 8px; border-left: 2px solid var(--border); margin: 2px 0; }
+#tip .v div.on { border-left-color: var(--accent2); }
+#tip .r { color: var(--muted); font-size: 12px; margin-top: 4px; }
+#tip .f { color: #b9a37a; font-style: italic; font-size: 12px; margin-top: 6px; }
+#tip .h { color: var(--green); font-size: 12px; margin-top: 6px; }
+#tip .h.bad { color: var(--red); }
+footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--muted); font-size: 11px; }
+@media (max-width: 700px) {
+  aside { width: 100%; top: auto !important; height: 45%; border-left: 0; border-top: 1px solid var(--border); }
+  input[type=search] { width: 150px; }
+  footer { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../"><img src="../icon.png" alt="">Exile Hub</a>
+  <span class="title">Árvore do Atlas <span id="ver"></span></span>
+  <div class="group" role="group" aria-label="Árvore">
+    <button id="t-data" data-tree="data">Normal</button>
+    <button id="t-ruthless" data-tree="ruthless">Ruthless</button>
+  </div>
+  <div class="group">
+    <input id="q" type="search" placeholder="Buscar nós (português ou inglês)" autocomplete="off" title="Enter: próximo resultado · Esc: limpar">
+    <span id="hits"></span>
+  </div>
+  <div class="group">
+    <button id="out" title="Diminuir zoom (-)">−</button>
+    <span id="pct"></span>
+    <button id="in" title="Aumentar zoom (+)">+</button>
+    <button id="fit" title="Mostrar a árvore inteira (0)">Ajustar</button>
+  </div>
+  <div class="group">
+    <span id="points"></span>
+    <button id="clear">Limpar</button>
+    <button id="panelBtn" class="on">Painel</button>
+  </div>
+</header>
+<svg id="map" xmlns="http://www.w3.org/2000/svg"><g id="edges"></g><g id="nodes"></g></svg>
+<aside id="panel">
+  <p class="empty" id="empty">Clique num nó para alocá-lo junto com o caminho até ele. Clique de novo para remover. Os efeitos aparecem somados aqui, e o link da página guarda a sua árvore para compartilhar.</p>
+  <h3>Efeitos</h3>
+  <ul id="effects"></ul>
+  <h3>Nós alocados</h3>
+  <ul id="picked"></ul>
+</aside>
+<div id="tip"></div>
+<footer>Dados oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>
+<script src="atlas.js"></script>
+</body>
+</html>

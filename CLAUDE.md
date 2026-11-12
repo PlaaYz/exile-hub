@@ -204,6 +204,13 @@ whisper, autostart after a reboot, the updater on a real update. SignPath Founda
 updater .sig of the SIGNED exe. Donations (0.4.3): LivePix https://livepix.gg/exilehub (Pix, main button on #apoie, owner 2026-11-11) and the owner's USDT address on Solana (given 2026-11-11), shown ONLY on the site's #apoie section (copy
 button with a select+execCommand fallback, red "only USDT on Solana" warning) and in the README; links.ts DONATE_URL =
 SITE_URL#apoie (the app's footer button opens it); .github/FUNDING.yml custom link (GitHub "Sponsor" button).
+Atlas tree planner (2026-11-12, HIDDEN until the owner says to release): docs/atlas/ (index.html + atlas.js, our own
+SVG viewer, written from scratch) + data.json / ruthless.json built by `npx vite-node scripts/atlas-build.mts <tag>` from
+GGG's official github.com/grindinggear/atlastree-export (tag 3.30.0) and data/atlas-ptbr.json (the owner's pt-BR table,
+English text with numbers as "#"; GGG markup "[A|B]" -> "B"; keys matched with or without line breaks; the script lists
+what is missing). The owner's earlier copy of hypostasis.faith/atlas (their viewer + hotlinked assets, no license) was
+NOT used. To release: link it from the site nav (docs/index.html) and drop `noindex` from docs/atlas/index.html.
+Each league: rebuild with the new tag, translate what the script reports.
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
