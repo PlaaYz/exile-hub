@@ -23,7 +23,7 @@ for (const [key, file] of Object.entries({
   bg: "atlas-background-4.webp",
 })) {
   img[key] = new Image();
-  img[key].onload = () => draw();
+  img[key].onload = () => buildCache();
   img[key].src = "img/" + file;
 }
 
@@ -54,7 +54,8 @@ async function load(name, saved) {
   picked.clear();
   choice.clear();
   if (saved) restore(saved);
-  fit();
+  setView(fit());
+  buildCache();
   changed();
 }
 
@@ -83,12 +84,30 @@ function build() {
 // ---- view: zoom and pan -----------------------------------------------------------------
 
 const box = () => canvas.getBoundingClientRect();
+const MIN_W = 500, MAX_W = 60000;
 
 function setView(v) {
   view = v;
   $("pct").textContent = Math.round(((box().width || innerWidth) / view.w) * 1000) / 10 + "%";
   draw();
 }
+
+// zoom and "show this node" glide to their target instead of jumping
+let anim = null;
+function animateTo(v, ms = 180) {
+  anim = { from: { ...view }, to: v, t0: performance.now(), ms };
+  requestAnimationFrame(step);
+}
+function step(now) {
+  if (!anim) return;
+  const t = Math.min(1, (now - anim.t0) / anim.ms);
+  const e = 1 - Math.pow(1 - t, 3);
+  const { from, to } = anim;
+  setView({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, w: from.w + (to.w - from.w) * e, h: from.h + (to.h - from.h) * e });
+  if (t < 1) requestAnimationFrame(step);
+  else anim = null;
+}
+const stopMotion = () => { anim = null; glide = null; };
 
 function fit() {
   const { x0, y0, x1, y1 } = bounds;
@@ -107,7 +126,7 @@ function fit() {
   v.y ??= (y0 + y1) / 2 - v.h / 2;
   v.w *= width / (width - side);
   v.h *= height / (height - below);
-  setView(v);
+  return v;
 }
 
 function toWorld(cx, cy) {
@@ -115,17 +134,24 @@ function toWorld(cx, cy) {
   return [view.x + ((cx - r.left) / r.width) * view.w, view.y + ((cy - r.top) / r.height) * view.h];
 }
 
-function zoomAt(factor, cx, cy) {
+/** `base` zoomed by `factor` around a screen point (that point stays under the cursor). */
+function zoomed(base, factor, cx, cy) {
   const r = box();
   const fx = (cx - r.left) / r.width, fy = (cy - r.top) / r.height;
-  const w = Math.min(60000, Math.max(500, view.w / factor));
-  const h = (view.h * w) / view.w;
-  setView({ x: view.x + (view.w - w) * fx, y: view.y + (view.h - h) * fy, w, h });
+  const w = Math.min(MAX_W, Math.max(MIN_W, base.w / factor));
+  const h = (base.h * w) / base.w;
+  return { x: base.x + (base.w - w) * fx, y: base.y + (base.h - h) * fy, w, h };
+}
+
+// quick wheel turns add up: each one zooms from where the glide is heading
+function zoomAt(factor, cx, cy) {
+  glide = null;
+  animateTo(zoomed(anim ? anim.to : view, factor, cx, cy));
 }
 
 function centerOn(n) {
   const w = Math.min(view.w, 5000), h = (view.h * w) / view.w;
-  setView({ x: n.x - w / 2, y: n.y - h / 2, w, h });
+  animateTo({ x: n.x - w / 2, y: n.y - h / 2, w, h }, 300);
 }
 
 const center = () => {
@@ -134,6 +160,9 @@ const center = () => {
 };
 
 // ---- drawing ------------------------------------------------------------------------------
+// Everything that never changes (background, group art, links, every node as unallocated) is drawn
+// once into a big picture of the whole tree; zoomed out, a frame is that picture plus the few
+// allocated / highlighted nodes on top. Zoomed in, only what is on screen is drawn.
 
 let pending = false;
 function draw() {
@@ -144,11 +173,11 @@ function draw() {
 
 const ready = (im) => im.complete && im.naturalWidth > 0;
 
-/** A sprite centred on (x, y) at its world size (times `scale`). */
-function sprite(im, r, x, y, scale = 1) {
+/** A sprite centred on (x, y) at its world size. */
+function sprite(g, im, r, x, y) {
   if (!r || !ready(im)) return;
-  const w = r[2] * S * scale, h = r[3] * S * scale;
-  ctx.drawImage(im, r[0], r[1], r[2], r[3], x - w / 2, y - h / 2, w, h);
+  const w = r[2] * S, h = r[3] * S;
+  g.drawImage(im, r[0], r[1], r[2], r[3], x - w / 2, y - h / 2, w, h);
 }
 
 const FRAME = {
@@ -157,6 +186,88 @@ const FRAME = {
   2: { off: "KeystoneFrameUnallocated", on: "KeystoneFrameAllocated", next: "KeystoneFrameCanAllocate" },
   4: { off: "WormholeFrameUnallocated", on: "WormholeFrameAllocated", next: "WormholeFrameCanAllocate" },
 };
+
+/** The round atlas background: centred on the start, framing the whole tree. */
+function bgSquare() {
+  const s = byId.get(T.start);
+  const { x0, y0, x1, y1 } = bounds;
+  const size = 2.25 * Math.max(s.x - x0, x1 - s.x, s.y - y0, y1 - s.y);
+  return { x: s.x - size / 2, y: s.y - size / 2, size };
+}
+
+/** Links whose ends pass `test`, as one path. */
+function linkPath(g, test) {
+  g.beginPath();
+  for (const l of lines) {
+    if (!test(l.a, l.b)) continue;
+    const p = byId.get(l.a), q = byId.get(l.b);
+    g.moveTo(p.x, p.y);
+    if (l.r) {
+      // arc around the group centre: endpoints, radius and direction
+      const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+      const half = Math.hypot(q.x - p.x, q.y - p.y) / 2;
+      const d = Math.sqrt(Math.max(0, l.r * l.r - half * half));
+      const nx = -(q.y - p.y) / (2 * half || 1), ny = (q.x - p.x) / (2 * half || 1);
+      const sgn = l.sweep ? 1 : -1;
+      const cx = mx + nx * d * sgn, cy = my + ny * d * sgn;
+      g.arc(cx, cy, l.r, Math.atan2(p.y - cy, p.x - cx), Math.atan2(q.y - cy, q.x - cx), !l.sweep);
+    } else g.lineTo(q.x, q.y);
+  }
+}
+
+const lineWidth = (k) => Math.max(14, 1.6 / k);
+
+/** The unchanging layer. `rect` = only what is inside it (zoomed in), null = everything. */
+function drawStatic(g, k, rect) {
+  const inside = rect ? (x, y, m) => x + m > rect.x && x - m < rect.x + rect.w && y + m > rect.y && y - m < rect.y + rect.h : () => true;
+  const b = T.sprites.background;
+  if (b && ready(img.bg)) {
+    const sq = bgSquare();
+    // only the part of the (5184 px) picture that is on screen
+    const x0 = Math.max(sq.x, rect ? rect.x : sq.x), y0 = Math.max(sq.y, rect ? rect.y : sq.y);
+    const x1 = Math.min(sq.x + sq.size, rect ? rect.x + rect.w : Infinity), y1 = Math.min(sq.y + sq.size, rect ? rect.y + rect.h : Infinity);
+    if (x1 > x0 && y1 > y0) {
+      const f = b[2] / sq.size;
+      g.globalAlpha = 0.9;
+      g.drawImage(img.bg, b[0] + (x0 - sq.x) * f, b[1] + (y0 - sq.y) * f, (x1 - x0) * f, (y1 - y0) * f, x0, y0, x1 - x0, y1 - y0);
+      g.globalAlpha = 1;
+    }
+  }
+  for (const [x, y, ...r] of T.groups) if (inside(x, y, r[2] * S)) sprite(g, img.group, r, x, y);
+  g.strokeStyle = "#4a3f2c";
+  g.lineWidth = lineWidth(k);
+  // a link is skipped when both ends are far off screen (arcs bulge at most ~900 units)
+  const near = (id) => { const n = byId.get(id); return inside(n.x, n.y, 900); };
+  linkPath(g, rect ? (a, b) => near(a) || near(b) : () => true);
+  g.stroke();
+  g.globalAlpha = 0.85;
+  for (const [x, y, ...r] of T.masteries) if (inside(x, y, r[2] * S)) sprite(g, img.mastery, r, x, y);
+  g.globalAlpha = 1;
+  for (const n of byId.values()) {
+    if (!inside(n.x, n.y, 160)) continue;
+    if (n.k === 3) { sprite(g, img.group, n.icon, n.x, n.y); continue; }
+    sprite(g, img.off, n.icon, n.x, n.y);
+    sprite(g, img.frame, T.sprites.frames[FRAME[n.k].off], n.x, n.y);
+  }
+}
+
+let cache = null; // { canvas, x, y, size, k }
+function buildCache() {
+  cache = null;
+  if (!T || !Object.values(img).every(ready)) return;
+  const sq = bgSquare();
+  // phones limit how big a canvas can be
+  const px = innerWidth <= 700 ? 2048 : 3072;
+  const c = document.createElement("canvas");
+  c.width = c.height = px;
+  const k = px / sq.size;
+  const g = c.getContext("2d");
+  g.imageSmoothingQuality = "high";
+  g.setTransform(k, 0, 0, k, -sq.x * k, -sq.y * k);
+  drawStatic(g, k, null);
+  cache = { canvas: c, ...sq, k };
+  draw();
+}
 
 function render() {
   pending = false;
@@ -174,60 +285,34 @@ function render() {
   ctx.setTransform(k, 0, 0, k, -view.x * k, -view.y * k);
   ctx.imageSmoothingQuality = "high";
 
-  // the atlas' round background, centred on the start and framing the whole tree
-  const start = byId.get(T.start);
-  if (T.sprites.background && ready(img.bg)) {
-    const { x0, y0, x1, y1 } = bounds;
-    const size = 2.25 * Math.max(start.x - x0, x1 - start.x, start.y - y0, y1 - start.y);
-    const b = T.sprites.background;
-    ctx.globalAlpha = 0.9;
-    ctx.drawImage(img.bg, b[0], b[1], b[2], b[3], start.x - size / 2, start.y - size / 2, size, size);
-    ctx.globalAlpha = 1;
-  }
-  for (const [x, y, ...g] of T.groups) sprite(img.group, g, x, y);
+  // the picture while it is at least as sharp as the screen needs (25% leeway)
+  if (cache && k <= cache.k * 1.25) ctx.drawImage(cache.canvas, cache.x, cache.y, cache.size, cache.size);
+  else drawStatic(ctx, k, view);
 
+  // what changes: allocated nodes and links, the path a click would add, highlights
   const on = (id) => id === T.start || picked.has(id);
   const soon = preview?.add ?? new Set();
   const cut = preview?.remove ?? new Set();
-  // links: dark, gold when both ends are allocated, green for the path a click would add
-  const width = Math.max(14, 1.6 / k);
-  const pass = (test, color, w) => {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = w;
-    ctx.beginPath();
-    for (const l of lines) {
-      if (!test(l.a, l.b)) continue;
-      const p = byId.get(l.a), q = byId.get(l.b);
-      ctx.moveTo(p.x, p.y);
-      if (l.r) {
-        // arc around the group centre: endpoints, radius and direction
-        const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
-        const half = Math.hypot(q.x - p.x, q.y - p.y) / 2;
-        const d = Math.sqrt(Math.max(0, l.r * l.r - half * half));
-        const nx = -(q.y - p.y) / (2 * half || 1), ny = (q.x - p.x) / (2 * half || 1);
-        const sgn = l.sweep ? 1 : -1;
-        const cx = mx + nx * d * sgn, cy = my + ny * d * sgn;
-        const a0 = Math.atan2(p.y - cy, p.x - cx), a1 = Math.atan2(q.y - cy, q.x - cx);
-        ctx.arc(cx, cy, l.r, a0, a1, !l.sweep);
-      } else ctx.lineTo(q.x, q.y);
-    }
+  ctx.lineWidth = lineWidth(k) * 1.4;
+  ctx.strokeStyle = "#e8c060";
+  linkPath(ctx, (a, b) => on(a) && on(b));
+  ctx.stroke();
+  if (soon.size) {
+    ctx.strokeStyle = "#8fd080";
+    linkPath(ctx, (a, b) => (on(a) || soon.has(a)) && (on(b) || soon.has(b)) && (soon.has(a) || soon.has(b)));
     ctx.stroke();
-  };
-  pass(() => true, "#4a3f2c", width);
-  pass((a, b) => on(a) && on(b), "#e8c060", width * 1.4);
-  if (soon.size) pass((a, b) => (on(a) || soon.has(a)) && (on(b) || soon.has(b)) && (soon.has(a) || soon.has(b)), "#8fd080", width * 1.4);
-
-  ctx.globalAlpha = 0.85;
-  for (const [x, y, ...m] of T.masteries) sprite(img.mastery, m, x, y);
-  ctx.globalAlpha = 1;
-
-  for (const n of byId.values()) {
-    if (n.k === 3) { sprite(img.group, n.icon, n.x, n.y); continue; }
-    const active = on(n.id);
-    sprite(active ? img.on : img.off, n.icon, n.x, n.y);
-    const f = FRAME[n.k];
-    sprite(img.frame, T.sprites.frames[active ? f.on : soon.has(n.id) || n.id === hover ? f.next : f.off], n.x, n.y);
   }
+  const lit = new Set([...picked, ...soon]);
+  if (hover != null) lit.add(hover);
+  for (const id of lit) {
+    const n = byId.get(id);
+    if (!n || n.k === 3) continue;
+    const active = picked.has(id);
+    sprite(ctx, active ? img.on : img.off, n.icon, n.x, n.y);
+    sprite(ctx, img.frame, T.sprites.frames[active ? FRAME[n.k].on : FRAME[n.k].next], n.x, n.y);
+  }
+  const start = byId.get(T.start);
+  if (lit.size || cut.size) sprite(ctx, img.group, start.icon, start.x, start.y); // above the gold links
 
   // rings: removal preview, choice still to make, search results
   const ring = (n, color, gap) => {
@@ -446,47 +531,114 @@ function nodeAt(cx, cy) {
   return best ? best.id : null;
 }
 
+// one finger / the mouse drags (and keeps sliding a little when let go), two fingers pinch
+const pointers = new Map(); // pointerId -> { x, y }
 let drag = null;
+let pinch = null;
+let glide = null; // { vx, vy } in screen px per ms
+
+function startGlide() {
+  let last = performance.now();
+  const tick = (now) => {
+    if (!glide) return;
+    const dt = Math.min(40, now - last);
+    last = now;
+    const s = view.w / box().width;
+    setView({ ...view, x: view.x - glide.vx * dt * s, y: view.y - glide.vy * dt * s });
+    glide.vx *= Math.pow(0.994, dt);
+    glide.vy *= Math.pow(0.994, dt);
+    if (Math.hypot(glide.vx, glide.vy) < 0.02) glide = null;
+    else requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 canvas.addEventListener("pointerdown", (e) => {
-  drag = { x0: e.clientX, y0: e.clientY, moved: false, view: { ...view } };
-  canvas.setPointerCapture(e.pointerId);
+  stopMotion();
+  try { canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, view: { ...view } };
+    drag = null;
+    tip.style.display = "none";
+  } else if (pointers.size === 1) {
+    drag = { x0: e.clientX, y0: e.clientY, moved: false, view: { ...view }, track: [{ x: e.clientX, y: e.clientY, t: e.timeStamp }] };
+  }
 });
+
 canvas.addEventListener("pointermove", (e) => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const v = zoomed(pinch.view, dist / Math.max(1, pinch.dist), pinch.mx, pinch.my);
+    const s = v.w / box().width;
+    setView({ ...v, x: v.x - (mx - pinch.mx) * s, y: v.y - (my - pinch.my) * s });
+    return;
+  }
   if (drag) {
     if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
     drag.moved = true;
     canvas.classList.add("drag");
     tip.style.display = "none";
+    drag.track.push({ x: e.clientX, y: e.clientY, t: e.timeStamp });
+    if (drag.track.length > 5) drag.track.shift();
     const s = view.w / box().width;
     setView({ ...drag.view, x: drag.view.x - (e.clientX - drag.x0) * s, y: drag.view.y - (e.clientY - drag.y0) * s });
     return;
   }
+  if (e.pointerType !== "mouse") return;
   const id = nodeAt(e.clientX, e.clientY);
   canvas.classList.toggle("over", id != null);
   if (id !== hover) { hover = id; preview = previewFor(id); draw(); }
   if (id != null) showTip(id, e.clientX, e.clientY);
   else tip.style.display = "none";
 });
-canvas.addEventListener("pointerup", (e) => {
-  const wasClick = drag && !drag.moved;
+
+function release(e) {
+  pointers.delete(e.pointerId);
+  if (pinch) {
+    // lifting one finger of a pinch neither clicks nor slides
+    if (pointers.size < 2) pinch = null;
+    drag = null;
+    return;
+  }
+  const d = drag;
   drag = null;
   canvas.classList.remove("drag");
-  if (!wasClick) return;
+  if (!d || e.type === "pointercancel") return;
+  if (d.moved) {
+    const first = d.track[0], last = d.track[d.track.length - 1];
+    const dt = last.t - first.t;
+    if (dt > 0 && e.timeStamp - last.t < 80) {
+      glide = { vx: (last.x - first.x) / dt, vy: (last.y - first.y) / dt };
+      startGlide();
+    }
+    return;
+  }
   const id = nodeAt(e.clientX, e.clientY);
   if (id != null) {
+    if (e.pointerType !== "mouse") { hover = id; preview = previewFor(id); }
     click(id);
-    if (e.pointerType === "mouse") showTip(id, e.clientX, e.clientY);
+    showTip(id, e.clientX, e.clientY);
+  } else if (e.pointerType !== "mouse") {
+    tip.style.display = "none";
   }
-});
-canvas.addEventListener("pointerleave", () => {
+}
+canvas.addEventListener("pointerup", release);
+canvas.addEventListener("pointercancel", release);
+canvas.addEventListener("pointerleave", (e) => {
+  if (e.pointerType !== "mouse") return;
   tip.style.display = "none";
   if (hover != null) { hover = null; preview = null; draw(); }
 });
-canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(Math.pow(1.0015, -e.deltaY), e.clientX, e.clientY); }, { passive: false });
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(Math.pow(1.0018, -e.deltaY), e.clientX, e.clientY); }, { passive: false });
 
-$("in").onclick = () => zoomAt(1.3, ...center());
-$("out").onclick = () => zoomAt(1 / 1.3, ...center());
-$("fit").onclick = fit;
+$("in").onclick = () => zoomAt(1.4, ...center());
+$("out").onclick = () => zoomAt(1 / 1.4, ...center());
+$("fit").onclick = () => animateTo(fit(), 300);
 $("clear").onclick = () => { picked.clear(); choice.clear(); changed(); };
 $("panelBtn").onclick = () => { $("panel").classList.toggle("hidden"); $("panelBtn").classList.toggle("on"); };
 for (const b of document.querySelectorAll("[data-tree]")) {
@@ -521,9 +673,9 @@ q.addEventListener("keydown", (e) => {
 });
 addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-  if (e.key === "+" || e.key === "=") zoomAt(1.3, ...center());
-  if (e.key === "-") zoomAt(1 / 1.3, ...center());
-  if (e.key === "0") fit();
+  if (e.key === "+" || e.key === "=") zoomAt(1.4, ...center());
+  if (e.key === "-") zoomAt(1 / 1.4, ...center());
+  if (e.key === "0") animateTo(fit(), 300);
   if (e.key === "/") { e.preventDefault(); q.focus(); }
 });
 

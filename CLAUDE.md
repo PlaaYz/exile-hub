@@ -206,7 +206,10 @@ button with a select+execCommand fallback, red "only USDT on Solana" warning) an
 SITE_URL#apoie (the app's footer button opens it); .github/FUNDING.yml custom link (GitHub "Sponsor" button).
 Atlas tree planner (2026-11-12, HIDDEN until the owner says to release): docs/atlas/ (index.html + atlas.js, our own
 canvas viewer, written from scratch, drawn with GGG's official atlas sprite sheets at zoom 0.5 in docs/atlas/img:
-world size = sprite px x 2; links stroked, not textured) + data.json / ruthless.json built by `npx vite-node scripts/atlas-build.mts <tag>` from
+world size = sprite px x 2; links stroked, not textured). Smoothness (2026-11-12): the unchanging layer is pre-drawn
+once into a 3072 px picture of the whole tree (2048 on phones) used while zoomed out (cache.k x 1.25); zoomed in, only
+what is on screen is drawn (background cropped, links culled); allocated/preview/hover nodes are drawn on top each
+frame. 15-19 ms -> 0.3-1.6 ms per frame at 1920 px. Animated zoom, drag inertia, two-finger pinch. + data.json / ruthless.json built by `npx vite-node scripts/atlas-build.mts <tag>` from
 GGG's official github.com/grindinggear/atlastree-export (tag 3.30.0) and data/atlas-ptbr.json (the owner's pt-BR table,
 English text with numbers as "#"; GGG markup "[A|B]" -> "B"; keys matched with or without line breaks; the script lists
 what is missing). The owner's earlier copy of hypostasis.faith/atlas (their viewer + hotlinked assets, no license) was
