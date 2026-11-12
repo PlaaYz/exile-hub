@@ -41,6 +41,8 @@ aside h3 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; lette
 aside ul { margin: 0; padding: 0; list-style: none; }
 aside li { padding: 3px 0; border-bottom: 1px solid #1f252e; display: flex; gap: 6px; align-items: baseline; }
 aside li .x { margin-left: auto; color: var(--muted); }
+aside li button.small { padding: 0 6px; font-size: 11px; }
+aside h3 .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
 aside li select { margin-left: auto; max-width: 150px; font-size: 12px; }
 aside .name { cursor: pointer; }
 aside .name:hover { color: var(--accent2); }
@@ -86,7 +88,9 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
   </div>
   <div class="group">
     <span id="points"></span>
+    <button id="save" title="Salvar esta árvore neste navegador">Salvar</button>
     <button id="clear">Limpar</button>
+    <button id="lang">PT</button>
     <button id="panelBtn" class="on">Painel</button>
   </div>
 </header>
@@ -97,6 +101,10 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
   <ul id="effects"></ul>
   <h3>Nós alocados</h3>
   <ul id="picked"></ul>
+  <h3>Mecânicas <span class="hint">(clique para destacar, ou no ícone na árvore)</span></h3>
+  <ul id="mechs"></ul>
+  <h3>Árvores salvas</h3>
+  <ul id="builds"></ul>
 </aside>
 <div id="tip"></div>
 <footer>Dados e imagens oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>

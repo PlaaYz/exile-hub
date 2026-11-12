@@ -215,6 +215,12 @@ English text with numbers as "#"; GGG markup "[A|B]" -> "B"; keys matched with o
 what is missing). The owner's earlier copy of hypostasis.faith/atlas (their viewer + hotlinked assets, no license) was
 NOT used. To release: link it from the site nav (docs/index.html) and drop `noindex` from docs/atlas/index.html.
 Each league: rebuild with the new tag, translate what the script reports.
+Atlas features (2026-11-12, ported in our own code from ideas of the owner's atlas-ptbr project): the build pairs EN/PT
+texts per node id from GGG's official pages (www. and br.pathofexile.com/atlas-skill-tree, `passiveSkillTreeData`)
+before falling back to data/atlas-ptbr.json; every node carries its mechanic (mastery cluster, else name rules; 24
+global nodes have none). Page: mechanic highlight (panel list allocated/total, or a click on a mastery icon), saved
+trees in localStorage ("exile-hub.atlas.builds", per browser), PT/EN toggle for node texts ("exile-hub.atlas.lang";
+the page chrome stays pt-BR), search in both languages.
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.

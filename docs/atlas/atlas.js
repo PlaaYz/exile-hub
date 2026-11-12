@@ -1,9 +1,10 @@
 // Atlas tree planner: GGG's official atlas data and art (built into data.json / ruthless.json and img/
 // by scripts/atlas-build.mts, texts already in Portuguese), drawn on a canvas like the game.
-// Node: [id, x, y, kind, sx, sy, sw, sh] kind 0 small, 1 notable, 2 keystone, 3 start, 4 gateway;
-//   s* = icon on the skills sheet (the start uses the group-background sheet).
+// Node: [id, x, y, kind, mechanic, sx, sy, sw, sh] kind 0 small, 1 notable, 2 keystone, 3 start, 4 gateway;
+//   mechanic = index in T.mechanics or -1; s* = icon on the skills sheet (the start: group-background sheet).
+// Mastery: [x, y, mechanic, sx, sy, sw, sh] (the icon in the middle of a mechanic's cluster).
 // Edge: [a, b] straight, [a, b, r, sweep] arc, [a, b, -1] two gateways (linked, not drawn).
-// Info: id -> [name, stats, reminder, flavour, variants | null, English text for the search].
+// Info: id -> { n: name (English, like the game), pt / en: { s: stats, r: reminder, f: flavour, v: variants } }.
 "use strict";
 const $ = (id) => document.getElementById(id);
 const canvas = $("map");
@@ -42,6 +43,11 @@ let hover = null;
 let preview = null; // { add: Set } or { remove: Set }
 let hits = [];
 let hitAt = -1;
+let focus = -1; // highlighted mechanic (index in T.mechanics)
+// language of the node texts (names stay in English, like the game), remembered in this browser
+let L = "pt";
+try { if (localStorage.getItem("exile-hub.atlas.lang") === "en") L = "en"; } catch { /* storage blocked */ }
+const texts = (id) => T.info[id]?.[L];
 
 // ---- loading ----------------------------------------------------------------------------
 
@@ -55,6 +61,7 @@ async function load(name, saved) {
   build();
   picked.clear();
   choice.clear();
+  focus = -1;
   if (saved) restore(saved);
   setView(fit());
   buildCache();
@@ -66,8 +73,8 @@ function build() {
   adj = new Map();
   lines = [];
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const [id, x, y, k, ...icon] of T.nodes) {
-    byId.set(id, { id, x, y, k, icon });
+  for (const [id, x, y, k, m, ...icon] of T.nodes) {
+    byId.set(id, { id, x, y, k, m, icon });
     x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
   }
   bounds = { x0, y0, x1, y1 };
@@ -242,7 +249,7 @@ function drawStatic(g, k, rect) {
   linkPath(g, rect ? (a, b) => near(a) || near(b) : () => true);
   g.stroke();
   g.globalAlpha = 0.85;
-  for (const [x, y, ...r] of T.masteries) if (inside(x, y, r[2] * S)) sprite(g, img.mastery, r, x, y);
+  for (const [x, y, , ...r] of T.masteries) if (inside(x, y, r[2] * S)) sprite(g, img.mastery, r, x, y);
   g.globalAlpha = 1;
   for (const n of byId.values()) {
     if (!inside(n.x, n.y, 160)) continue;
@@ -290,6 +297,18 @@ function render() {
   if (cache && k <= cache.k * 1.25) ctx.drawImage(cache.canvas, cache.x, cache.y, cache.size, cache.size);
   else drawStatic(ctx, k, view);
 
+  // a highlighted mechanic: everything else dimmed, its nodes and mastery icon redrawn bright
+  if (focus >= 0) {
+    ctx.fillStyle = "rgba(6,7,10,.68)";
+    ctx.fillRect(view.x, view.y, view.w, view.h);
+    for (const [x, y, m, ...r] of T.masteries) if (m === focus) sprite(ctx, img.mastery, r, x, y);
+    for (const n of byId.values()) {
+      if (n.m !== focus || picked.has(n.id)) continue;
+      sprite(ctx, img.off, n.icon, n.x, n.y);
+      sprite(ctx, img.frame, T.sprites.frames[FRAME[n.k].off], n.x, n.y);
+    }
+  }
+
   // what changes: allocated nodes and links, the path a click would add, highlights
   const on = (id) => id === T.start || picked.has(id);
   const soon = preview?.add ?? new Set();
@@ -324,7 +343,7 @@ function render() {
     ctx.stroke();
   };
   for (const id of cut) ring(byId.get(id), "#f0716b", 6);
-  for (const id of picked) if (T.info[id]?.[4] && !choice.has(id)) ring(byId.get(id), "#e07a30", 6);
+  for (const id of picked) if (texts(id)?.v && !choice.has(id)) ring(byId.get(id), "#e07a30", 6);
   hits.forEach((id, i) => ring(byId.get(id), i === hitAt ? "#ffffff" : "#4fc3ff", 14));
 }
 
@@ -390,7 +409,7 @@ function restore(saved) {
     const [id, c] = item.split(".").map(Number);
     if (!byId.has(id) || picked.size >= T.points) continue;
     picked.add(id);
-    if (T.info[id]?.[4]?.[c]) choice.set(id, c);
+    if (texts(id)?.v?.[c]) choice.set(id, c);
   }
   // drop anything a hand-edited link left floating
   const keep = reachable(null);
@@ -405,9 +424,9 @@ const NUM = /\d+(?:\.\d+)?/g;
 function effectsOf() {
   const groups = new Map();
   for (const id of picked) {
-    const info = T.info[id];
-    if (!info) continue;
-    const stats = info[4] ? (choice.has(id) ? info[4][choice.get(id)] : []) : info[1];
+    const t = texts(id);
+    if (!t) continue;
+    const stats = t.v ? (choice.has(id) ? t.v[choice.get(id)] : []) : t.s;
     for (const s of stats) {
       const key = s.replace(NUM, "#");
       const nums = (s.match(NUM) ?? []).map(Number);
@@ -418,7 +437,7 @@ function effectsOf() {
   }
   return [...groups.values()]
     .map((g) => (g.count > 1 && g.nums.length === 1 ? { ...g, text: g.text.replace(NUM, String(Math.round(g.nums[0] * 100) / 100)) } : g))
-    .sort((a, b) => a.text.localeCompare(b.text, "pt-BR"));
+    .sort((a, b) => a.text.localeCompare(b.text, L === "pt" ? "pt-BR" : "en"));
 }
 
 function panel() {
@@ -448,24 +467,24 @@ function panel() {
   const big = [];
   for (const id of picked) {
     const n = byId.get(id);
-    if (n.k === 0) small.set(T.info[id][0], [...(small.get(T.info[id][0]) ?? []), n]);
+    if (n.k === 0) small.set(T.info[id].n, [...(small.get(T.info[id].n) ?? []), n]);
     else big.push(n);
   }
-  big.sort((a, b) => b.k - a.k || T.info[a.id][0].localeCompare(T.info[b.id][0]));
+  big.sort((a, b) => b.k - a.k || T.info[a.id].n.localeCompare(T.info[b.id].n));
   for (const n of big) {
-    const info = T.info[n.id];
+    const variants = texts(n.id)?.v;
     const li = document.createElement("li");
     const name = document.createElement("span");
     name.className = "name k" + n.k;
-    name.textContent = info[0];
+    name.textContent = T.info[n.id].n;
     name.title = "Mostrar na árvore";
     name.onclick = () => centerOn(n);
     li.append(name);
-    if (info[4]) {
+    if (variants) {
       const sel = document.createElement("select");
       sel.title = "Escolha deste nó";
       if (!choice.has(n.id)) sel.append(new Option("Escolha um…", "", true, true));
-      info[4].forEach((stats, i) => sel.append(new Option(stats.join(" / "), String(i), false, choice.get(n.id) === i)));
+      variants.forEach((stats, i) => sel.append(new Option(stats.join(" / "), String(i), false, choice.get(n.id) === i)));
       sel.onchange = () => { choice.set(n.id, Number(sel.value)); changed(); };
       li.append(sel);
     }
@@ -486,19 +505,107 @@ function panel() {
     }
     list.append(li);
   }
+  mechList();
+  buildList();
 }
+
+// ---- mechanics: allocated / total per mechanic; a click (or on its icon in the tree) highlights it --
+
+function setFocus(m) {
+  focus = focus === m ? -1 : m;
+  mechList();
+  draw();
+}
+
+function mechList() {
+  const total = T.mechanics.map(() => 0), mine = T.mechanics.map(() => 0);
+  for (const n of byId.values()) if (n.m >= 0 && n.k !== 4) { total[n.m]++; if (picked.has(n.id)) mine[n.m]++; }
+  const list = $("mechs");
+  list.textContent = "";
+  T.mechanics
+    .map((name, m) => ({ name, m }))
+    .filter((x) => total[x.m])
+    .sort((a, b) => mine[b.m] - mine[a.m] || a.name.localeCompare(b.name))
+    .forEach(({ name, m }) => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.className = "name" + (focus === m ? " k1" : "");
+      span.textContent = name;
+      span.title = "Destacar na árvore";
+      span.onclick = () => setFocus(m);
+      const k = document.createElement("span");
+      k.className = "x";
+      k.textContent = `${mine[m]} / ${total[m]}`;
+      li.append(span, k);
+      list.append(li);
+    });
+}
+
+/** The mastery icon under the pointer: its mechanic, or -1. */
+function masteryAt(cx, cy) {
+  const [wx, wy] = toWorld(cx, cy);
+  for (const [x, y, m, , , w] of T.masteries) if (m >= 0 && Math.hypot(x - wx, y - wy) < (w * S) / 2) return m;
+  return -1;
+}
+
+// ---- saved builds (this browser only) ---------------------------------------------------------
+
+const BUILDS = "exile-hub.atlas.builds";
+function builds() {
+  try { return JSON.parse(localStorage.getItem(BUILDS) ?? "[]"); } catch { return []; }
+}
+function storeBuilds(list) {
+  try { localStorage.setItem(BUILDS, JSON.stringify(list)); } catch { alert("Este navegador não deixou salvar."); }
+  buildList();
+}
+
+function buildList() {
+  const list = $("builds");
+  list.textContent = "";
+  const mine = builds().filter((b) => b.tree === tree);
+  if (!mine.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "Nenhuma salva ainda.";
+    list.append(li);
+  }
+  for (const b of mine) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = b.name;
+    name.title = "Carregar";
+    name.onclick = () => load(tree, b.ids);
+    const del = document.createElement("button");
+    del.className = "x small";
+    del.textContent = "✕";
+    del.title = "Apagar";
+    del.onclick = () => { if (confirm(`Apagar "${b.name}"?`)) storeBuilds(builds().filter((x) => !(x.tree === b.tree && x.name === b.name))); };
+    li.append(name, del);
+    list.append(li);
+  }
+}
+
+$("save").onclick = () => {
+  if (!picked.size) return;
+  const name = prompt("Nome desta árvore:")?.trim();
+  if (!name) return;
+  const ids = location.hash.split(":")[1] ?? "";
+  // same name on the same tree = overwrite
+  storeBuilds([...builds().filter((b) => !(b.tree === tree && b.name === name)), { tree, name, ids }]);
+};
 
 // ---- tooltip ------------------------------------------------------------------------------
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
 function showTip(id, x, y) {
-  const info = T.info[id];
-  if (!info) { tip.style.display = "none"; return; }
-  const [name, stats, rem, flav, variants] = info;
+  const t = texts(id);
+  if (!t) { tip.style.display = "none"; return; }
+  const name = T.info[id].n, { s: stats, r: rem, f: flav, v: variants } = t;
   let html = `<b>${esc(name)}</b>` + stats.map((s) => `<div class="s">${esc(s)}</div>`).join("");
   if (variants) {
-    html += '<div class="v">Escolha uma opção:' +
+    html += `<div class="v">${L === "pt" ? "Escolha uma opção:" : "Choose one:"}` +
       variants.map((v, i) => `<div${choice.get(id) === i ? ' class="on"' : ""}>${v.map(esc).join("<br>")}</div>`).join("") + "</div>";
   }
   html += rem.map((s) => `<div class="r">${esc(s)}</div>`).join("");
@@ -624,8 +731,10 @@ function release(e) {
     if (e.pointerType !== "mouse") { hover = id; preview = previewFor(id); }
     click(id);
     showTip(id, e.clientX, e.clientY);
-  } else if (e.pointerType !== "mouse") {
-    tip.style.display = "none";
+  } else {
+    if (e.pointerType !== "mouse") tip.style.display = "none";
+    const m = masteryAt(e.clientX, e.clientY);
+    if (m >= 0) setFocus(m);
   }
 }
 canvas.addEventListener("pointerup", release);
@@ -642,6 +751,19 @@ $("out").onclick = () => zoomAt(1 / 1.4, ...center());
 $("fit").onclick = () => animateTo(fit(), 300);
 $("clear").onclick = () => { picked.clear(); choice.clear(); changed(); };
 $("panelBtn").onclick = () => { $("panel").classList.toggle("hidden"); $("panelBtn").classList.toggle("on"); };
+const langBtn = $("lang");
+const showLang = () => {
+  langBtn.textContent = L === "pt" ? "PT" : "EN";
+  langBtn.title = L === "pt" ? "Textos dos nós em português (clique para inglês)" : "Node texts in English (click for Portuguese)";
+};
+showLang();
+langBtn.onclick = () => {
+  L = L === "pt" ? "en" : "pt";
+  try { localStorage.setItem("exile-hub.atlas.lang", L); } catch { /* storage blocked */ }
+  showLang();
+  tip.style.display = "none";
+  panel();
+};
 for (const b of document.querySelectorAll("[data-tree]")) {
   b.onclick = () => { if (b.dataset.tree !== tree) load(b.dataset.tree, ""); };
 }
@@ -657,7 +779,7 @@ function search() {
     for (const n of byId.values()) {
       const info = T.info[n.id];
       if (!info) continue;
-      const text = (info[0] + " " + info[1].join(" ") + " " + (info[4] ?? []).flat().join(" ") + " " + info[5]).toLowerCase();
+      const text = [info.n, ...["pt", "en"].flatMap((l) => [...info[l].s, ...(info[l].v ?? []).flat()])].join(" ").toLowerCase();
       if (words.every((w) => text.includes(w))) hits.push(n.id);
     }
   }
