@@ -12,6 +12,8 @@ const tip = $("tip");
 // sprites are for zoom 0.5: their size in the world is twice their pixels
 const S = 2;
 const HIT = [40, 56, 76, 110, 76]; // click radius in world units, by kind
+// the colour at the edges of GGG's atlas background picture: the space around it uses it, so no seam shows
+const EDGE = "#0a0c12";
 
 const img = {};
 for (const [key, file] of Object.entries({
@@ -228,9 +230,8 @@ function drawStatic(g, k, rect) {
     const x1 = Math.min(sq.x + sq.size, rect ? rect.x + rect.w : Infinity), y1 = Math.min(sq.y + sq.size, rect ? rect.y + rect.h : Infinity);
     if (x1 > x0 && y1 > y0) {
       const f = b[2] / sq.size;
-      g.globalAlpha = 0.9;
       g.drawImage(img.bg, b[0] + (x0 - sq.x) * f, b[1] + (y0 - sq.y) * f, (x1 - x0) * f, (y1 - y0) * f, x0, y0, x1 - x0, y1 - y0);
-      g.globalAlpha = 1;
+      
     }
   }
   for (const [x, y, ...r] of T.groups) if (inside(x, y, r[2] * S)) sprite(g, img.group, r, x, y);
@@ -280,7 +281,7 @@ function render() {
   }
   const k = canvas.width / view.w; // device pixels per world unit
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = "#08090c";
+  ctx.fillStyle = EDGE;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.setTransform(k, 0, 0, k, -view.x * k, -view.y * k);
   ctx.imageSmoothingQuality = "high";
