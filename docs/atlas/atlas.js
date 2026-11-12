@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=7`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=8`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -413,16 +413,44 @@ function changed() {
   preview = previewFor(hover);
   draw();
   panel();
-  const ids = [...picked].map((id) => (choice.has(id) ? `${id}.${choice.get(id)}` : id)).join(",");
-  history.replaceState(null, "", `#${tree}${ids ? ":" + ids : ""}`);
+  history.replaceState(null, "", `#${tree}${picked.size ? encode() : ""}`);
+}
+
+// Short links: "~" + one bit per node (in the data file's order) as base64url, then "~index.choice"
+// for nodes with options. ~160 characters for a full tree instead of ~900 with plain ids.
+// shortcut: bits follow the node order of this league's data; a new league's rebuild can scramble old links
+// (old "#data:1,2.0,3" id links still load).
+function encode() {
+  const bytes = new Uint8Array(Math.ceil(T.nodes.length / 8));
+  const extra = [];
+  T.nodes.forEach(([id], i) => {
+    if (!picked.has(id)) return;
+    bytes[i >> 3] |= 1 << (i & 7);
+    if (choice.has(id)) extra.push(`~${i.toString(36)}.${choice.get(id)}`);
+  });
+  let end = bytes.length;
+  while (end && !bytes[end - 1]) end--;
+  const b64 = btoa(String.fromCharCode(...bytes.subarray(0, end))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return "~" + b64 + extra.join("");
 }
 
 function restore(saved) {
-  for (const item of saved.split(",")) {
-    const [id, c] = item.split(".").map(Number);
-    if (!byId.has(id) || picked.size >= T.points) continue;
+  const add = (id, c) => {
+    if (!byId.has(id) || picked.size >= T.points) return;
     picked.add(id);
-    if (texts(id)?.v?.[c]) choice.set(id, c);
+    if (c != null && texts(id)?.v?.[c]) choice.set(id, c);
+  };
+  if (saved.startsWith("~")) {
+    const [b64, ...extra] = saved.slice(1).split("~");
+    let bin = "";
+    try { bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/")); } catch { /* broken link: nothing */ }
+    const chosen = new Map(extra.map((e) => e.split(".")).map(([i, c]) => [parseInt(i, 36), Number(c)]));
+    T.nodes.forEach(([id], i) => { if ((bin.charCodeAt(i >> 3) >> (i & 7)) & 1) add(id, chosen.get(i)); });
+  } else {
+    for (const item of saved.split(",")) {
+      const [id, c] = item.split(".").map(Number);
+      add(id, c);
+    }
   }
   // drop anything a hand-edited link left floating
   const keep = reachable(null);
@@ -594,7 +622,7 @@ $("save").onclick = () => {
   if (!picked.size) { alert("Selecione algum nó antes de salvar."); return; }
   const name = prompt("Nome desta build:", buildName)?.trim();
   if (!name) return;
-  const ids = location.hash.split(":")[1] ?? "";
+  const ids = location.hash.slice(1 + tree.length);
   buildName = name;
   // same name on the same tree = overwrite
   storeBuilds([...builds().filter((b) => !(b.tree === tree && b.name === name)), { tree, name, ids }]);
@@ -848,6 +876,7 @@ addEventListener("resize", layout);
 layout();
 
 // "#data:1,2.0,3" = tree and allocated nodes ("id.choice" for nodes with options)
-const m = /^#(data|ruthless)(?::([\d.,]+))?/.exec(location.hash);
-if (innerWidth <= 700 && !(m && m[2])) { $("panel").classList.add("hidden"); $("panelBtn").classList.remove("on"); }
-load(m ? m[1] : "data", m?.[2] ?? "");
+// "#data~code" (short) or the older "#data:1,2.0,3" (ids, "id.choice" for nodes with options)
+const m = /^#(data|ruthless)(?::([\d.,]+)|(~[\w.~-]+))?/.exec(location.hash);
+if (innerWidth <= 700 && !(m && (m[2] || m[3]))) { $("panel").classList.add("hidden"); $("panelBtn").classList.remove("on"); }
+load(m ? m[1] : "data", m?.[2] ?? m?.[3] ?? "");
