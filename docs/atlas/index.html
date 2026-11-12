@@ -17,7 +17,9 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 14px; overflow: hidden; }
 header { position: fixed; inset: 0 0 auto 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
   padding: 8px 12px; background: rgba(8,8,10,.96); border-bottom: 1px solid #2a2620; }
-header a.home { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; font-weight: 700; }
+header a.home { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; font-weight: 700;
+  padding: 3px 10px 3px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel2); }
+header a.home:hover { border-color: var(--accent); color: var(--accent2); }
 header a.home img { width: 24px; height: 24px; }
 .title { color: var(--accent2); font-weight: 600; }
 .group { display: flex; gap: 4px; align-items: center; }
@@ -84,7 +86,7 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
 </head>
 <body>
 <header>
-  <a class="home" href="../"><img src="../icon.png" alt="">Exile Hub</a>
+  <a class="home" href="../" title="Voltar ao site do Exile Hub">← <img src="../icon.png" alt="">Voltar ao site</a>
   <span class="title">Árvore do Atlas <span id="ver"></span></span>
   <div class="group" role="group" aria-label="Árvore">
     <button id="t-data" data-tree="data">Normal</button>
