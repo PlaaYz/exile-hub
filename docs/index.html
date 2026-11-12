@@ -271,6 +271,17 @@ nav.top .links + .lang-toggle { margin-left: 0; }
 .ss-mock .btns > span.hl { position: relative; }
 @media (max-width: 900px) { .smartscreen { grid-template-columns: 1fr; } }
 
+/* support: wallet address */
+.crypto { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: left; }
+.crypto-head { color: var(--muted); margin-bottom: 10px; }
+.crypto-or { color: var(--muted); font-size: 14px; margin: 0 0 10px; }
+.crypto-head b { color: var(--text); }
+.crypto-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.crypto-row code { flex: 1; min-width: 0; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--accent2); user-select: all; }
+.crypto-warn { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+.crypto-warn b { color: var(--red); }
+
 /* real screenshots */
 .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .shots figure { margin: 0; }
@@ -826,15 +837,29 @@ nav.top .links + .lang-toggle { margin-left: 0; }
   </div>
 </section>
 
-<section class="alt" id="apoie" hidden>
+<section class="alt" id="apoie">
   <div class="wrap" style="max-width:820px;text-align:center">
     <h2><span class="pt">Apoie o projeto</span><span class="en">Support the project</span></h2>
     <p class="sub pt" style="margin:0 auto 24px">O Exile Hub é e continua grátis, sem anúncios e sem recurso pago. Se ele te ajuda,
       uma doação ajuda a manter o desenvolvimento. Ela é só um apoio: não libera nada no app.</p>
     <p class="sub en" style="margin:0 auto 24px">Exile Hub is and stays free, with no ads and no paid features. If it helps
       you, a donation helps keep it developed. It is support only: it unlocks nothing in the app.</p>
-    <div class="cta" style="justify-content:center">
-      <a class="btn primary donate-link" href="#" rel="noopener"><span class="pt">Apoiar o Exile Hub</span><span class="en">Support Exile Hub</span></a>
+    <div class="cta" style="justify-content:center;margin-bottom:24px">
+      <a class="btn primary" href="https://livepix.gg/exilehub" target="_blank" rel="noopener">
+        <span class="pt">Apoiar com Pix (LivePix)</span><span class="en">Support via LivePix (Pix, Brazil)</span>
+      </a>
+    </div>
+    <p class="crypto-or"><span class="pt">ou, em cripto:</span><span class="en">or, in crypto:</span></p>
+    <div class="crypto">
+      <div class="crypto-head"><b>USDT</b> · <span class="pt">rede</span><span class="en">network</span> <b>Solana</b> (SPL)</div>
+      <div class="crypto-row">
+        <code id="donate-address">EjrsinpsX28vxXF5qf4sRAZtjCdNARNb163d1T9xeRjK</code>
+        <button type="button" class="btn" id="copy-address"><span class="pt">Copiar</span><span class="en">Copy</span></button>
+      </div>
+      <p class="crypto-warn pt">Envie <b>somente USDT pela rede Solana</b>. Outra moeda ou outra rede (Ethereum, Tron, BSC...) se perde e não
+        pode ser devolvida.</p>
+      <p class="crypto-warn en">Send <b>only USDT on the Solana network</b>. Any other coin or network (Ethereum, Tron, BSC...) is lost and
+        cannot be returned.</p>
     </div>
   </div>
 </section>
@@ -915,16 +940,34 @@ document.querySelectorAll("a[data-shot]").forEach((a) =>
 lightbox.addEventListener("click", (e) => { if (e.target !== lightboxImg) closeLightbox(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
 
-// Donation link: empty = the support section and its menu link stay hidden.
-const DONATE_URL = "";
-if (DONATE_URL) {
-  document.getElementById("apoie").hidden = false;
-  document.querySelectorAll(".donate-link").forEach((a) => { a.href = DONATE_URL; a.target = "_blank"; });
+// Support: the menu link to the section, and the copy button for the wallet address.
+{
   const nav = document.querySelector("nav.top .links");
   const link = document.createElement("a");
   link.href = "#apoie";
   link.className = "support-link";
   nav.insertBefore(link, nav.lastElementChild);
+  const copy = document.getElementById("copy-address");
+  const address = document.getElementById("donate-address");
+  const label = copy.innerHTML;
+  const done = () => {
+    copy.textContent = document.documentElement.lang === "en" ? "Copied!" : "Copiado!";
+    setTimeout(() => (copy.innerHTML = label), 2000);
+  };
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(address.textContent.trim());
+      return done();
+    } catch { /* clipboard API blocked (embedded browsers): fall back to selecting the address */ }
+    const range = document.createRange();
+    range.selectNodeContents(address);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { /* the address stays selected for Ctrl+C */ }
+    if (ok) done();
+  });
 }
 
 setLang(storedLang() || (/^pt\b/i.test(navigator.language || "") ? "pt" : "en"), false);

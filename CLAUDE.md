@@ -201,7 +201,9 @@ Verified in game by the owner (2026-11-11, 0.4.x): overlay hides on alt-tab (ove
 (opens, drags, Esc, clipboard restored), F5 /hideout, equipment registration. Still untested: trade cards with a real
 whisper, autostart after a reboot, the updater on a real update. SignPath Foundation: owner applied 2026-11-11
 (answers in Claude outputs/signpath-pedido.md); when approved, sign in CI with their GitHub action, then add the Tauri
-updater .sig of the SIGNED exe. Donations: owner cannot open a PayPal (Ko-fi's default), DONATE_URL still empty.
+updater .sig of the SIGNED exe. Donations (0.4.3): LivePix https://livepix.gg/exilehub (Pix, main button on #apoie, owner 2026-11-11) and the owner's USDT address on Solana (given 2026-11-11), shown ONLY on the site's #apoie section (copy
+button with a select+execCommand fallback, red "only USDT on Solana" warning) and in the README; links.ts DONATE_URL =
+SITE_URL#apoie (the app's footer button opens it); .github/FUNDING.yml custom link (GitHub "Sponsor" button).
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.

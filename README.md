@@ -226,6 +226,19 @@ GitHub issue, and the app sends nothing on its own.
 
 ---
 
+## Apoie / Support
+
+O Exile Hub é e continua grátis. Se quiser apoiar o desenvolvimento: **Pix em
+[livepix.gg/exilehub](https://livepix.gg/exilehub)**, ou **USDT na rede Solana (SPL)**
+`EjrsinpsX28vxXF5qf4sRAZtjCdNARNb163d1T9xeRjK`
+Envie somente USDT pela rede Solana: outra moeda ou rede se perde. A doação não libera nada no app.
+
+Exile Hub is and stays free. To support development: **[livepix.gg/exilehub](https://livepix.gg/exilehub)** (Pix, Brazil),
+or **USDT on the Solana network (SPL)**, same address above.
+Send only USDT on Solana: any other coin or network is lost. Donating unlocks nothing in the app.
+
+---
+
 ## Develop (Windows, Node 20+, Rust stable MSVC + VS Build Tools)
 
     npm install
