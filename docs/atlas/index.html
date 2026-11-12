@@ -41,6 +41,12 @@ aside h3 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; lette
 aside ul { margin: 0; padding: 0; list-style: none; }
 aside li { padding: 3px 0; border-bottom: 1px solid #1f252e; display: flex; gap: 6px; align-items: baseline; }
 aside li .x { margin-left: auto; color: var(--muted); }
+/* the game's own item-text colours: black panel, magic-blue effects */
+aside { background: rgba(8,8,10,.97); border-color: #2a2620; }
+aside li { border-bottom-color: #1c1a17; }
+#effects li { display: block; color: #8888ff; }
+#effects li .x { margin-left: 6px; }
+#picked li .name:not(.k1):not(.k2) { color: #c8c8c8; }
 aside .top { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
 aside .top #count { font-weight: 600; color: var(--accent2); margin-right: auto; }
 aside .top #count.full { color: var(--red); }
