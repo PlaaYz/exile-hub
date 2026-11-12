@@ -59,6 +59,9 @@ const ATTACK_MOD = /Critical Strike|Damage|Attack|Accuracy|Socketed|Gems?\b|Leec
 /** Bulk offers shown. */
 const kBulkOffers = 12;
 
+/** The same item copied again within this time reuses the last search. */
+const kSameItemMs = 10_000;
+
 export class PriceChecker {
   private seq = 0;
   private current: { item: ParsedItem; view: PriceView; text: string; queryId: string | null; rest: string[] } | null = null;
@@ -73,6 +76,17 @@ export class PriceChecker {
   check(text: string, league: string): boolean {
     const item = parseItem(text);
     if (!item) return false;
+    // the same item again while its search runs (or a few seconds after): show that one, don't spend the trade limit twice
+    const cur = this.current;
+    if (cur && cur.text === text && cur.view.league === league) {
+      const v = cur.view;
+      const loading = v.ninjaStatus === "loading" || v.tradeStatus === "loading" || v.bulkStatus === "loading";
+      const failed = v.ninjaStatus === "error" || v.tradeError !== null || v.bulkStatus === "error";
+      if (loading || (!failed && (this.d.now ?? Date.now)() - v.at < kSameItemMs)) {
+        this.emit();
+        return true;
+      }
+    }
     const seq = ++this.seq;
     const dps = weaponDps(item);
     const def = defences(item);

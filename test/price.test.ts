@@ -225,6 +225,29 @@ describe("PriceChecker", () => {
     expect(t.bodies[0].query.name).toBe("Tabula Rasa");
   });
 
+  it("the same item twice in a row searches once, again after 10 s", async () => {
+    let now = 1000;
+    const t = fakeTrade();
+    const pc = new PriceChecker({
+      ninja: new NinjaClient(fakeNinja().fn, "test"),
+      trade: new TradeClient(t.fn, "test"),
+      stats: async () => stats,
+      onUpdate: () => {},
+      now: () => now,
+    });
+    pc.check(tabula, "Allflame");
+    pc.check(tabula, "Allflame"); // still loading
+    await settle();
+    now += 5000;
+    pc.check(tabula, "Allflame"); // done, a few seconds later
+    await settle();
+    expect(t.bodies).toHaveLength(1);
+    now += 10_000;
+    pc.check(tabula, "Allflame");
+    await settle();
+    expect(t.bodies).toHaveLength(2);
+  });
+
   it("prices stackable currency on ninja only", async () => {
     const { pc, t } = make();
     pc.check(chaosStack, "Allflame");
