@@ -104,7 +104,40 @@ function lookup(line: string): string | undefined {
   if (p === undefined) return undefined;
   const nums = line.match(NUM) ?? [];
   let i = 0;
-  return p.replace(/#/g, () => nums[i++] ?? "#");
+  return keepKeywords(p.replace(/#/g, () => nums[i++] ?? "#"));
+}
+
+// Mechanic keywords stay as in the English client (owner, 2026-11-12: "Thread" is what players search
+// and talk about, "Fios" is not). Longer phrases first: "Altares Ritualísticos" before "Altar".
+const KEEP: [string, string][] = [
+  ["Fios de Memória", "Memory Strands"], ["Vestígios de Memória", "Memory Traces"], ["Fios", "Threads"], ["Fio", "Thread"],
+  ["Altares Ritualísticos", "Ritual Altars"], ["Altar Ritualístico", "Ritual Altar"], ["Altares", "Shrines"], ["Altar", "Shrine"],
+  ["Cofres", "Strongboxes"], ["Cofre", "Strongbox"],
+  ["Mercenários", "Mercenaries"], ["Mercenário", "Mercenary"],
+  ["Joias Abissais", "Abyss Jewels"], ["Abismos", "Abysses"], ["Abismo", "Abyss"],
+  ["Fendas Instáveis", "Unstable Breaches"], ["Fenda Instável", "Unstable Breach"], ["Fendas", "Breaches"], ["Fenda", "Breach"],
+  ["Exilados Renegados", "Rogue Exiles"], ["Exilado Renegado", "Rogue Exile"],
+  ["Bestas Vermelhas", "Red Beasts"], ["Besta Vermelha", "Red Beast"], ["Bestas Amarelas", "Yellow Beasts"], ["Besta Amarela", "Yellow Beast"],
+  ["Bestas", "Beasts"], ["Besta", "Beast"],
+  ["Espelho do Delírio", "Mirror of Delirium"], ["Miragens", "Mirages"], ["Miragem", "Mirage"], ["Bosque Viridiano", "Viridian Wildwood"],
+  ["Sentinelas Enterradas", "Buried Sentinels"], ["Sentinela Enterrada", "Buried Sentinel"],
+  ["Evocadores Demoníacos", "Demonic Evocators"], ["Evocador Demoníaco", "Demonic Evocator"],
+  ["Monstros Aprisionados", "Imprisoned Monsters"], ["Monstro Aprisionado", "Imprisoned Monster"],
+  ["Floras Sagradas", "Sacred Flora"], ["Flora Sagrada", "Sacred Flora"], ["Fauna Sagrada", "Sacred Fauna"],
+  ["Expedições", "Expeditions"], ["Expedição", "Expedition"], ["Incursões", "Incursions"], ["Incursão", "Incursion"],
+  ["Legião", "Legion"], ["Sindicato Imortal", "Immortal Syndicate"], ["Cartas de Adivinhação", "Divination Cards"],
+  ["Espíritos Atormentados", "Tormented Spirits"], ["Espírito Atormentado", "Tormented Spirit"],
+  ["Devorador de Mundos", "Eater of Worlds"], ["Exarca Cauterizado", "Searing Exarch"], ["Criador", "Shaper"], ["Ancião", "Elder"],
+  ["Conquistadores", "Conquerors"], ["Anomalias do Atlas", "Atlas Anomalies"],
+  ["Depósitos de Minério", "Ore Deposits"], ["Depósito de Minério", "Ore Deposit"],
+  ["Ultimatos", "Ultimatums"], ["Ultimato", "Ultimatum"], ["Provações de Ascensão", "Trials of Ascendancy"],
+  ["Provação de Ascensão", "Trial of Ascendancy"], ["Labirinto", "Labyrinth"],
+  ["Mapas Sintetizados", "Synthesis Maps"], ["Mapa Sintetizado", "Synthesis Map"],
+];
+const KEEP_RE = KEEP.map(([pt, en]) => [new RegExp(`(?<![\\p{L}])${pt}(?![\\p{L}])`, "giu"), en] as const);
+function keepKeywords(s: string): string {
+  for (const [re, en] of KEEP_RE) s = s.replace(re, en);
+  return s;
 }
 
 /**

@@ -220,7 +220,8 @@ texts per node id from GGG's official pages (www. and br.pathofexile.com/atlas-s
 before falling back to data/atlas-ptbr.json; every node carries its mechanic (mastery cluster, else name rules; 24
 global nodes have none). Page: mechanic highlight (panel list allocated/total, or a click on a mastery icon), saved
 trees in localStorage ("exile-hub.atlas.builds", per browser), PT/EN toggle for node texts ("exile-hub.atlas.lang";
-the page chrome stays pt-BR), search in both languages.
+the page chrome stays pt-BR), search in both languages. Mechanic keywords stay in English inside the pt texts
+(Threads, Shrine, Strongbox, Breach...; atlas-build.mts KEEP table, owner 2026-11-12): add new ones there.
 Site screenshots: docs/img/{farm,maps,sessions}-{pt,en}.png, taken from the real dashboard through CDP with character
 names replaced by their class (scratchpad shots.mjs); no price shot (other players' account names, owner's PoB test ring).
 Website: docs/ on GitHub Pages (https://plaayz.github.io/exile-hub/), download button = latest release via the GitHub API.
