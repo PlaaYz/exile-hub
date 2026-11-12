@@ -31,7 +31,7 @@ input[type=search] { padding: 4px 8px; width: 220px; }
 #hits, #pct { color: var(--muted); font-size: 12px; min-width: 40px; }
 #points { font-weight: 600; }
 #points.full { color: var(--red); }
-canvas#map { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; touch-action: none; cursor: grab; display: block; background: #0a0c12; }
+canvas#map { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; touch-action: none; cursor: grab; display: block; background: #0a0b14; }
 canvas#map.drag { cursor: grabbing; }
 canvas#map.over { cursor: pointer; }
 aside { position: fixed; right: 0; bottom: 0; width: 340px; z-index: 4; background: rgba(22,27,34,.97); border-left: 1px solid var(--border);
@@ -41,8 +41,20 @@ aside h3 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; lette
 aside ul { margin: 0; padding: 0; list-style: none; }
 aside li { padding: 3px 0; border-bottom: 1px solid #1f252e; display: flex; gap: 6px; align-items: baseline; }
 aside li .x { margin-left: auto; color: var(--muted); }
-aside li button.small { padding: 0 6px; font-size: 11px; }
-aside h3 .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+aside .top { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+aside .top #count { font-weight: 600; color: var(--accent2); margin-right: auto; }
+aside .top #count.full { color: var(--red); }
+aside .top select { flex: 1; min-width: 0; padding: 3px 4px; }
+aside .top button:disabled { opacity: .45; cursor: default; border-color: var(--border); }
+aside details { border-top: 1px solid var(--border); padding: 8px 0 4px; }
+aside summary { cursor: pointer; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); margin-bottom: 6px; }
+aside ul.grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+aside ul.grid li { border: 0; padding: 2px 0; cursor: pointer; font-size: 13px; white-space: nowrap; }
+aside ul.grid li .name { overflow: hidden; text-overflow: ellipsis; }
+aside ul.grid li .x { font-size: 11px; }
+aside ul.grid li:hover .name { color: var(--accent2); }
+aside ul.grid li.some .x { color: var(--accent2); }
+aside ul.grid li.focus .name, aside ul.grid li.focus .x { color: var(--blue); }
 aside li select { margin-left: auto; max-width: 150px; font-size: 12px; }
 aside .name { cursor: pointer; }
 aside .name:hover { color: var(--accent2); }
@@ -88,23 +100,22 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
   </div>
   <div class="group">
     <span id="points"></span>
-    <button id="save" title="Salvar esta árvore neste navegador">Salvar</button>
-    <button id="clear">Limpar</button>
     <button id="lang">PT</button>
     <button id="panelBtn" class="on">Painel</button>
   </div>
 </header>
 <canvas id="map"></canvas>
 <aside id="panel">
+  <div class="top"><span id="count"></span><button id="clear">Limpar</button></div>
+  <div class="top">
+    <select id="builds" title="Builds salvas neste navegador"></select>
+    <button id="save">Salvar</button>
+    <button id="del">Excluir</button>
+  </div>
   <p class="empty" id="empty">Clique num nó para alocá-lo junto com o caminho até ele. Clique de novo para remover. Os efeitos aparecem somados aqui, e o link da página guarda a sua árvore para compartilhar.</p>
-  <h3>Efeitos</h3>
-  <ul id="effects"></ul>
-  <h3>Nós alocados</h3>
-  <ul id="picked"></ul>
-  <h3>Mecânicas <span class="hint">(clique para destacar, ou no ícone na árvore)</span></h3>
-  <ul id="mechs"></ul>
-  <h3>Árvores salvas</h3>
-  <ul id="builds"></ul>
+  <details open><summary title="Clique numa mecânica (ou no ícone dela na árvore) para destacá-la">Mecânicas</summary><ul id="mechs" class="grid"></ul></details>
+  <details open><summary>Efeitos</summary><ul id="effects"></ul></details>
+  <details open><summary>Nós</summary><ul id="picked"></ul></details>
 </aside>
 <div id="tip"></div>
 <footer>Dados e imagens oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>

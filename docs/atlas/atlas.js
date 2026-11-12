@@ -14,7 +14,7 @@ const tip = $("tip");
 const S = 2;
 const HIT = [40, 56, 76, 110, 76]; // click radius in world units, by kind
 // the colour at the edges of GGG's atlas background picture: the space around it uses it, so no seam shows
-const EDGE = "#0a0c12";
+const EDGE = "#0a0b14"; // the background picture's own edge colour (sampled)
 
 const img = {};
 for (const [key, file] of Object.entries({
@@ -444,6 +444,8 @@ function panel() {
   const pts = $("points");
   pts.textContent = `${picked.size} / ${T.points} pontos`;
   pts.classList.toggle("full", picked.size >= T.points);
+  $("count").textContent = `${picked.size} / ${T.points} selecionados`;
+  $("count").classList.toggle("full", picked.size >= T.points);
   $("empty").style.display = picked.size ? "none" : "";
 
   const eff = $("effects");
@@ -525,17 +527,18 @@ function mechList() {
   T.mechanics
     .map((name, m) => ({ name, m }))
     .filter((x) => total[x.m])
-    .sort((a, b) => mine[b.m] - mine[a.m] || a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name))
     .forEach(({ name, m }) => {
       const li = document.createElement("li");
+      li.className = (focus === m ? "focus" : "") + (mine[m] ? " some" : "");
+      li.title = "Destacar na árvore";
+      li.onclick = () => setFocus(m);
       const span = document.createElement("span");
-      span.className = "name" + (focus === m ? " k1" : "");
+      span.className = "name";
       span.textContent = name;
-      span.title = "Destacar na árvore";
-      span.onclick = () => setFocus(m);
       const k = document.createElement("span");
       k.className = "x";
-      k.textContent = `${mine[m]} / ${total[m]}`;
+      k.textContent = `${mine[m]}/${total[m]}`;
       li.append(span, k);
       list.append(li);
     });
@@ -559,40 +562,38 @@ function storeBuilds(list) {
   buildList();
 }
 
+let buildName = ""; // the saved tree last loaded or saved (preselected in the list)
+
 function buildList() {
-  const list = $("builds");
-  list.textContent = "";
+  const sel = $("builds");
   const mine = builds().filter((b) => b.tree === tree);
-  if (!mine.length) {
-    const li = document.createElement("li");
-    li.className = "empty";
-    li.textContent = "Nenhuma salva ainda.";
-    list.append(li);
-  }
-  for (const b of mine) {
-    const li = document.createElement("li");
-    const name = document.createElement("span");
-    name.className = "name";
-    name.textContent = b.name;
-    name.title = "Carregar";
-    name.onclick = () => load(tree, b.ids);
-    const del = document.createElement("button");
-    del.className = "x small";
-    del.textContent = "✕";
-    del.title = "Apagar";
-    del.onclick = () => { if (confirm(`Apagar "${b.name}"?`)) storeBuilds(builds().filter((x) => !(x.tree === b.tree && x.name === b.name))); };
-    li.append(name, del);
-    list.append(li);
-  }
+  if (!mine.some((b) => b.name === buildName)) buildName = "";
+  sel.textContent = "";
+  sel.append(new Option(mine.length ? "Builds salvas…" : "Nenhuma build salva", "", true, !buildName));
+  for (const b of mine) sel.append(new Option(b.name, b.name, false, b.name === buildName));
+  $("del").disabled = !buildName;
 }
 
+$("builds").onchange = () => {
+  const b = builds().find((x) => x.tree === tree && x.name === $("builds").value);
+  buildName = b ? b.name : "";
+  if (b) load(tree, b.ids);
+  else buildList();
+};
 $("save").onclick = () => {
-  if (!picked.size) return;
-  const name = prompt("Nome desta árvore:")?.trim();
+  if (!picked.size) { alert("Selecione algum nó antes de salvar."); return; }
+  const name = prompt("Nome desta build:", buildName)?.trim();
   if (!name) return;
   const ids = location.hash.split(":")[1] ?? "";
+  buildName = name;
   // same name on the same tree = overwrite
   storeBuilds([...builds().filter((b) => !(b.tree === tree && b.name === name)), { tree, name, ids }]);
+};
+$("del").onclick = () => {
+  if (!buildName || !confirm(`Excluir a build "${buildName}"?`)) return;
+  const name = buildName;
+  buildName = "";
+  storeBuilds(builds().filter((b) => !(b.tree === tree && b.name === name)));
 };
 
 // ---- tooltip ------------------------------------------------------------------------------
@@ -749,7 +750,7 @@ canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(Math.pow(1.
 $("in").onclick = () => zoomAt(1.4, ...center());
 $("out").onclick = () => zoomAt(1 / 1.4, ...center());
 $("fit").onclick = () => animateTo(fit(), 300);
-$("clear").onclick = () => { picked.clear(); choice.clear(); changed(); };
+$("clear").onclick = () => { picked.clear(); choice.clear(); buildName = ""; changed(); };
 $("panelBtn").onclick = () => { $("panel").classList.toggle("hidden"); $("panelBtn").classList.toggle("on"); };
 const langBtn = $("lang");
 const showLang = () => {
