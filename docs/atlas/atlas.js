@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=6`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=7`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -240,6 +240,18 @@ function drawStatic(g, k, rect) {
     if (x1 > x0 && y1 > y0) {
       const f = b[2] / sq.size;
       g.drawImage(img.bg, b[0] + (x0 - sq.x) * f, b[1] + (y0 - sq.y) * f, (x1 - x0) * f, (y1 - y0) * f, x0, y0, x1 - x0, y1 - y0);
+      // the picture's edges are not one flat colour: fade them into the page colour so no square shows
+      const w = sq.size * 0.06, X1 = sq.x + sq.size, Y1 = sq.y + sq.size;
+      for (const [ax, ay, bx, by, rx, ry, rw, rh] of [
+        [sq.x, 0, sq.x + w, 0, sq.x, sq.y, w, sq.size], [X1, 0, X1 - w, 0, X1 - w, sq.y, w, sq.size],
+        [0, sq.y, 0, sq.y + w, sq.x, sq.y, sq.size, w], [0, Y1, 0, Y1 - w, sq.x, Y1 - w, sq.size, w],
+      ]) {
+        const grad = g.createLinearGradient(ax, ay, bx, by);
+        grad.addColorStop(0, EDGE);
+        grad.addColorStop(1, EDGE + "00");
+        g.fillStyle = grad;
+        g.fillRect(rx, ry, rw, rh);
+      }
     }
   }
   for (const [x, y, ...r] of T.groups) if (inside(x, y, r[2] * S)) sprite(g, img.group, r, x, y);
@@ -748,6 +760,17 @@ canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(Math.pow(1.
 $("in").onclick = () => zoomAt(1.4, ...center());
 $("out").onclick = () => zoomAt(1 / 1.4, ...center());
 $("fit").onclick = () => animateTo(fit(), 300);
+// the link already carries the tree (#data:ids); this just copies it
+$("share").onclick = async () => {
+  const b = $("share");
+  try {
+    await navigator.clipboard.writeText(location.href);
+    b.textContent = "Copiado!";
+  } catch {
+    prompt("Copie o link:", location.href); // clipboard blocked (old browser, http)
+  }
+  setTimeout(() => (b.textContent = "Copiar link"), 1500);
+};
 $("clear").onclick = () => { picked.clear(); choice.clear(); buildName = ""; changed(); };
 $("panelBtn").onclick = () => { $("panel").classList.toggle("hidden"); $("panelBtn").classList.toggle("on"); };
 // "Fundo": the round background picture on/off, remembered in this browser

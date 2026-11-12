@@ -204,7 +204,7 @@ whisper, autostart after a reboot, the updater on a real update. SignPath Founda
 updater .sig of the SIGNED exe. Donations (0.4.3): LivePix https://livepix.gg/exilehub (Pix, main button on #apoie, owner 2026-11-11) and the owner's USDT address on Solana (given 2026-11-11), shown ONLY on the site's #apoie section (copy
 button with a select+execCommand fallback, red "only USDT on Solana" warning) and in the README; links.ts DONATE_URL =
 SITE_URL#apoie (the app's footer button opens it); .github/FUNDING.yml custom link (GitHub "Sponsor" button).
-Atlas tree planner (2026-11-12, HIDDEN until the owner says to release): docs/atlas/ (index.html + atlas.js, our own
+Atlas tree planner (2026-11-12, RELEASED the same day: site nav "Árvore do Atlas", indexable): docs/atlas/ (index.html + atlas.js, our own
 canvas viewer, written from scratch, drawn with GGG's official atlas sprite sheets at zoom 0.5 in docs/atlas/img:
 world size = sprite px x 2; links stroked, not textured). Smoothness (2026-11-12): the unchanging layer is pre-drawn
 once into a 3072 px picture of the whole tree (2048 on phones) used while zoomed out (cache.k x 1.25); zoomed in, only
@@ -213,8 +213,7 @@ frame. 15-19 ms -> 0.3-1.6 ms per frame at 1920 px. Animated zoom, drag inertia,
 GGG's official github.com/grindinggear/atlastree-export (tag 3.30.0) and data/atlas-ptbr.json (the owner's pt-BR table,
 English text with numbers as "#"; GGG markup "[A|B]" -> "B"; keys matched with or without line breaks; the script lists
 what is missing). The owner's earlier copy of hypostasis.faith/atlas (their viewer + hotlinked assets, no license) was
-NOT used. To release: link it from the site nav (docs/index.html) and drop `noindex` from docs/atlas/index.html.
-Each league: rebuild with the new tag, translate what the script reports.
+NOT used. Each league: rebuild with the new tag, translate what the script reports.
 Atlas features (2026-11-12, ported in our own code from ideas of the owner's atlas-ptbr project): the build pairs EN/PT
 texts per node id from GGG's official pages (www. and br.pathofexile.com/atlas-skill-tree, `passiveSkillTreeData`)
 before falling back to data/atlas-ptbr.json; every node carries its mechanic (mastery cluster, else name rules; 24

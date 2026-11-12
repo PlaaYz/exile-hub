@@ -3,8 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- not linked from the site yet: kept out of search engines until it is released -->
-<meta name="robots" content="noindex, nofollow">
 <title>Árvore do Atlas · Exile Hub</title>
 <meta name="description" content="Planejador da árvore do Atlas do Path of Exile em português, com os dados oficiais da GGG.">
 <meta name="theme-color" content="#0e1116">
@@ -110,7 +108,7 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
 </header>
 <canvas id="map"></canvas>
 <aside id="panel">
-  <div class="top"><span id="count"></span><button id="clear">Limpar</button></div>
+  <div class="top"><span id="count"></span><button id="share" title="Copia o link desta árvore para compartilhar">Copiar link</button><button id="clear">Limpar</button></div>
   <div class="top">
     <select id="builds" title="Builds salvas neste navegador"></select>
     <button id="save">Salvar</button>
@@ -124,6 +122,6 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
 <div id="tip"></div>
 <footer>Dados e imagens oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>
 <!-- bump ?v= on every change: GitHub Pages lets browsers keep old copies for 10 min, and a new page with an old script breaks -->
-<script src="atlas.js?v=6"></script>
+<script src="atlas.js?v=7"></script>
 </body>
 </html>
