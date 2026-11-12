@@ -23,10 +23,13 @@ interface RawNode {
   isMastery?: boolean;
   isWormhole?: boolean;
   variantEffects?: { effect: number; stats: string[] }[];
+  icon?: string;
 }
+type Sheet = { filename: string; coords: Record<string, { x: number; y: number; w: number; h: number }> };
 interface Raw {
   nodes: Record<string, RawNode>;
-  groups: Record<string, { x: number; y: number }>;
+  groups: Record<string, { x: number; y: number; background?: { image: string; offsetX?: number; offsetY?: number } }>;
+  sprites: Record<string, Record<string, Sheet>>;
   constants: { skillsPerOrbit: number[]; orbitRadii: number[] };
   points: { totalPoints: number };
 }
@@ -77,7 +80,16 @@ function tr(text: string): string[] {
 }
 
 const out = path.resolve(import.meta.dirname, "../docs/atlas");
-mkdirSync(out, { recursive: true });
+mkdirSync(path.join(out, "img"), { recursive: true });
+
+// GGG's sprite sheets at the largest zoom (0.5): world size = sprite size / 0.5
+const ZOOM = "0.5";
+const SHEETS = ["atlas-skills-4.webp", "atlas-skills-disabled-4.webp", "atlas-frame-4.webp", "atlas-group-background-4.webp", "atlas-mastery-4.webp", "atlas-background-4.webp"];
+for (const file of SHEETS) {
+  const res = await fetch(`https://raw.githubusercontent.com/grindinggear/atlastree-export/${tag}/assets/${file}`);
+  if (!res.ok) throw new Error(`${file} HTTP ${res.status}`);
+  writeFileSync(path.join(out, "img", file), Buffer.from(await res.arrayBuffer()));
+}
 
 for (const name of ["data", "ruthless"]) {
   const res = await fetch(`https://raw.githubusercontent.com/grindinggear/atlastree-export/${tag}/${name}.json`);
@@ -85,6 +97,12 @@ for (const name of ["data", "ruthless"]) {
   const raw = (await res.json()) as Raw;
   const { skillsPerOrbit, orbitRadii } = raw.constants;
   const startId = Number(raw.nodes.root.out?.[0]);
+  /** [x, y, w, h] of a sprite on the sheet of that category, or null. */
+  const rect = (category: string, key: string | undefined): number[] | null => {
+    const c = key ? raw.sprites[category]?.[ZOOM]?.coords[key] : undefined;
+    return c ? [c.x, c.y, c.w, c.h] : null;
+  };
+  const iconCategory = ["normalActive", "notableActive", "keystoneActive", "startNode", "wormholeActive"];
 
   type Pos = { x: number; y: number; g?: number; o?: number; a?: number; r?: number };
   const pos = new Map<number, Pos>();
@@ -98,18 +116,25 @@ for (const name of ["data", "ruthless"]) {
     pos.set(Number(key), { x: Math.round(g.x + r * Math.sin(a)), y: Math.round(g.y - r * Math.cos(a)), g: n.group, o: orbit, a: deg, r });
   }
 
-  // [id, x, y, kind]: 0 small, 1 notable, 2 keystone, 3 start, 4 gateway (masteries are only group decoration)
-  const nodes: [number, number, number, number][] = [];
+  // [id, x, y, kind, ...icon rect]: 0 small, 1 notable, 2 keystone, 3 start, 4 gateway (masteries are only group decoration)
+  const nodes: number[][] = [];
+  const masteries: number[][] = []; // [x, y, ...icon rect]
   // id -> [name, stats, reminder, flavour, variants (each a list of stats) | null, English text for the search]
   const info: Record<number, [string, string[], string[], string[], string[][] | null, string]> = {};
   const edges: (number[])[] = [];
   const shown = (id: number) => pos.has(id) && !raw.nodes[id]?.isMastery;
   for (const [key, n] of Object.entries(raw.nodes)) {
     const id = Number(key);
-    if (key === "root" || !shown(id)) continue;
+    if (key === "root") continue;
+    if (n.isMastery && pos.has(id)) {
+      const r = rect("mastery", n.icon);
+      if (r) masteries.push([pos.get(id)!.x, pos.get(id)!.y, ...r]);
+    }
+    if (!shown(id)) continue;
     const p = pos.get(id)!;
     const kind = id === startId ? 3 : n.isWormhole ? 4 : n.isKeystone ? 2 : n.isNotable ? 1 : 0;
-    nodes.push([id, p.x, p.y, kind]);
+    const iconKey = kind === 3 ? "AtlasPassiveSkillScreenStart" : kind === 4 ? "Wormhole" : n.icon;
+    nodes.push([id, p.x, p.y, kind, ...(rect(iconCategory[kind], iconKey) ?? [])]);
     if (id !== startId) {
       const variants = n.variantEffects?.map((v) => v.stats.flatMap(tr)) ?? null;
       const en = plain([n.name, ...(n.stats ?? []), ...(n.variantEffects?.flatMap((v) => v.stats) ?? [])].join(" ")).replace(/\s+/g, " ");
@@ -131,7 +156,13 @@ for (const name of ["data", "ruthless"]) {
       } else edges.push([id, to]);
     }
   }
-  const tree = { version: tag, points: raw.points.totalPoints, start: startId, nodes, edges, info };
+  const groups = Object.values(raw.groups).flatMap((g) => {
+    const r = g.background && rect("groupBackground", g.background.image);
+    return r ? [[Math.round(g.x + (g.background!.offsetX ?? 0)), Math.round(g.y + (g.background!.offsetY ?? 0)), ...r]] : [];
+  });
+  const frames = Object.fromEntries(Object.entries(raw.sprites.frame[ZOOM].coords).map(([k, c]) => [k, [c.x, c.y, c.w, c.h]]));
+  const sprites = { frames, background: rect("atlasBackground", "AtlasPassiveBackground") };
+  const tree = { version: tag, points: raw.points.totalPoints, start: startId, nodes, edges, info, groups, masteries, sprites };
   writeFileSync(path.join(out, `${name}.json`), JSON.stringify(tree));
   console.log(`${name}: ${nodes.length} nodes, ${edges.length} links, ${raw.points.totalPoints} points`);
 }
