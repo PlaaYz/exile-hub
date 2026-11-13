@@ -78,7 +78,7 @@ describe("PoB import", () => {
   it("fills required levels from the gem table", () => {
     const table = gemLevelTable({
       a: { name: "Arc", required_level: 12 },
-      b: { name: "Added Lightning Damage", required_level: 8 },
+      b: { name: "Added Lightning Damage Support", required_level: 8 },
     });
     const b = applyGemLevels(parsePobXml(XML), table);
     expect(b.groups[0].gems.map((g) => g.requiredLevel)).toEqual([12, 8, null]);
@@ -127,5 +127,13 @@ Implicits: 0
     expect(b.groups[0].gems[0].name).toBe("Freezing Pulse");
     expect(parsePobEquipped(xml, 0)[0].item.name).toBe("Old Ring");
     expect(parsePobEquipped(xml, 1)[0].item.name).toBe("New Ring");
+  });
+});
+
+describe("gem levels", () => {
+  it("support gems without \"Support\" and transfigured gems use the gem data's names", () => {
+    const table = gemLevelTable({ a: { name: "Combustion Support", required_level: 38 }, b: { name: "Pyroclast Mine", required_level: 28 } });
+    const build = { className: "", ascendClass: "", level: 1, treeNodes: [], stages: [], stage: 0, groups: [{ label: "x", slot: null, enabled: true, gems: ["Combustion", "Pyroclast Mine of Sabotage", "Herald of the Hive"].map((name) => ({ name, level: 1, quality: 0, enabled: true, support: false, requiredLevel: null })) }] };
+    expect(applyGemLevels(build, table).groups[0].gems.map((g) => g.requiredLevel)).toEqual([38, 28, null]);
   });
 });

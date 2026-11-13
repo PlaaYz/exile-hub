@@ -144,6 +144,8 @@ export function importPob(code: string, stage?: number): PobBuild {
   return parsePobXml(decodePobCode(code), stage);
 }
 
+const levelOf = (levels: ReadonlyMap<string, number>, name: string) => levels.get(name) ?? levels.get(`${name} support`) ?? null;
+
 /** Fills `requiredLevel` on gems using a name -> required level table. */
 export function applyGemLevels(build: PobBuild, levels: ReadonlyMap<string, number>): PobBuild {
   return {
@@ -152,7 +154,9 @@ export function applyGemLevels(build: PobBuild, levels: ReadonlyMap<string, numb
       ...g,
       gems: g.gems.map((gem) => ({
         ...gem,
-        requiredLevel: levels.get(gem.name.toLowerCase()) ?? null,
+        // PoB names support gems without the "Support" the gem data has ("Combustion" = "Combustion Support")
+        // transfigured gems ("Pyroclast Mine of Sabotage") need the level of their base gem
+        requiredLevel: levelOf(levels, gem.name.toLowerCase()) ?? levelOf(levels, gem.name.toLowerCase().replace(/ of [\w' ]+$/, "")),
       })),
     })),
   };
