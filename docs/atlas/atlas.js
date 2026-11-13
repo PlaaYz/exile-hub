@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=10`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=11`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -506,7 +506,7 @@ function panel() {
       eff.append(h);
     }
     const li = document.createElement("li");
-    li.textContent = e.text;
+    li.innerHTML = hl(e.text);
     if (e.count > 1) {
       const k = document.createElement("span");
       k.className = "x";
@@ -654,14 +654,26 @@ $("del").onclick = () => {
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
+// mechanic keywords (kept in English in the pt texts too, see atlas-build.mts KEEP) and numbers stand out
+const KW_RE = new RegExp("\\b(?:" + [
+  "Abyss(?:es| Jewels?)?", "Atlas Anomal(?:y|ies)", "Beasts?", "Red Beasts?", "Yellow Beasts?", "Betrayal", "Beyond", "Blight(?:ed)?",
+  "Breach(?:es)?", "Unstable Breach(?:es)?", "Buried Sentinels?", "Conquerors?", "Delirium", "Mirror of Delirium", "Demonic Evocators?",
+  "Divination Cards?", "Eater of Worlds", "Elder", "Essences?", "Expeditions?", "Harbingers?", "Imprisoned Monsters?",
+  "Immortal Syndicate", "Incursions?", "Labyrinth", "Legion", "Memory Strands?", "Memory Traces?", "Mercenar(?:y|ies)", "Mirages?",
+  "Ore Deposits?", "Ritual(?:s| Altars?)?", "Rogue Exiles?", "Sacred F(?:lora|auna)", "Searing Exarch", "Sentinels?", "Settlers",
+  "Shaper", "Shrines?", "Strongbox(?:es)?", "Synthesis Maps?", "Threads?", "Tormented Spirits?", "Trials? of Ascendancy",
+  "Ultimatums?", "Viridian Wildwood", "Kalguur",
+].sort((a, b) => b.length - a.length).join("|") + ")\\b", "g");
+const hl = (s) => esc(s).replace(/\d+(?:\.\d+)?%?/g, '<span class="num">$&</span>').replace(KW_RE, '<span class="kw">$&</span>');
+
 function showTip(id, x, y) {
   const t = texts(id);
   if (!t) { tip.style.display = "none"; return; }
   const name = T.info[id].n, { s: stats, r: rem, f: flav, v: variants } = t;
-  let html = `<b>${esc(name)}</b>` + stats.map((s) => `<div class="s">${esc(s)}</div>`).join("");
+  let html = `<b>${esc(name)}</b>` + stats.map((s) => `<div class="s">${hl(s)}</div>`).join("");
   if (variants) {
     html += `<div class="v">${L === "pt" ? "Escolha uma opção:" : "Choose one:"}` +
-      variants.map((v, i) => `<div${choice.get(id) === i ? ' class="on"' : ""}>${v.map(esc).join("<br>")}</div>`).join("") + "</div>";
+      variants.map((v, i) => `<div${choice.get(id) === i ? ' class="on"' : ""}>${v.map(hl).join("<br>")}</div>`).join("") + "</div>";
   }
   html += rem.map((s) => `<div class="r">${esc(s)}</div>`).join("");
   if (flav.length) html += `<div class="f">${flav.map(esc).join("<br>")}</div>`;
