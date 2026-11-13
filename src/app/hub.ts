@@ -789,7 +789,7 @@ export class Hub {
       startWithWindows: this.startWithWindowsCache,
       farmRuns: this.farmRuns(),
       farmPricesVersion: this.prices.farmPricesVersion,
-      tree: this.tree.state(this.build, this.session, this.log.passives),
+      tree: this.tree.state(this.build),
       maps: this.log.maps.stats(),
       diag: {
         entries: this.diag.recent(),

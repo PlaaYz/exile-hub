@@ -1,6 +1,5 @@
-// Passive tree progress: GGG's tree data (cached) compared with the build and the log.
-import { compareTree, kTreeFormat, pointBudget, pointsIn, slimTree, treeLayout, type PassiveTracker, type PassiveTree } from "../core/passives";
-import type { Session } from "../core/session";
+// The imported build's passive tree as a guide: GGG's tree data (cached) with the build's nodes.
+import { compareTree, kTreeFormat, slimTree, treeLayout, type PassiveTree } from "../core/passives";
 import type { AppState, PobBuild, TreeLayout } from "../shared/types";
 import { kTreeMaxAgeMs, kTreeUrl } from "./constants";
 import type { Platform } from "./platform";
@@ -56,26 +55,13 @@ export class TreeService {
     return this.layoutCache;
   }
 
-  state(build: PobBuild | null, session: Session, passives: PassiveTracker): AppState["tree"] {
-    const name = session.characterName;
+  /** The build's tree as a guide: nothing is marked as taken (the character's own tree is not followed). */
+  state(build: PobBuild | null): AppState["tree"] {
     if (!build) return null;
     if (!this.data) {
       void this.load();
-      return { status: "loading", character: name, level: session.characterLevel, pointsSeen: 0, budget: 0, progress: null };
+      return { status: "loading", progress: null };
     }
-    // without a character the build's tree is still shown, with nothing marked as taken
-    if (!name) return { status: "no-character", character: null, level: null, pointsSeen: 0, budget: 0, progress: compareTree(this.data, build, new Map()) };
-    const allocated = passives.allocated(name);
-    const level = session.characterLevel ?? 1;
-    const pointsSeen = pointsIn(allocated);
-    const budget = pointBudget(level);
-    return {
-      status: pointsSeen > budget ? "inconsistent" : "ok",
-      character: name,
-      level,
-      pointsSeen,
-      budget,
-      progress: compareTree(this.data, build, allocated),
-    };
+    return { status: "ok", progress: compareTree(this.data, build, new Map()) };
   }
 }

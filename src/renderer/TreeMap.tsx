@@ -186,8 +186,8 @@ export function TreeMapModal({ progress, onClose }: { progress: Progress; onClos
         <div className="row">
           <b>{tr("Árvore passiva", "Passive tree")}</b>
           <span className="muted small">
-            {tr("roda do mouse = zoom · arrastar = mover", "mouse wheel = zoom · drag = move")} · <span className="t-legend have">●</span> {tr("já tem", "allocated")} ·{" "}
-            <span className="t-legend build">●</span> {tr("do build", "in the build")} · <span className="t-legend next">●</span> {tr("próximos (na ordem)", "next (in order)")}
+            {tr("roda do mouse = zoom · arrastar = mover", "mouse wheel = zoom · drag = move")} · <span className="t-legend build">●</span>{" "}
+            {tr("do build", "in the build")} · <span className="t-legend next">●</span> {tr("primeiros pontos (na ordem)", "first points (in order)")}
           </span>
           <button onClick={onClose}>{tr("fechar (Esc)", "close (Esc)")}</button>
         </div>

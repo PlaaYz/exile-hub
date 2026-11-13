@@ -430,13 +430,9 @@ export interface AppState {
   /** map runs found in Client.txt (whole log at start, then live) */
   maps: MapStats;
   /** passive tree of the current character (from Client.txt) vs the PoB build; null without a build */
+  /** the imported build's passive tree, as a guide (not compared with the character: owner, 2026-11-12) */
   tree: {
-    status: "loading" | "no-character" | "ok" | "inconsistent";
-    character: string | null;
-    level: number | null;
-    /** points the log showed for this character, and what its level allows */
-    pointsSeen: number;
-    budget: number;
+    status: "loading" | "ok";
     progress: {
       buildPoints: number;
       donePoints: number;
