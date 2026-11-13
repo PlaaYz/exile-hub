@@ -111,6 +111,7 @@ export class GearService {
       name: item.name || item.baseType,
       baseType: item.baseType,
       rarity: item.rarity,
+      itemClass: item.itemClass,
       sockets: item.sockets,
       icon: this.icons.get(iconKey(item)) ?? null,
       lines: [...item.mods].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => t(m.text)),

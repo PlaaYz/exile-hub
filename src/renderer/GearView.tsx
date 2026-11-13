@@ -20,6 +20,9 @@ const SLOTS: Record<string, [number, number, number, number]> = {
   Boots: [6, 5, 2, 2],
 };
 
+/** Two-handed weapons: the game greys their picture into the off-hand slot (a bow's quiver goes there instead). */
+const TWO_HANDED = /^(Two Hand|Staves|Warstaves|Bows|Fishing Rods)/;
+
 export const linksOf = (sockets: string) => Math.max(0, ...sockets.trim().split(/\s+/).filter(Boolean).map((g) => g.split("-").length));
 
 function ItemDetail({ g }: { g: GearItemView }) {
@@ -82,6 +85,14 @@ export function GearPanelBody({ state }: { state: AppState }) {
       <div className="paperdoll">
         {Object.entries(SLOTS).map(([slot, [x, y, w, h]]) => {
           const g = bySlot.get(slot);
+          const main = bySlot.get("Weapon 1");
+          if (slot === "Weapon 2" && !g && main && TWO_HANDED.test(main.itemClass)) {
+            return (
+              <div key={slot} className="doll-slot two-hand" style={{ gridColumn: `${x} / span ${w}`, gridRow: `${y} / span ${h}` }} title={main.name}>
+                {main.icon && <img src={main.icon} alt="" draggable={false} />}
+              </div>
+            );
+          }
           return (
             <button
               key={slot}

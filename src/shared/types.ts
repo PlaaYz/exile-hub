@@ -347,6 +347,8 @@ export interface GearItemView {
   name: string;
   baseType: string;
   rarity: string;
+  /** "Staves", "Rings"... (a two-handed weapon fills the off hand too) */
+  itemClass: string;
   /** as the game writes it: "R-G-B B" (dash = linked) */
   sockets: string;
   /** item art from poe.ninja (null until found / when it has none) */

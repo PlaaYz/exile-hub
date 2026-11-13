@@ -378,3 +378,5 @@ body.mode-summary { background: var(--bg); overflow: hidden; }
 .gear-copied img { height: 44px; }
 .stage-select { gap: 8px; margin: 6px 0 10px; }
 .stage-select select { width: auto; flex: 1; }
+.doll-slot.two-hand { cursor: default; border-color: #3a3f48; }
+.doll-slot.two-hand img { opacity: .3; filter: grayscale(1); }
