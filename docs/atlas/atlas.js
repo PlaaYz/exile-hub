@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=13`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=14`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -398,17 +398,59 @@ function previewFor(id) {
   return path ? { add: new Set(path) } : null;
 }
 
+/** Allocates (with its path) or removes a node; true when it was allocated. */
 function click(id) {
-  if (id === T.start) return;
+  if (id === T.start) return false;
   if (picked.has(id)) {
     for (const p of removing(id)) { picked.delete(p); choice.delete(p); }
-  } else {
-    const path = pathTo(id);
-    if (!path || picked.size + path.length > T.points) return;
-    for (const p of path) picked.add(p);
+    changed();
+    return false;
   }
+  const path = pathTo(id);
+  if (!path || picked.size + path.length > T.points) return false;
+  for (const p of path) picked.add(p);
   changed();
+  return true;
 }
+
+// ---- choice menu: nodes with options ("Threadbare": Breach, Ritual...) are chosen on the tree itself --
+
+const chooser = $("pick");
+
+function openChooser(id, x, y) {
+  const t = texts(id);
+  chooser.textContent = "";
+  const head = document.createElement("b");
+  head.textContent = T.info[id].n;
+  chooser.append(head);
+  t.s.forEach((s) => { const d = document.createElement("div"); d.className = "s"; d.innerHTML = hl(s); chooser.append(d); });
+  const label = document.createElement("div");
+  label.className = "lbl";
+  label.textContent = L === "pt" ? "Escolha uma opção:" : "Choose one:";
+  chooser.append(label);
+  t.v.forEach((stats, i) => {
+    const b = document.createElement("button");
+    b.className = "opt" + (choice.get(id) === i ? " on" : "");
+    b.innerHTML = stats.map(hl).join("<br>");
+    b.onclick = () => { choice.set(id, i); closeChooser(); changed(); };
+    chooser.append(b);
+  });
+  const del = document.createElement("button");
+  del.className = "del";
+  del.textContent = L === "pt" ? "Remover nó" : "Remove node";
+  del.onclick = () => { closeChooser(); click(id); };
+  chooser.append(del);
+  chooser.style.display = "block";
+  const r = chooser.getBoundingClientRect();
+  chooser.style.left = Math.max(8, Math.min(x + 12, innerWidth - r.width - 8)) + "px";
+  chooser.style.top = Math.max(8, Math.min(y + 12, innerHeight - r.height - 8)) + "px";
+}
+
+function closeChooser() {
+  chooser.style.display = "none";
+}
+
+addEventListener("keydown", (e) => { if (e.key === "Escape") closeChooser(); });
 
 function changed() {
   preview = previewFor(hover);
@@ -748,6 +790,7 @@ function startGlide() {
 }
 
 canvas.addEventListener("pointerdown", (e) => {
+  closeChooser();
   stopMotion();
   try { canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -813,7 +856,14 @@ function release(e) {
     return;
   }
   const id = nodeAt(e.clientX, e.clientY);
+  closeChooser();
   if (id != null) {
+    // a node with options: allocating it, or clicking it again, opens the choice menu instead of the tooltip
+    if (texts(id)?.v && (picked.has(id) || click(id))) {
+      tip.style.display = "none";
+      openChooser(id, e.clientX, e.clientY);
+      return;
+    }
     if (e.pointerType !== "mouse") { hover = id; preview = previewFor(id); }
     click(id);
     showTip(id, e.clientX, e.clientY);
