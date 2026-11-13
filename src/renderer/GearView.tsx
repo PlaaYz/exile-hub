@@ -1,5 +1,5 @@
 // Equipamento tab: what the player wears, laid out like the game's character screen (item art from
-// poe.ninja, sockets and links drawn from the copied text), and the last item copied with Ctrl+C
+// poe.ninja), and the last item copied with Ctrl+C
 // compared with it. Items come from "register my equipment" (Ctrl+C on each worn item) or the PoB build.
 import { useState } from "react";
 import { tr } from "../shared/i18n";
@@ -19,95 +19,6 @@ const SLOTS: Record<string, [number, number, number, number]> = {
   Belt: [4, 6, 2, 1],
   Boots: [6, 5, 2, 2],
 };
-
-/** Gem colour of each socket: [light centre, dark rim]. A = abyss, D = Delve resonator. */
-const SOCKET_COLOR: Record<string, [string, string]> = {
-  R: ["#ff6a55", "#7a1410"],
-  G: ["#8be05a", "#245b12"],
-  B: ["#6fa4ff", "#13306e"],
-  W: ["#ffffff", "#8a8a8a"],
-  A: ["#3a3a3a", "#0e0e0e"],
-  D: ["#d8bf78", "#5e4a1c"],
-};
-
-/** Gradients shared by every socket drawing (the same ids in each svg: identical, so whichever is found works). */
-function SocketDefs() {
-  return (
-    <defs>
-      {Object.entries(SOCKET_COLOR).map(([c, [light, dark]]) => (
-        <radialGradient key={c} id={`sk-${c}`} cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stopColor={light} />
-          <stop offset="100%" stopColor={dark} />
-        </radialGradient>
-      ))}
-      <linearGradient id="sk-link" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stopColor="#5b3f1c" />
-        <stop offset="50%" stopColor="#e2b765" />
-        <stop offset="100%" stopColor="#5b3f1c" />
-      </linearGradient>
-      <linearGradient id="sk-link-h" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#5b3f1c" />
-        <stop offset="50%" stopColor="#e2b765" />
-        <stop offset="100%" stopColor="#5b3f1c" />
-      </linearGradient>
-    </defs>
-  );
-}
-
-/**
- * Sockets the way the game draws them: one per inventory cell, two columns snaking down (one column on
- * narrow items), centred on the item; a socket is a dark metal ring around the gem colour, a link a short
- * bronze bar between two sockets.
- */
-function Sockets({ sockets, w, h }: { sockets: string; w: number; h: number }) {
-  const groups = sockets.trim().split(/\s+/).filter(Boolean).map((g) => g.split("-"));
-  const all = groups.flat();
-  if (!all.length) return null;
-  const cols = Math.min(w, 2);
-  const rows = Math.ceil(all.length / cols);
-  const cell = 50;
-  const top = ((h - rows) / 2) * cell;
-  const left = ((w - Math.min(cols, all.length)) / 2) * cell;
-  const pos = (i: number) => {
-    const r = Math.floor(i / cols);
-    const c = cols === 1 ? 0 : r % 2 === 0 ? i % 2 : 1 - (i % 2);
-    return { x: left + c * cell + cell / 2, y: top + r * cell + cell / 2 };
-  };
-  const R = 15; // socket radius in a 50-unit cell
-  const links: { a: number; b: number }[] = [];
-  let i = 0;
-  for (const g of groups) {
-    for (let k = 1; k < g.length; k++) links.push({ a: i + k - 1, b: i + k });
-    i += g.length;
-  }
-  return (
-    <svg className="sockets" viewBox={`0 0 ${w * cell} ${h * cell}`} preserveAspectRatio="xMidYMid meet">
-      <SocketDefs />
-      {links.map(({ a, b }) => {
-        const p = pos(a);
-        const q = pos(b);
-        const horizontal = p.y === q.y;
-        const len = Math.abs(horizontal ? q.x - p.x : q.y - p.y) - 2 * R + 8;
-        const x = (p.x + q.x) / 2;
-        const y = (p.y + q.y) / 2;
-        return horizontal ? (
-          <rect key={`${a}-${b}`} className="link" x={x - len / 2} y={y - 5} width={len} height={10} rx={2} fill="url(#sk-link-h)" />
-        ) : (
-          <rect key={`${a}-${b}`} className="link" x={x - 5} y={y - len / 2} width={10} height={len} rx={2} fill="url(#sk-link)" />
-        );
-      })}
-      {all.map((c, k) => {
-        const p = pos(k);
-        return (
-          <g key={k}>
-            <circle className="ring" cx={p.x} cy={p.y} r={R} />
-            <circle cx={p.x} cy={p.y} r={R - 5} fill={`url(#sk-${SOCKET_COLOR[c] ? c : "A"})`} />
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
 
 export const linksOf = (sockets: string) => Math.max(0, ...sockets.trim().split(/\s+/).filter(Boolean).map((g) => g.split("-").length));
 
@@ -182,7 +93,6 @@ export function GearPanelBody({ state }: { state: AppState }) {
               disabled={!g}
             >
               {g?.icon ? <img src={g.icon} alt="" draggable={false} /> : <span className="doll-label">{g ? g.baseType : slotLabel(slot)}</span>}
-              {g && <Sockets sockets={g.sockets} w={w} h={h} />}
             </button>
           );
         })}

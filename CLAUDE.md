@@ -194,8 +194,8 @@ list every secondary mode (else that window starts a second Hub: it failed on AC
 Price check split (2026-11-12, owner): Ctrl+C = equipment (register, else compare with what is worn: GearService.compare),
 Ctrl+D = price (only the price key's copy is priced; with no price key configured, Ctrl+C still prices). Tab "Equipamento"
 (GearView.tsx, Panel "gear"): paper doll like the game's character screen, item art from poe.ninja (ninja iconFor:
-unique's own art, else the BaseType overview's plain base; CSP img-src allows https://web.poecdn.com), sockets/links drawn
-from the "Sockets:" line (PoB items have none), click = mods; below, the last Ctrl+C item compared. Whisper button
+unique's own art, else the BaseType overview's plain base; CSP img-src allows https://web.poecdn.com), no socket drawing (owner
+2026-11-12: without the game's art it is useless; the detail line shows "sockets R-G-B (3L)"), click = mods; below, the last Ctrl+C item compared. Whisper button
 on listings that are not instant buyout (owner chose this over the trade site's "Travel to Hideout", which needs the
 POESESSID login: never): Hub.priceWhisper sends only a whisper of a listing on screen, after chat.rs bring_game_front
 (finds the game window via EnumWindows when the click came from our own window). send_chat limit 200 -> 500 chars.
