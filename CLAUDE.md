@@ -198,8 +198,8 @@ as progress.json "current". backfill also updates `endgame` (updateEndgame), so 
 Native controls use the dark palette (color-scheme: dark in styles.css and the site). Site screenshots open in an
 in-page lightbox (no new tab: the owner got stuck on the bare image).
 Verified in game by the owner (2026-11-11, 0.4.x): overlay hides on alt-tab (overlayHideUnfocused on), Ctrl+D popup
-(opens, drags, Esc, clipboard restored), F5 /hideout, equipment registration. Still untested: trade cards with a real
-whisper, autostart after a reboot, the updater on a real update. SignPath Foundation: owner applied 2026-11-11
+(opens, drags, Esc, clipboard restored), F5 /hideout, equipment registration. Updater verified on a real update
+(0.4.3 -> 0.4.4, owner 2026-11-12). Still untested: trade cards with a real whisper, autostart after a reboot. SignPath Foundation: owner applied 2026-11-11
 (answers in Claude outputs/signpath-pedido.md); when approved, sign in CI with their GitHub action, then add the Tauri
 updater .sig of the SIGNED exe. Donations (0.4.3): LivePix https://livepix.gg/exilehub (Pix, main button on #apoie, owner 2026-11-11) and the owner's USDT address on Solana (given 2026-11-11), shown ONLY on the site's #apoie section (copy
 button with a select+execCommand fallback, red "only USDT on Solana" warning) and in the README; links.ts DONATE_URL =

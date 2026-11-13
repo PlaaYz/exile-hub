@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=9`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=10`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -470,16 +470,22 @@ function effectsOf() {
     if (!t) continue;
     const stats = t.v ? (choice.has(id) ? t.v[choice.get(id)] : []) : t.s;
     for (const s of stats) {
-      const key = s.replace(NUM, "#");
+      const m = byId.get(id).m;
+      const key = m + "|" + s.replace(NUM, "#");
       const nums = (s.match(NUM) ?? []).map(Number);
       const g = groups.get(key);
-      if (!g) groups.set(key, { text: s, nums, count: 1 });
+      if (!g) groups.set(key, { m, text: s, nums, count: 1 });
       else { g.count++; if (nums.length === 1) g.nums[0] += nums[0]; }
     }
   }
   return [...groups.values()]
     .map((g) => (g.count > 1 && g.nums.length === 1 ? { ...g, text: g.text.replace(NUM, String(Math.round(g.nums[0] * 100) / 100)) } : g))
-    .sort((a, b) => a.text.localeCompare(b.text, L === "pt" ? "pt-BR" : "en"));
+    .sort((a, b) => mechName(a.m).localeCompare(mechName(b.m)) || a.text.localeCompare(b.text, L === "pt" ? "pt-BR" : "en"));
+}
+
+/** Effects are grouped under their node's mechanic; nodes without one go last, as "Geral". */
+function mechName(m) {
+  return m >= 0 ? T.mechanics[m] : "￿Geral";
 }
 
 function panel() {
@@ -489,7 +495,16 @@ function panel() {
 
   const eff = $("effects");
   eff.textContent = "";
+  let last = null;
   for (const e of effectsOf()) {
+    if (e.m !== last) {
+      last = e.m;
+      const h = document.createElement("li");
+      h.className = "mech";
+      h.textContent = mechName(e.m).replace("￿", "");
+      if (e.m >= 0) { h.title = "Destacar na árvore"; h.onclick = () => setFocus(e.m); }
+      eff.append(h);
+    }
     const li = document.createElement("li");
     li.textContent = e.text;
     if (e.count > 1) {

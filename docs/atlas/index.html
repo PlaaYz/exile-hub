@@ -44,6 +44,8 @@ aside { background: rgba(8,8,10,.97); border-color: #2a2620; }
 aside li { border-bottom-color: #1c1a17; }
 #effects li { display: block; color: #8888ff; }
 #effects li .x { margin-left: 6px; }
+#effects li.mech { color: var(--accent2); font-weight: 600; font-size: 12px; margin-top: 8px; border-bottom-color: #2a2620; cursor: pointer; }
+#effects li.mech:first-child { margin-top: 0; }
 #picked li .name:not(.k1):not(.k2) { color: #c8c8c8; }
 aside .top { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
 aside .top #count { font-weight: 600; color: var(--accent2); margin-right: auto; }
@@ -124,6 +126,6 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
 <div id="tip"></div>
 <footer>Dados e imagens oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>
 <!-- bump ?v= on every change: GitHub Pages lets browsers keep old copies for 10 min, and a new page with an old script breaks -->
-<script src="atlas.js?v=9"></script>
+<script src="atlas.js?v=10"></script>
 </body>
 </html>
