@@ -36,20 +36,40 @@ const buildSource = (s: "manual" | "clipboard" | "saved") =>
     clipboard: tr("pego do clipboard", "taken from the clipboard"),
     saved: tr("restaurado da última sessão", "restored from the last session"),
   })[s];
-const LS_KEY = "exile-hub.visiblePanels.v10"; // bump when a panel is added so it shows up
+/**
+ * Which tabs the player shows. Never renamed: `known` lists the tabs that existed when they last chose,
+ * so a tab added by an update shows up once without bringing back the ones they hid.
+ */
+const LS_KEY = "exile-hub.panels";
+/** older builds renamed their key on every new tab (which reset the player's choice) */
+const OLD_KEYS = ["exile-hub.visiblePanels.v10", "exile-hub.visiblePanels.v9", "exile-hub.visiblePanels.v8"];
 
-function loadVisible(): Panel[] {
+export function loadVisible(read: (key: string) => string | null): Panel[] {
+  const all = ALL_PANELS.map((p) => p.id);
+  const isPanel = (p: unknown): p is Panel => all.includes(p as Panel);
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = read(LS_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Panel[];
-      const known = parsed.filter((p) => ALL_PANELS.some((a) => a.id === p));
-      if (known.length) return known;
+      const saved = JSON.parse(raw) as { visible: unknown[]; known: unknown[] };
+      const fresh = all.filter((p) => !saved.known.includes(p));
+      return [...saved.visible.filter(isPanel), ...fresh];
     }
+    for (const key of OLD_KEYS) {
+      const old = read(key);
+      if (old) return (JSON.parse(old) as unknown[]).filter(isPanel);
+    }
+  } catch {
+    /* storage unavailable or unreadable */
+  }
+  return all;
+}
+
+function saveVisible(visible: Panel[]): void {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ visible, known: ALL_PANELS.map((p) => p.id) }));
   } catch {
     /* storage unavailable */
   }
-  return ALL_PANELS.map((p) => p.id);
 }
 
 /**
@@ -654,15 +674,17 @@ function Welcome({ state }: { state: AppState }) {
 
 export function DashboardApp() {
   const state = useHubState();
-  const [visible, setVisible] = useState<Panel[]>(loadVisible);
+  const [visible, setVisible] = useState<Panel[]>(() =>
+    loadVisible((k) => {
+      try {
+        return localStorage.getItem(k);
+      } catch {
+        return null;
+      }
+    }),
+  );
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(visible));
-    } catch {
-      /* ignore */
-    }
-  }, [visible]);
+  useEffect(() => saveVisible(visible), [visible]);
 
   if (!state) return <div className="loading">{tr("carregando…", "loading…")}</div>;
 
