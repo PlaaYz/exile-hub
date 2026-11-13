@@ -88,6 +88,11 @@ aside .k2 { color: #ffd77a; font-weight: 600; }
 #pick button { display: block; width: 100%; text-align: left; margin: 3px 0; padding: 5px 8px; }
 #pick button.opt.on { border-color: var(--accent2); color: var(--accent2); }
 #pick button.del { color: var(--red); margin-top: 8px; }
+#pick button.opt { background: #1c1c1e; border-color: #3a3a3c; color: #c8c8c8; }
+#pick button.opt:hover:not(:disabled) { border-color: var(--accent); color: var(--accent2); }
+#pick button.opt:disabled { opacity: .45; cursor: default; }
+#pick .foot { margin-top: 6px; color: var(--muted); font-size: 12px; }
+#pick .foot.bad { color: var(--red); }
 footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--muted); font-size: 11px; }
 @media (max-width: 700px) {
   aside { width: 100%; top: auto !important; height: 45%; border-left: 0; border-top: 1px solid var(--border); }
@@ -144,6 +149,6 @@ footer { position: fixed; left: 10px; bottom: 6px; z-index: 3; color: var(--mute
 <div id="pick" role="menu"></div>
 <footer>Dados e imagens oficiais da GGG (atlastree-export) · This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</footer>
 <!-- bump ?v= on every change: GitHub Pages lets browsers keep old copies for 10 min, and a new page with an old script breaks -->
-<script src="atlas.js?v=14"></script>
+<script src="atlas.js?v=15"></script>
 </body>
 </html>

@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=14`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=15`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -427,19 +427,41 @@ function openChooser(id, x, y) {
   const label = document.createElement("div");
   label.className = "lbl";
   label.textContent = L === "pt" ? "Escolha uma opção:" : "Choose one:";
-  chooser.append(label);
+  if (picked.has(id)) chooser.append(label);
+  // not allocated yet: picking an option allocates the node (and its path) with that option
+  const have = picked.has(id);
+  const path = have ? null : pathTo(id);
+  const cost = path?.length ?? 0;
+  const fits = have || (path && picked.size + cost <= T.points);
   t.v.forEach((stats, i) => {
     const b = document.createElement("button");
     b.className = "opt" + (choice.get(id) === i ? " on" : "");
     b.innerHTML = stats.map(hl).join("<br>");
-    b.onclick = () => { choice.set(id, i); closeChooser(); changed(); };
+    b.disabled = !fits;
+    b.onclick = () => {
+      if (!have && !click(id)) return;
+      choice.set(id, i);
+      closeChooser();
+      changed();
+    };
     chooser.append(b);
   });
-  const del = document.createElement("button");
-  del.className = "del";
-  del.textContent = L === "pt" ? "Remover nó" : "Remove node";
-  del.onclick = () => { closeChooser(); click(id); };
-  chooser.append(del);
+  if (have) {
+    const del = document.createElement("button");
+    del.className = "del";
+    del.textContent = L === "pt" ? "Remover nó" : "Remove node";
+    del.onclick = () => { closeChooser(); click(id); };
+    chooser.append(del);
+  } else {
+    const foot = document.createElement("div");
+    foot.className = "foot" + (fits ? "" : " bad");
+    const left = T.points - picked.size;
+    const pts = `${cost} ${L === "pt" ? (cost === 1 ? "ponto" : "pontos") : cost === 1 ? "point" : "points"}`;
+    foot.textContent = fits
+      ? (L === "pt" ? `Escolha uma para alocar (${pts})` : `Choose one to allocate (${pts})`)
+      : (L === "pt" ? `O caminho precisa de ${pts} e só restam ${left}` : `The path needs ${pts}, only ${left} left`);
+    chooser.append(foot);
+  }
   chooser.style.display = "block";
   const r = chooser.getBoundingClientRect();
   chooser.style.left = Math.max(8, Math.min(x + 12, innerWidth - r.width - 8)) + "px";
@@ -738,14 +760,16 @@ function showTip(id, x, y) {
   }
   html += rem.map((s) => `<div class="r">${esc(s)}</div>`).join("");
   if (flav.length) html += `<div class="f">${flav.map(esc).join("<br>")}</div>`;
-  if (preview?.remove) {
+  if (preview?.remove && variants) {
+    html += `<div class="h">Clique para trocar a opção ou remover</div>`;
+  } else if (preview?.remove) {
     const k = preview.remove.size;
     html += `<div class="h bad">Clique para remover${k > 1 ? ` (${k} nós: este e os que dependem dele)` : ""}</div>`;
   } else if (preview?.add) {
     const k = preview.add.size, left = T.points - picked.size;
     html += k > left
       ? `<div class="h bad">O caminho precisa de ${k} pontos e só restam ${left}</div>`
-      : `<div class="h">Clique para alocar (${k} ${k === 1 ? "ponto" : "pontos"})${variants ? "; depois escolha a opção no painel" : ""}</div>`;
+      : `<div class="h">${variants ? "Clique para escolher a opção" : "Clique para alocar"} (${k} ${k === 1 ? "ponto" : "pontos"})</div>`;
   }
   tip.innerHTML = html;
   tip.style.display = "block";
@@ -859,7 +883,7 @@ function release(e) {
   closeChooser();
   if (id != null) {
     // a node with options: allocating it, or clicking it again, opens the choice menu instead of the tooltip
-    if (texts(id)?.v && (picked.has(id) || click(id))) {
+    if (texts(id)?.v && id !== T.start) {
       tip.style.display = "none";
       openChooser(id, e.clientX, e.clientY);
       return;
