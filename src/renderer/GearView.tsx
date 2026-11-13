@@ -20,19 +20,60 @@ const SLOTS: Record<string, [number, number, number, number]> = {
   Boots: [6, 5, 2, 2],
 };
 
-const SOCKET_COLOR: Record<string, string> = { R: "#c8413b", G: "#5fae3c", B: "#4d7fd6", W: "#e8e8e8", A: "#4a4a4a", D: "#b39b5a" };
+/** Gem colour of each socket: [light centre, dark rim]. A = abyss, D = Delve resonator. */
+const SOCKET_COLOR: Record<string, [string, string]> = {
+  R: ["#ff6a55", "#7a1410"],
+  G: ["#8be05a", "#245b12"],
+  B: ["#6fa4ff", "#13306e"],
+  W: ["#ffffff", "#8a8a8a"],
+  A: ["#3a3a3a", "#0e0e0e"],
+  D: ["#d8bf78", "#5e4a1c"],
+};
 
-/** Sockets as the game draws them: two columns snaking down (one column on narrow items), links between. */
-function Sockets({ sockets, cols }: { sockets: string; cols: number }) {
+/** Gradients shared by every socket drawing (the same ids in each svg: identical, so whichever is found works). */
+function SocketDefs() {
+  return (
+    <defs>
+      {Object.entries(SOCKET_COLOR).map(([c, [light, dark]]) => (
+        <radialGradient key={c} id={`sk-${c}`} cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stopColor={light} />
+          <stop offset="100%" stopColor={dark} />
+        </radialGradient>
+      ))}
+      <linearGradient id="sk-link" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="#5b3f1c" />
+        <stop offset="50%" stopColor="#e2b765" />
+        <stop offset="100%" stopColor="#5b3f1c" />
+      </linearGradient>
+      <linearGradient id="sk-link-h" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#5b3f1c" />
+        <stop offset="50%" stopColor="#e2b765" />
+        <stop offset="100%" stopColor="#5b3f1c" />
+      </linearGradient>
+    </defs>
+  );
+}
+
+/**
+ * Sockets the way the game draws them: one per inventory cell, two columns snaking down (one column on
+ * narrow items), centred on the item; a socket is a dark metal ring around the gem colour, a link a short
+ * bronze bar between two sockets.
+ */
+function Sockets({ sockets, w, h }: { sockets: string; w: number; h: number }) {
   const groups = sockets.trim().split(/\s+/).filter(Boolean).map((g) => g.split("-"));
   const all = groups.flat();
   if (!all.length) return null;
+  const cols = Math.min(w, 2);
   const rows = Math.ceil(all.length / cols);
+  const cell = 50;
+  const top = ((h - rows) / 2) * cell;
+  const left = ((w - Math.min(cols, all.length)) / 2) * cell;
   const pos = (i: number) => {
     const r = Math.floor(i / cols);
     const c = cols === 1 ? 0 : r % 2 === 0 ? i % 2 : 1 - (i % 2);
-    return { x: cols === 1 ? 50 : 30 + c * 40, y: rows === 1 ? 50 : 50 + (r - (rows - 1) / 2) * 30 };
+    return { x: left + c * cell + cell / 2, y: top + r * cell + cell / 2 };
   };
+  const R = 15; // socket radius in a 50-unit cell
   const links: { a: number; b: number }[] = [];
   let i = 0;
   for (const g of groups) {
@@ -40,15 +81,29 @@ function Sockets({ sockets, cols }: { sockets: string; cols: number }) {
     i += g.length;
   }
   return (
-    <svg className="sockets" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+    <svg className="sockets" viewBox={`0 0 ${w * cell} ${h * cell}`} preserveAspectRatio="xMidYMid meet">
+      <SocketDefs />
       {links.map(({ a, b }) => {
         const p = pos(a);
         const q = pos(b);
-        return <line key={`${a}-${b}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} />;
+        const horizontal = p.y === q.y;
+        const len = Math.abs(horizontal ? q.x - p.x : q.y - p.y) - 2 * R + 8;
+        const x = (p.x + q.x) / 2;
+        const y = (p.y + q.y) / 2;
+        return horizontal ? (
+          <rect key={`${a}-${b}`} className="link" x={x - len / 2} y={y - 5} width={len} height={10} rx={2} fill="url(#sk-link-h)" />
+        ) : (
+          <rect key={`${a}-${b}`} className="link" x={x - 5} y={y - len / 2} width={10} height={len} rx={2} fill="url(#sk-link)" />
+        );
       })}
       {all.map((c, k) => {
         const p = pos(k);
-        return <circle key={k} cx={p.x} cy={p.y} r={9} fill={SOCKET_COLOR[c] ?? "#777"} />;
+        return (
+          <g key={k}>
+            <circle className="ring" cx={p.x} cy={p.y} r={R} />
+            <circle cx={p.x} cy={p.y} r={R - 5} fill={`url(#sk-${SOCKET_COLOR[c] ? c : "A"})`} />
+          </g>
+        );
       })}
     </svg>
   );
@@ -127,7 +182,7 @@ export function GearPanelBody({ state }: { state: AppState }) {
               disabled={!g}
             >
               {g?.icon ? <img src={g.icon} alt="" draggable={false} /> : <span className="doll-label">{g ? g.baseType : slotLabel(slot)}</span>}
-              {g && <Sockets sockets={g.sockets} cols={w} />}
+              {g && <Sockets sockets={g.sockets} w={w} h={h} />}
             </button>
           );
         })}
