@@ -56,14 +56,15 @@ textarea { resize: vertical; font-family: Consolas, monospace; font-size: 12px; 
   display: flex; align-items: center; gap: 16px; padding: 8px 14px;
   border-bottom: 1px solid var(--border); background: var(--panel);
 }
-.brand { font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
-.status { flex: 1; color: var(--muted); display: flex; align-items: center; gap: 8px; white-space: nowrap; min-width: 0; }
-.status .char-pick { max-width: 260px; }
+.brand { font-weight: 700; color: var(--accent); letter-spacing: 0.04em; white-space: nowrap; }
+.status { flex: 1 0 auto; color: var(--muted); display: flex; align-items: center; gap: 8px; white-space: nowrap; min-width: 0; }
+/* the character's name must stay readable: on a narrow window the tab buttons wrap instead */
+.status .char-pick { width: auto; max-width: 260px; flex-shrink: 0; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; }
 .dot.watching { background: #3fb950; }
 .dot.waiting { background: #d29922; }
 .dot.error, .dot.no-path { background: #f85149; }
-.chips { display: flex; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; flex: 0 1 auto; }
 .chip.on { border-color: var(--accent); color: var(--accent); }
 .grid {
   flex: 1; overflow: auto; padding: 12px; display: grid; gap: 12px; align-content: start;

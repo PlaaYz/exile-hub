@@ -62,12 +62,15 @@ export function GearPanelBody({ state }: { state: AppState }) {
   const selected = sel ? bySlot.get(sel) : undefined;
   const c = gear.copied;
   const canCompare = registered > 0;
+  // a two-handed weapon leaves no off hand to register (a bow's quiver still counts when registered)
+  const twoHanded = TWO_HANDED.test(bySlot.get("Weapon 1")?.itemClass ?? "") && !bySlot.has("Weapon 2");
+  const slotsToFill = twoHanded ? 9 : 10;
   return (
     <>
       <div className={`gear${on ? " on" : ""}`}>
         <div className="row" style={{ margin: 0 }}>
           <span className="muted small" style={{ flex: 1 }}>
-            {tr(`${registered} de 10 registrados no jogo`, `${registered} of 10 registered in game`)}
+            {tr(`${registered} de ${slotsToFill} registrados no jogo`, `${registered} of ${slotsToFill} registered in game`)}
           </span>
           <button className={on ? "primary" : ""} onClick={() => void window.hub.setGearRegister(!on)}>
             {on ? tr("Terminar registro", "Finish registering") : registered ? tr("Registrar de novo", "Register again") : tr("Registrar meu equipamento", "Register my equipment")}
