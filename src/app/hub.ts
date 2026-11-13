@@ -33,6 +33,7 @@ const kFarmPricesMaxAgeMs = 3600 * 1000;
 const kFarmPricesRetryMs = 60 * 1000;
 import { Diagnostics } from "./diagnostics";
 import { GearService } from "./gearService";
+import { iconFor } from "../core/ninja";
 import { LogService } from "./logService";
 import type { Platform } from "./platform";
 import { PriceService } from "./priceService";
@@ -127,16 +128,29 @@ export class Hub {
       },
       equipped: () => this.gear.merged(this.equipped),
       gearItem: (text) => {
-        if (!this.gear.register) return false;
-        const slot = this.gear.add(text);
-        this.diag.add("clipboard", slot ? `equipamento registrado: ${slot}` : "item copiado no registro de equipamento, mas não é um item que se equipa");
+        if (this.gear.register) {
+          const slot = this.gear.add(text);
+          this.diag.add("clipboard", slot ? `equipamento registrado: ${slot}` : "item copiado no registro de equipamento, mas não é um item que se equipa");
+          return true;
+        }
+        // Ctrl+C compares and Ctrl+D prices; without a price key, Ctrl+C still prices
+        if (!this.config.priceCheckKey || !this.p.copyItem) return false;
+        if (this.gear.compare(text)) this.diag.add("clipboard", "item copiado: comparado com o seu equipamento");
         return true;
       },
     });
     this.tree = new TreeService(p, broadcast);
     this.challenges = new ChallengeService(p);
     p.diag = addDiag;
-    this.gear = new GearService(p, () => this.broadcast());
+    this.gear = new GearService(
+      p,
+      () => this.broadcast(),
+      () => this.equipped,
+      (item) => {
+        const league = this.prices.league();
+        return league ? iconFor(this.prices.ninja, league, item) : null;
+      },
+    );
     await this.gear.load();
     await this.loadProgress();
     await this.loadBuild();
@@ -446,6 +460,23 @@ export class Hub {
   }
   priceRecheck(id: number): void {
     this.prices.recheck(id);
+  }
+  /** Only a whisper of a listing on screen is sent: the text never comes from the page itself. */
+  async priceWhisper(text: string): Promise<string | null> {
+    const v = this.prices.view;
+    const shown = [...(v?.trade?.listings ?? []), ...(v?.similar?.listings ?? [])];
+    if (!shown.some((l) => l.whisper === text)) return tr("anúncio não encontrado", "listing not found");
+    if (!this.p.sendChat || !this.p.focusGame) return tr("indisponível nesta versão", "not available in this build");
+    if (!(await this.p.focusGame())) return tr("abra o jogo primeiro", "open the game first");
+    try {
+      await this.p.sendChat(text);
+      this.diag.add("comando", `whisper para ${text.split(" ")[0]}`);
+      return null;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.diag.add("comando", `whisper não enviado: ${msg}`);
+      return msg;
+    }
   }
 
   // ---- buy requests (whispers from the trade site) -------------------------------------------

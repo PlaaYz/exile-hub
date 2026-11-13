@@ -280,6 +280,8 @@ body.mode-price { background: #0e1116; }
 .seller.afk::before { color: #e0c060; }
 .seller.offline::before { color: #6b7380; }
 .seller.instant::before { content: '⚡'; color: #e8b84a; }
+button.whisper { margin-left: 8px; padding: 0 6px; font-size: 11px; line-height: 16px; }
+button.whisper.bad { color: var(--red, #f0716b); }
 
 .listings tr.bait { opacity: 0.55; }
 
@@ -352,3 +354,28 @@ body.mode-summary { background: var(--bg); overflow: hidden; }
 .summary-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .summary .session-stats { margin: 4px 0; }
 .summary-support { align-self: flex-start; margin-top: 4px; }
+
+/* Equipamento tab: the game's character screen (cells of 44 px, rarity-coloured frames) */
+.paperdoll { display: grid; grid-template-columns: repeat(8, 44px); grid-template-rows: repeat(6, 44px); gap: 4px;
+  justify-content: center; margin: 12px 0; }
+.doll-slot { position: relative; padding: 2px; border: 1px solid #3a3f48; border-radius: 4px; background: #14110d;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+.doll-slot img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
+.doll-slot.empty { border-style: dashed; cursor: default; opacity: .55; }
+.doll-slot.unique { border-color: #af6025; }
+.doll-slot.rare { border-color: #c8b04a; }
+.doll-slot.magic { border-color: #6a6aff; }
+.doll-slot.pob { opacity: .8; border-style: dotted; }
+.doll-slot.sel { box-shadow: 0 0 0 2px var(--accent); }
+.doll-label { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.1; }
+.doll-slot .sockets { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.doll-slot .sockets line { stroke: #d9b36a; stroke-width: 5; }
+.doll-slot .sockets circle { stroke: #1a1a1a; stroke-width: 2; opacity: .92; }
+.gear-detail { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+.gear-name { font-weight: 600; }
+.gear-name.unique { color: #e08a3c; }
+.gear-name.rare { color: #e8d36a; }
+.gear-name.magic { color: #8888ff; }
+.gear-lines { margin: 6px 0; padding-left: 16px; color: #8888ff; font-size: 13px; }
+.gear-copied { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.gear-copied img { height: 44px; }

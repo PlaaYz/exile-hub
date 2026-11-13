@@ -166,6 +166,8 @@ export interface PriceListing {
   seller: string;
   character: string | null;
   status: SellerStatus;
+  /** the trade site's whisper for this listing (not for instant buyout) */
+  whisper?: string;
 }
 
 /** One bulk exchange offer, converted to chaos per unit. */
@@ -324,6 +326,7 @@ export interface DisplayInfo {
 export type Panel =
   | "campaign"
   | "price"
+  | "gear"
   | "maps"
   | "sessions"
   | "farm"
@@ -333,6 +336,30 @@ export type Panel =
   | "timers"
   | "settings"
   | "diag";
+
+/** One worn item on the Equipamento tab. */
+export interface GearItemView {
+  slot: string;
+  name: string;
+  baseType: string;
+  rarity: string;
+  /** as the game writes it: "R-G-B B" (dash = linked) */
+  sockets: string;
+  /** item art from poe.ninja (null until found / when it has none) */
+  icon: string | null;
+  /** mod lines, implicits first */
+  lines: string[];
+  /** copied in game (else: from the PoB build) */
+  fromGame: boolean;
+}
+
+export interface GearView {
+  register: boolean;
+  /** registered items and PoB items for the other slots */
+  items: GearItemView[];
+  /** the last item copied with Ctrl+C, against what is worn in its slot */
+  copied: { item: GearItemView; compare: ItemComparison[] | null } | null;
+}
 
 export interface AppState {
   config: AppConfig;
@@ -380,7 +407,7 @@ export interface AppState {
   /** the account's characters seen leveling up in the log, most recent first (to pick who is playing) */
   knownCharacters: { name: string; className: string; level: number }[];
   /** equipment registered from the game (Ctrl+C on each item) for "compare with my item" */
-  gear: { register: boolean; items: { slot: string; name: string; rarity: string }[] };
+  gear: GearView;
   /** chat commands on keys: supported by this build, keys registered now, last whisperer */
   chat: { supported: boolean; active: boolean; lastWhisper: string | null };
   /** what the app understood recently (Diagnóstico tab) */

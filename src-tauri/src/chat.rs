@@ -5,7 +5,7 @@ use std::{thread, time::Duration};
 #[cfg(windows)]
 pub(crate) mod win {
     use windows_sys::Win32::{
-        Foundation::{CloseHandle, HWND},
+        Foundation::{CloseHandle, BOOL, HWND, LPARAM},
         System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION},
         UI::{
             Input::KeyboardAndMouse::{
@@ -13,14 +13,33 @@ pub(crate) mod win {
                 VK_A, VK_CONTROL, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_MENU, VK_RCONTROL, VK_RETURN, VK_RMENU,
                 VK_RSHIFT, VK_SHIFT,
             },
-            WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId},
+            WindowsAndMessaging::{EnumWindows, GetForegroundWindow, GetWindow, GetWindowThreadProcessId, IsWindowVisible, GW_OWNER},
         },
     };
 
     /// The executable of the foreground window ("PathOfExile.exe", "PathOfExileSteam.exe"...).
     pub fn foreground_exe() -> Option<String> {
+        exe_of(unsafe { GetForegroundWindow() })
+    }
+
+    /// The game's main window (visible, top-level), if it is running.
+    pub fn game_window() -> Option<HWND> {
+        unsafe extern "system" fn each(hwnd: HWND, found: LPARAM) -> BOOL {
+            if unsafe { IsWindowVisible(hwnd) } != 0 && unsafe { GetWindow(hwnd, GW_OWNER) }.is_null()
+                && exe_of(hwnd).is_some_and(|e| super::is_game(&e))
+            {
+                unsafe { *(found as *mut HWND) = hwnd };
+                return 0; // stop
+            }
+            1
+        }
+        let mut found: HWND = std::ptr::null_mut();
+        unsafe { EnumWindows(Some(each), &mut found as *mut HWND as LPARAM) };
+        (!found.is_null()).then_some(found)
+    }
+
+    fn exe_of(hwnd: HWND) -> Option<String> {
         unsafe {
-            let hwnd: HWND = GetForegroundWindow();
             if hwnd.is_null() {
                 return None;
             }
@@ -95,7 +114,8 @@ pub(crate) fn is_game(exe: &str) -> bool {
 
 #[tauri::command]
 pub async fn send_chat(text: String) -> Result<(), String> {
-    if text.is_empty() || text.len() > 200 || text.contains(['\r', '\n']) || !(text.starts_with('/') || text.starts_with('@')) {
+    // 500: the trade site's whispers carry the item name, price, league and stash position
+    if text.is_empty() || text.len() > 500 || text.contains(['\r', '\n']) || !(text.starts_with('/') || text.starts_with('@')) {
         return Err("comando inválido".into());
     }
     tauri::async_runtime::spawn_blocking(move || {
@@ -124,4 +144,39 @@ pub async fn send_chat(text: String) -> Result<(), String> {
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Brings the game window to the front (a click in our own window allows it); false if the game is not
+/// running or Windows refused.
+#[tauri::command]
+pub async fn bring_game_front() -> bool {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(windows)]
+        {
+            use windows_sys::Win32::UI::WindowsAndMessaging::{IsIconic, SetForegroundWindow, ShowWindow, SW_RESTORE};
+            if is_game(&win::foreground_exe().unwrap_or_default()) {
+                return true;
+            }
+            let Some(h) = win::game_window() else { return false };
+            unsafe {
+                if IsIconic(h) != 0 {
+                    ShowWindow(h, SW_RESTORE);
+                }
+                SetForegroundWindow(h);
+            }
+            // the game takes a moment to accept keys after it gets the focus
+            for _ in 0..20 {
+                thread::sleep(Duration::from_millis(25));
+                if is_game(&win::foreground_exe().unwrap_or_default()) {
+                    thread::sleep(Duration::from_millis(100));
+                    return true;
+                }
+            }
+            false
+        }
+        #[cfg(not(windows))]
+        false
+    })
+    .await
+    .unwrap_or(false)
 }

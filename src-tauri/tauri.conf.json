@@ -96,7 +96,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://web.poecdn.com; script-src 'self'; connect-src ipc: http://ipc.localhost"
     }
   },
   "plugins": {

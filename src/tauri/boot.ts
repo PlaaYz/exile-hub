@@ -26,6 +26,7 @@ const OVERLAY_CALLS = new Set<keyof HubApi>([
   "priceOpenTrade",
   "priceMore",
   "priceRecheck",
+  "priceWhisper",
   "closePricePopup",
   "tradeAction",
   "closeSessionSummary",
@@ -86,6 +87,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     priceRecheck: async (id) => {
       if (Number.isInteger(id) && id > 0) hub.priceRecheck(id);
     },
+    priceWhisper: async (text) => (typeof text === "string" && text.length <= 500 ? hub.priceWhisper(text) : null),
     reportProblem: () => hub.reportProblem(),
     openDonate: () => hub.openDonate(),
     setGearRegister: async (on) => hub.setGearRegister(on === true),

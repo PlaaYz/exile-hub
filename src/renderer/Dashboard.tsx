@@ -11,12 +11,14 @@ import { SessionsPanelBody } from "./SessionsView";
 import { FarmPanelBody } from "./FarmView";
 import { MapsPanelBody } from "./MapsView";
 import { TreePanel } from "./TreeView";
-import { GearBlock, PricePanelBody } from "./PriceView";
+import { PricePanelBody } from "./PriceView";
+import { GearPanelBody } from "./GearView";
 import { Frags, StepView } from "./StepView";
 
 const ALL_PANELS: { id: Panel; label: () => string }[] = [
   { id: "campaign", label: () => tr("Campanha", "Campaign") },
   { id: "price", label: () => tr("Preço", "Price") },
+  { id: "gear", label: () => tr("Equipamento", "Equipment") },
   { id: "maps", label: () => tr("Mapas", "Maps") },
   { id: "sessions", label: () => tr("Sessões", "Sessions") },
   { id: "farm", label: () => "Farm" },
@@ -33,7 +35,7 @@ const buildSource = (s: "manual" | "clipboard" | "saved") =>
     clipboard: tr("pego do clipboard", "taken from the clipboard"),
     saved: tr("restaurado da última sessão", "restored from the last session"),
   })[s];
-const LS_KEY = "exile-hub.visiblePanels.v8"; // bump when a panel is added so it shows up
+const LS_KEY = "exile-hub.visiblePanels.v9"; // bump when a panel is added so it shows up
 
 function loadVisible(): Panel[] {
   try {
@@ -162,8 +164,15 @@ function PricePanel({ state }: { state: AppState }) {
         <div className="warn">{tr("Price check desligado nas configurações.", "Price check is off in the settings.")}</div>
       )}
       {state.config.priceCheckEnabled && !state.league && <div className="warn">{tr("Carregando ligas…", "Loading leagues…")}</div>}
-      <GearBlock gear={state.gear} />
-      <PricePanelBody p={state.price} recent={state.priceRecent} hasBuild={!!state.build} />
+      <PricePanelBody p={state.price} recent={state.priceRecent} />
+    </PanelBox>
+  );
+}
+
+function GearPanel({ state }: { state: AppState }) {
+  return (
+    <PanelBox title={tr("Equipamento", "Equipment")} className="panel-tall">
+      <GearPanelBody state={state} />
     </PanelBox>
   );
 }
@@ -382,7 +391,7 @@ function SettingsPanel({ state }: { state: AppState }) {
           checked={state.config.priceCheckEnabled}
           onChange={(e) => void window.hub.setConfig({ priceCheckEnabled: e.target.checked })}
         />
-        {tr("Precificar itens copiados no jogo (Ctrl+C sobre o item)", "Price items copied in game (Ctrl+C over the item)")}
+        {tr("Price check de itens no jogo (Ctrl+D sobre o item)", "Price check items in game (Ctrl+D over the item)")}
       </label>
       {state.chat.supported && state.config.priceCheckEnabled && (
         <div className="row">
@@ -571,7 +580,7 @@ function Welcome({ state }: { state: AppState }) {
           <tbody>
             <tr>
               <td><b>Ctrl+D</b></td>
-              <td>{tr("com o mouse sobre um item: preço ao lado do item (Ctrl+C também funciona)", "with the mouse over an item: its price next to it (Ctrl+C works too)")}</td>
+              <td>{tr("com o mouse sobre um item: preço ao lado do item (sem esta tecla, o Ctrl+C dá o preço)", "with the mouse over an item: its price next to it (without this key, Ctrl+C prices)")}</td>
             </tr>
             <tr>
               <td><b>F9</b></td>
@@ -651,6 +660,7 @@ export function DashboardApp() {
       <main className="grid">
         {visible.includes("campaign") && <CampaignPanel state={state} />}
         {visible.includes("price") && <PricePanel state={state} />}
+        {visible.includes("gear") && <GearPanel state={state} />}
         {visible.includes("maps") && <MapsPanel state={state} />}
         {visible.includes("sessions") && <SessionsPanel state={state} />}
         {visible.includes("farm") && <FarmPanel state={state} />}

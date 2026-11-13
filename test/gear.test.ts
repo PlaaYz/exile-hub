@@ -130,3 +130,34 @@ describe("comparison totals", () => {
     expect(c.rows.find((r) => /Dexterity/.test(r.label))).toMatchObject({ equipped: 25, candidate: 0 });
   });
 });
+
+describe("equipment tab", () => {
+  const platform = { readUserFile: async () => null, writeUserFile: async () => {} } as never;
+  const ringText = (name: string, life: number) =>
+    `Item Class: Rings\nRarity: Rare\n${name}\nAmethyst Ring\n--------\nItem Level: 84\n--------\n+${life} to maximum Life`;
+
+  it("a copied item is compared with the registered one; art comes from the icon lookup", async () => {
+    const { GearService } = await import("../src/app/gearService");
+    let changes = 0;
+    const g = new GearService(platform, () => changes++, () => [], async (i) => `https://web.poecdn.com/${i.baseType}.png`);
+    g.setRegister(true);
+    expect(g.add(ringText("Old Loop", 40))).toBe("Ring 1");
+    g.setRegister(false);
+    expect(g.compare(ringText("New Loop", 70))).toBe(true);
+    expect(g.compare("Item Class: Stackable Currency\nRarity: Currency\nChaos Orb")).toBe(false);
+    g.view(); // starts the icon lookups
+    await new Promise((r) => setTimeout(r, 0));
+    const v = g.view();
+    expect(v.items.map((i) => [i.slot, i.name, i.fromGame, i.icon])).toEqual([["Ring 1", "Old Loop", true, "https://web.poecdn.com/Amethyst Ring.png"]]);
+    expect(v.copied?.item.name).toBe("New Loop");
+    expect(v.copied?.compare?.[0].rows.find((r) => /Life/.test(r.label))).toMatchObject({ equipped: 40, candidate: 70 });
+    expect(changes).toBeGreaterThan(0);
+  });
+
+  it("without a league the icon lookup waits", async () => {
+    const { GearService } = await import("../src/app/gearService");
+    const g = new GearService(platform, () => {}, () => [], () => null);
+    g.compare(ringText("New Loop", 70));
+    expect(g.view().copied?.item.icon).toBeNull();
+  });
+});

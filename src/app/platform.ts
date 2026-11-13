@@ -93,6 +93,8 @@ export interface Platform {
   setCommandKeys?(keys: string[], onPress: (key: string) => void): Promise<void>;
   /** Types one line in the game's chat (Enter, text, Enter); fails unless the game window is in front. */
   sendChat?(text: string): Promise<void>;
+  /** Brings the game window to the front; false if it is not running or Windows refused. */
+  focusGame?(): Promise<boolean>;
   /** Copies the item under the mouse with the game's advanced copy (Ctrl+Alt+C); game in front only. */
   copyItem?(): Promise<void>;
 

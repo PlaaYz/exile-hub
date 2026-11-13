@@ -156,6 +156,9 @@ export class TauriPlatform implements Platform {
   sendChat(text: string): Promise<void> {
     return invoke("send_chat", { text });
   }
+  focusGame(): Promise<boolean> {
+    return invoke("bring_game_front");
+  }
   copyItem(): Promise<void> {
     return invoke("copy_item");
   }

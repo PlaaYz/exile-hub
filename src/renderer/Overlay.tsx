@@ -35,7 +35,7 @@ export function OverlayApp() {
       )}
       {state.gear.register && (
         <div className="ov-warn">
-          {tr("Registrando equipamento: Ctrl+C em cada item equipado", "Registering equipment: Ctrl+C on each equipped item")} ({state.gear.items.length}/10)
+          {tr("Registrando equipamento: Ctrl+C em cada item equipado", "Registering equipment: Ctrl+C on each equipped item")} ({state.gear.items.filter((g) => g.fromGame).length}/10)
         </div>
       )}
       <MapHint maps={state.maps} />

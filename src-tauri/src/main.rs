@@ -166,6 +166,7 @@ fn main() {
             clipboard::clipboard_watch,
             clipboard::clipboard_unwatch,
             chat::send_chat,
+            chat::bring_game_front,
             files::app_info,
             files::read_data,
             files::read_user_file,

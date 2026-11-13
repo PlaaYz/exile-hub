@@ -58,6 +58,8 @@ export interface StashLine {
   gemLevel?: number;
   gemQuality?: number;
   corrupted?: boolean;
+  /** item art on GGG's image server (web.poecdn.com) */
+  icon?: string;
   chaosValue: number;
   divineValue?: number;
   listingCount?: number;
@@ -175,6 +177,23 @@ export class NinjaClient {
     }
     return null;
   }
+}
+
+/**
+ * The item's art as poe.ninja shows it: a unique's own picture, else its base type's (the plain one when
+ * poe.ninja also lists influenced variants). null when poe.ninja has none.
+ */
+export async function iconFor(ninja: NinjaClient, league: string, item: ParsedItem): Promise<string | null> {
+  const ok = (u: string | undefined) => (u && /^https:\/\/web\.poecdn\.com\//.test(u) ? u : null);
+  if (item.rarity === "Unique" && item.name) {
+    const m = UNIQUE_TYPE_BY_CLASS.find(([re]) => re.test(item.itemClass));
+    for (const t of m ? [m[1]] : ALL_UNIQUE_TYPES) {
+      const line = (await ninja.stash(league, t)).lines.find((l) => l.name === item.name && l.icon);
+      if (line) return ok(line.icon);
+    }
+  }
+  const bases = (await ninja.stash(league, "BaseType")).lines.filter((l) => l.name === item.baseType && l.icon);
+  return ok((bases.find((l) => !l.variant) ?? bases[0])?.icon);
 }
 
 /** Stash overviews looked at by name lookups, after the exchange ones. */

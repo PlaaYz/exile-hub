@@ -37,7 +37,7 @@ export interface PriceContext {
   onPobText(text: string): void;
   /** what the imported PoB build wears (compare with my item) */
   equipped(): readonly EquippedItem[];
-  /** item text copied while "register my equipment" is on: true = it was taken (no price check) */
+  /** item text copied with Ctrl+C (not the price key): true = taken by the equipment tab (no price check) */
   gearItem(text: string): boolean;
 }
 
@@ -307,14 +307,8 @@ export class PriceService {
     if (text === this.lastClipboard && !this.hotkey) return;
     this.lastClipboard = text;
     // only item text copied from the game and Path of Building codes/links are looked at
-    if (/^Item Class: /.test(text) && this.ctx.gearItem(text)) {
-      const hk = this.hotkey;
-      if (hk) {
-        this.cancelHotkey();
-        if (hk.before && hk.before !== text) void this.writeClipboard(hk.before).catch(() => {});
-      }
-      return;
-    }
+    // Ctrl+C goes to the equipment tab (register / compare); the price key's copy is priced
+    if (/^Item Class: /.test(text) && !this.hotkey && this.ctx.gearItem(text)) return;
     const league = this.league();
     if (league && this.checker.check(text, league)) {
       this.lastUserTradeAt = Date.now();

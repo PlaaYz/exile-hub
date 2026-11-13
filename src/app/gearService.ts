@@ -1,10 +1,10 @@
 // "Register my equipment": while on, every item the player copies in game (Ctrl+C over each equipped
-// item on the character screen) is kept as what they wear in its slot, instead of being price
-// checked. Price checks then compare against these real items (exact rolls, DPS and defences), and
-// the PoB build only fills the slots that were never registered. Kept in userData/gear.json.
-import { parseItem } from "../core/item";
-import { gearSlotFor, GEAR_SLOTS, type EquippedItem } from "../core/itemCompare";
-import type { AppState } from "../shared/types";
+// item on the character screen) is kept as what they wear in its slot. Otherwise an item copied with
+// Ctrl+C (Ctrl+D is the price key) is compared with what is worn: these real items (exact rolls, DPS and
+// defences) first, the PoB build for the slots that were never registered. Kept in userData/gear.json.
+import { parseItem, type ParsedItem } from "../core/item";
+import { compareItem, gearSlotFor, GEAR_SLOTS, type EquippedItem } from "../core/itemCompare";
+import type { GearItemView, GearView } from "../shared/types";
 import type { Platform } from "./platform";
 
 const kFile = "gear.json";
@@ -19,10 +19,20 @@ export class GearService {
   /** slots filled in this registration (first ring = Ring 1, second = Ring 2) */
   private taken = new Set<string>();
   private idle: ReturnType<typeof setTimeout> | null = null;
+  /** the last item copied outside registration (compared with what is worn) */
+  private copied: ParsedItem | null = null;
+  /** item art by "name|baseType" (null = poe.ninja has none) */
+  private icons = new Map<string, string | null>();
+  private iconsBusy = false;
+  private iconsFailedAt = 0;
 
   constructor(
     private readonly p: Platform,
     private readonly changed: () => void,
+    /** what the imported PoB build wears */
+    private readonly pob: () => readonly EquippedItem[],
+    /** the item's art on poe.ninja; null while no league is known */
+    private readonly iconOf: (item: ParsedItem) => Promise<string | null> | null,
   ) {}
 
   async load(): Promise<void> {
@@ -59,6 +69,15 @@ export class GearService {
     return slot;
   }
 
+  /** An item copied with Ctrl+C outside registration: shown against what is worn. False when it is not equipment. */
+  compare(text: string): boolean {
+    const item = parseItem(text);
+    if (!item || !gearSlotFor(item, new Set())) return false;
+    this.copied = item;
+    this.changed();
+    return true;
+  }
+
   remove(slot: string): void {
     if (!(slot in this.texts)) return;
     delete this.texts[slot];
@@ -71,11 +90,53 @@ export class GearService {
     return [...this.items, ...pob.filter((e) => !(e.slot in this.texts))];
   }
 
-  view(): AppState["gear"] {
+  view(): GearView {
+    const worn = this.merged(this.pob());
+    this.findIcons([...worn.map((e) => e.item), ...(this.copied ? [this.copied] : [])]);
+    const c = this.copied;
+    let copied: GearView["copied"] = null;
+    if (c) {
+      const cmp = compareItem(c, worn);
+      copied = { item: this.itemView("", c, true), compare: cmp.length ? cmp : null };
+    }
+    return { register: this.registering, items: worn.map((e) => this.itemView(e.slot, e.item, !!e.fromGame)), copied };
+  }
+
+  private itemView(slot: string, item: ParsedItem, fromGame: boolean): GearItemView {
+    const order = (k: string) => (k === "enchant" ? 0 : k === "implicit" ? 1 : 2);
     return {
-      register: this.registering,
-      items: this.items.map((e) => ({ slot: e.slot, name: e.item.name || e.item.baseType, rarity: e.item.rarity })),
+      slot,
+      name: item.name || item.baseType,
+      baseType: item.baseType,
+      rarity: item.rarity,
+      sockets: item.sockets,
+      icon: this.icons.get(iconKey(item)) ?? null,
+      lines: [...item.mods].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => m.text),
+      fromGame,
     };
+  }
+
+  /** Looks up the art of items not seen yet (one at a time; after a failure, again a minute later). */
+  private findIcons(items: ParsedItem[]): void {
+    const todo = items.filter((i) => !this.icons.has(iconKey(i)));
+    if (!todo.length || this.iconsBusy || Date.now() - this.iconsFailedAt < 60_000) return;
+    this.iconsBusy = true;
+    void (async () => {
+      let found = false;
+      try {
+        for (const item of todo) {
+          const p = this.iconOf(item);
+          if (!p) return; // no league yet: the next view tries again
+          this.icons.set(iconKey(item), await p);
+          found = true;
+        }
+      } catch {
+        this.iconsFailedAt = Date.now();
+      } finally {
+        this.iconsBusy = false;
+        if (found) this.changed();
+      }
+    })();
   }
 
   private rebuild(): void {
@@ -95,3 +156,5 @@ export class GearService {
     this.idle = this.registering ? setTimeout(() => this.setRegister(false), kRegisterIdleMs) : null;
   }
 }
+
+const iconKey = (i: ParsedItem) => `${i.rarity === "Unique" ? i.name : ""}|${i.baseType}`;

@@ -36,6 +36,8 @@ export interface TradeListing {
   character: string | null;
   /** online now / away (afk) / offline / instant buyout */
   status: SellerStatus;
+  /** the trade site's ready-made whisper ("@char Hi, I would like to buy..."); none for instant buyout */
+  whisper?: string;
 }
 
 export interface TradeSearchResult {
@@ -297,7 +299,7 @@ export class TradeClient {
       this.fetchLimiter,
       `${SITE}/api/trade/fetch/${ids.slice(0, kFetchBatch).join(",")}?query=${encodeURIComponent(queryId)}`,
     )) as {
-      result: ({ listing?: { method?: string; indexed?: string; account?: RawAccount; price?: { amount?: number; currency?: string } } } | null)[];
+      result: ({ listing?: { method?: string; indexed?: string; whisper?: string; account?: RawAccount; price?: { amount?: number; currency?: string } } } | null)[];
     };
     return f.result
       .map((r) => r?.listing)
@@ -310,6 +312,7 @@ export class TradeClient {
         character: l.account?.lastCharacterName ?? null,
         // merchant tab listings ("psapi") are bought on the spot, the seller need not be online
         status: l.method === "psapi" ? "instant" : statusOf(l.account),
+        ...(l.method !== "psapi" && l.whisper?.startsWith("@") && !/[\r\n]/.test(l.whisper) ? { whisper: l.whisper } : {}),
       }));
   }
 

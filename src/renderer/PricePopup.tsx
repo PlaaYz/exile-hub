@@ -50,7 +50,7 @@ export function PricePopupApp() {
         </button>
       </div>
       <div className="price-popup-body">
-        <PricePanelBody p={state.price} recent={state.priceRecent} hasBuild={!!state.build} />
+        <PricePanelBody p={state.price} recent={state.priceRecent} />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { tr } from "../shared/i18n";
+import type { ItemComparison } from "../core/itemCompare";
 import type { PriceFilters, PriceModFilter, PriceRange, PriceRecent, PriceView, SellerStatus, TradeStatus } from "../shared/types";
 
 const CURRENCY_SHORT: Record<string, string> = { chaos: "c", divine: "div", exalted: "ex" };
@@ -250,6 +251,29 @@ function SearchEditor({ p }: { p: PriceView }) {
   );
 }
 
+/** One click = the listing's whisper typed in the game's chat (the game comes to the front). */
+function WhisperButton({ text }: { text: string }) {
+  const [state, setState] = useState<"idle" | "busy" | "sent" | string>("idle");
+  const send = async () => {
+    setState("busy");
+    const err = await window.hub.priceWhisper(text).catch((e: unknown) => String(e));
+    setState(err ?? "sent");
+  };
+  const failed = state !== "idle" && state !== "busy" && state !== "sent";
+  return (
+    <button
+      className={`whisper${failed ? " bad" : ""}`}
+      disabled={state === "busy"}
+      onClick={() => void send()}
+      title={failed ? state : tr(`Mandar whisper no jogo:
+${text}`, `Whisper in game:
+${text}`)}
+    >
+      {state === "sent" ? tr("enviado ✓", "sent ✓") : failed ? tr("falhou", "failed") : "whisper"}
+    </button>
+  );
+}
+
 const statusLabel = (s: SellerStatus) =>
   ({ online: "online", afk: tr("ausente", "away"), offline: "offline", instant: tr("compra instantânea", "instant buyout") })[s];
 
@@ -428,9 +452,9 @@ const totalLabel = (label: string) => {
 const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}`;
 
 /** The checked item against what the imported PoB build wears in the same slot. */
-function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
-  if (!p.compare) {
-    if (!hasBuild && (p.item.rarity === "Rare" || p.item.rarity === "Unique") && !/Gem|Jewel|Flask|Map/.test(p.item.itemClass)) {
+export function CompareBlock({ compare, rarity, hasBuild }: { compare: ItemComparison[] | null; rarity: string; hasBuild: boolean }) {
+  if (!compare) {
+    if (!hasBuild && (rarity === "Rare" || rarity === "Unique")) {
       return <p className="muted small">{tr("Importe seu build do Path of Building (copie o código) para comparar com o item que você usa.", "Import your Path of Building build (copy the code) to compare with the item you wear.")}</p>;
     }
     return null;
@@ -438,7 +462,7 @@ function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
   return (
     <>
       <h3>{tr("Comparado ao seu item", "Compared with your item")}</h3>
-      {p.compare.map((c) => (
+      {compare.map((c) => (
         <div key={c.slot} className="compare">
           <div className="small">
             <b>{slotLabel(c.slot)}</b> <span className="muted">· {c.name}</span>{" "}
@@ -491,7 +515,7 @@ function CompareBlock({ p, hasBuild }: { p: PriceView; hasBuild: boolean }) {
   );
 }
 
-const slotLabel = (s: string) =>
+export const slotLabel = (s: string) =>
   ({
     "Weapon 1": tr("Arma", "Weapon"),
     "Weapon 2": tr("Segunda mão", "Off hand"),
@@ -504,52 +528,6 @@ const slotLabel = (s: string) =>
     "Ring 1": tr("Anel 1", "Ring 1"),
     "Ring 2": tr("Anel 2", "Ring 2"),
   })[s] ?? s;
-
-/** "Register my equipment": what is registered, and the switch that makes Ctrl+C register instead of price check. */
-export function GearBlock({ gear }: { gear: { register: boolean; items: { slot: string; name: string; rarity: string }[] } }) {
-  const on = gear.register;
-  return (
-    <div className={`gear${on ? " on" : ""}`}>
-      <div className="row" style={{ margin: 0 }}>
-        <b style={{ flex: 1 }}>
-          {tr("Seu equipamento", "Your equipment")} <span className="muted small">({gear.items.length}/10)</span>
-        </b>
-        <button className={on ? "primary" : ""} onClick={() => void window.hub.setGearRegister(!on)}>
-          {on ? tr("Terminar registro", "Finish registering") : gear.items.length ? tr("Registrar de novo", "Register again") : tr("Registrar meu equipamento", "Register my equipment")}
-        </button>
-      </div>
-      {on ? (
-        <p className="small" style={{ margin: "6px 0" }}>
-          {tr(
-            "No jogo: abra a tela do personagem (I) e dê Ctrl+C em cada item equipado. Enquanto isso o price check fica pausado. O primeiro anel vira Anel 1 e o segundo Anel 2; a segunda arma de uma mão vira a segunda mão.",
-            "In game: open the character screen (I) and press Ctrl+C on each equipped item. Price checks pause meanwhile. The first ring is Ring 1 and the second Ring 2; a second one-handed weapon goes to the off hand.",
-          )}
-        </p>
-      ) : (
-        !gear.items.length && (
-          <p className="muted small" style={{ margin: "6px 0" }}>
-            {tr(
-              "Registre o que você está usando para o price check comparar com os seus itens de verdade, inclusive DPS e defesas.",
-              "Register what you wear so price checks compare with your real items, DPS and defences included.",
-            )}
-          </p>
-        )
-      )}
-      {gear.items.length > 0 && (
-        <div className="gear-items">
-          {gear.items.map((g) => (
-            <span key={g.slot} className="gear-item" title={`${g.name} (${g.rarity})`}>
-              <span className="muted">{slotLabel(g.slot)}:</span> {g.name}
-              <button className="link small" title={tr("Remover", "Remove")} onClick={() => void window.hub.removeGear(g.slot)}>
-                ✕
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** Few results: what the same search finds with every minimum 20% lower. */
 function SimilarBlock({ p }: { p: PriceView }) {
@@ -586,14 +564,13 @@ export function RecentChecks({ recent, current }: { recent: PriceRecent[]; curre
   );
 }
 
-export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceView | null; recent?: PriceRecent[]; hasBuild?: boolean }) {
+export function PricePanelBody({ p, recent = [] }: { p: PriceView | null; recent?: PriceRecent[] }) {
   if (!p) {
     return (
       <>
         <p className="muted">
           {tr("No jogo, passe o mouse sobre um item e aperte", "In game, hover an item and press")} <b>Ctrl+D</b>{" "}
-          {tr("(abre o preço ao lado do item) ou", "(opens the price next to the item) or")} <b>Ctrl+C</b>{" "}
-          {tr("(o preço aparece aqui e no overlay).", "(the price shows here and on the overlay).")}
+          {tr("(abre o preço ao lado do item). O Ctrl+C manda o item para a aba Equipamento, para comparar com o que você usa.", "(opens the price next to the item). Ctrl+C sends the item to the Equipment tab, to compare with what you wear.")}
         </p>
         <RecentChecks recent={recent} current={null} />
       </>
@@ -611,7 +588,6 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
       <PriceSummary p={p} />
       <SimilarBlock p={p} />
       <CalcLine p={p} />
-      <CompareBlock p={p} hasBuild={hasBuild} />
       <ModTiers p={p} />
       {p.ninja && (
         <div className="muted small">
@@ -631,6 +607,7 @@ export function PricePanelBody({ p, recent = [], hasBuild = false }: { p: PriceV
                   <span className={`seller ${l.status}`} title={`${l.seller} · ${statusLabel(l.status)}`}>
                     {l.character ?? l.seller}
                   </span>
+                  {l.whisper && <WhisperButton text={l.whisper} />}
                 </td>
                 <td className="muted">{tr(`há ${ago(l.indexed)}`, `${ago(l.indexed)} ago`)}</td>
               </tr>

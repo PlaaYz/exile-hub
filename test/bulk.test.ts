@@ -71,3 +71,14 @@ describe("bulk exchange", () => {
     expect(v.tradeStatus).toBe("n/a");
   });
 });
+
+describe("listing whispers", () => {
+  it("keeps the trade site's whisper, never for instant buyout or a multi-line text", async () => {
+    const listing = (method: string, whisper: string) => ({
+      listing: { method, indexed: "", whisper, account: { name: "a#1", lastCharacterName: "Ch", online: { league: "x" } }, price: { amount: 1, currency: "chaos" } },
+    });
+    const body = { result: [listing("psonline", "@Ch Hi, I would like to buy your X"), listing("psapi", "@Ch hi"), listing("psonline", "@Ch a\n/kick me")] };
+    const r = await new TradeClient(async () => ok(body), "test").fetchListings("q", ["1", "2", "3"]);
+    expect(r.map((l) => l.whisper)).toEqual(["@Ch Hi, I would like to buy your X", undefined, undefined]);
+  });
+});
