@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=15`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=16`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -478,7 +478,19 @@ function changed() {
   preview = previewFor(hover);
   draw();
   panel();
-  history.replaceState(null, "", `#${tree}${picked.size ? encode() : ""}`);
+  const code = picked.size ? encode() : "";
+  history.replaceState(null, "", `#${tree}${code}`);
+  saveDraft(tree, code);
+}
+
+// ---- draft: the tree being worked on is kept per tree type (this browser only) and comes back on the next
+// visit without a link, even if it was never saved under a name
+const DRAFT_KEY = "exile-hub.atlas.draft";
+function drafts() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}") ?? {}; } catch { return {}; }
+}
+function saveDraft(name, code) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...drafts(), [name]: code })); } catch { /* storage blocked */ }
 }
 
 // Short links: "~~" + base64url bits of a walk from the start: each allocated node, in walk order, gives one
@@ -947,7 +959,7 @@ langBtn.onclick = () => {
   panel();
 };
 for (const b of document.querySelectorAll("[data-tree]")) {
-  b.onclick = () => { if (b.dataset.tree !== tree) load(b.dataset.tree, ""); };
+  b.onclick = () => { if (b.dataset.tree !== tree) load(b.dataset.tree, drafts()[b.dataset.tree] ?? ""); };
 }
 
 // ---- search -------------------------------------------------------------------------------
@@ -1002,5 +1014,8 @@ layout();
 // "#data:1,2.0,3" = tree and allocated nodes ("id.choice" for nodes with options)
 // "#data~code" (short) or the older "#data:1,2.0,3" (ids, "id.choice" for nodes with options)
 const m = /^#(data|ruthless)(?::([\d.,]+)|(~[\w.~-]+))?/.exec(location.hash);
-if (innerWidth <= 700 && !(m && (m[2] || m[3]))) { $("panel").classList.add("hidden"); $("panelBtn").classList.remove("on"); }
-load(m ? m[1] : "data", m?.[2] ?? m?.[3] ?? "");
+const startTree = m ? m[1] : "data";
+// a link with nodes wins; otherwise the last draft of that tree
+const startCode = m?.[2] ?? m?.[3] ?? drafts()[startTree] ?? "";
+if (innerWidth <= 700 && !startCode) { $("panel").classList.add("hidden"); $("panelBtn").classList.remove("on"); }
+load(startTree, startCode);
