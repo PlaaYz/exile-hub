@@ -24,6 +24,7 @@ const ALL_PANELS: { id: Panel; label: () => string }[] = [
   { id: "farm", label: () => "Farm" },
   { id: "search", label: () => tr("Buscas", "Searches") },
   { id: "build", label: () => "Build" },
+  { id: "tree", label: () => tr("Árvore", "Tree") },
   { id: "challenges", label: () => "Challenges" },
   { id: "timers", label: () => tr("Tempos", "Timers") },
   { id: "settings", label: () => tr("Configurações", "Settings") },
@@ -35,7 +36,7 @@ const buildSource = (s: "manual" | "clipboard" | "saved") =>
     clipboard: tr("pego do clipboard", "taken from the clipboard"),
     saved: tr("restaurado da última sessão", "restored from the last session"),
   })[s];
-const LS_KEY = "exile-hub.visiblePanels.v9"; // bump when a panel is added so it shows up
+const LS_KEY = "exile-hub.visiblePanels.v10"; // bump when a panel is added so it shows up
 
 function loadVisible(): Panel[] {
   try {
@@ -169,6 +170,24 @@ function PricePanel({ state }: { state: AppState }) {
   );
 }
 
+/** The build's passive tree against what the playing character has allocated (from Client.txt). */
+function PassiveTreePanel({ state }: { state: AppState }) {
+  return (
+    <PanelBox title={tr("Árvore passiva", "Passive tree")} className="panel-tall">
+      {state.tree ? (
+        <TreePanel tree={state.tree} />
+      ) : (
+        <p className="muted small">
+          {tr(
+            "Importe o build do Path of Building (aba Build, ou copie o código no PoB) para seguir a árvore dele aqui.",
+            "Import your Path of Building build (Build tab, or copy the code in PoB) to follow its tree here.",
+          )}
+        </p>
+      )}
+    </PanelBox>
+  );
+}
+
 function GearPanel({ state }: { state: AppState }) {
   return (
     <PanelBox title={tr("Equipamento", "Equipment")} className="panel-tall">
@@ -274,7 +293,6 @@ function BuildPanel({ state }: { state: AppState }) {
         </button>
         {msg && <span className={msg.startsWith(tr("Falha ao importar", "Import failed")) ? "warn-text" : "muted"}>{msg}</span>}
       </div>
-      {state.tree && <TreePanel tree={state.tree} />}
       {b && (
         <>
           <h3>{tr("Gemas", "Gems")}</h3>
@@ -666,6 +684,7 @@ export function DashboardApp() {
         {visible.includes("farm") && <FarmPanel state={state} />}
         {visible.includes("search") && <SearchPanel state={state} />}
         {visible.includes("build") && <BuildPanel state={state} />}
+        {visible.includes("tree") && <PassiveTreePanel state={state} />}
         {visible.includes("challenges") && (
           <PanelBox title={tr("Challenges da liga", "League challenges")}>
             <ChallengesPanelBody />

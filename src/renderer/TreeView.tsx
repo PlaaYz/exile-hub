@@ -17,7 +17,10 @@ export function TreePanel({ tree }: { tree: Tree }) {
   if (tree.status === "no-character" || !tree.progress) {
     return (
       <p className="muted small">
-        {tr("Ainda não sei qual personagem você está jogando: o Client.txt só diz o nome quando ele sobe de nível.", "I do not know which character you are playing yet: Client.txt only names it when it levels up.")}
+        {tr(
+          "Ainda não sei qual personagem você está jogando: escolha no seletor \"quem está jogando?\" no topo, ou suba de nível no jogo (o Client.txt só diz o nome no level up).",
+          "I do not know which character you are playing yet: pick it in the \"who is playing?\" selector at the top, or level up in game (Client.txt only names it on level-ups).",
+        )}
       </p>
     );
   }

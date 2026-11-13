@@ -332,6 +332,7 @@ export type Panel =
   | "farm"
   | "search"
   | "build"
+  | "tree"
   | "challenges"
   | "timers"
   | "settings"
