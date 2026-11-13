@@ -193,7 +193,8 @@ additionalBrowserArgs as the others (else WebView2 fails "0x8007139F ... not in 
 list every secondary mode (else that window starts a second Hub: it failed on ACL "primary_monitor not allowed").
 Price check split (2026-11-12, owner): Ctrl+C = equipment (register, else compare with what is worn: GearService.compare),
 Ctrl+D = price (only the price key's copy is priced; with no price key configured, Ctrl+C still prices). Tab "Equipamento"
-(GearView.tsx, Panel "gear"): paper doll like the game's character screen, item art from poe.ninja (ninja iconFor:
+(GearView.tsx, Panel "gear"): ONLY items registered with Ctrl+C (owner 2026-11-12: it compares my gear with future swaps; no PoB
+items, so PoB item sets per stage are parsed but unused), paper doll like the game's character screen, item art from poe.ninja (ninja iconFor:
 unique's own art, else the BaseType overview's plain base; CSP img-src allows https://web.poecdn.com), no socket drawing (owner
 2026-11-12: without the game's art it is useless; the detail line shows "sockets R-G-B (3L)"), click = mods; below, the last Ctrl+C item compared. Whisper button
 on listings that are not instant buyout (owner chose this over the trade site's "Travel to Hideout", which needs the

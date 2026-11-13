@@ -455,7 +455,7 @@ const signed = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n * 10) / 10}`;
 export function CompareBlock({ compare, rarity, hasBuild }: { compare: ItemComparison[] | null; rarity: string; hasBuild: boolean }) {
   if (!compare) {
     if (!hasBuild && (rarity === "Rare" || rarity === "Unique")) {
-      return <p className="muted small">{tr("Importe seu build do Path of Building (copie o código) para comparar com o item que você usa.", "Import your Path of Building build (copy the code) to compare with the item you wear.")}</p>;
+      return <p className="muted small">{tr("Registre o seu equipamento (botão acima) para comparar com o que você usa.", "Register your equipment (button above) to compare with what you wear.")}</p>;
     }
     return null;
   }

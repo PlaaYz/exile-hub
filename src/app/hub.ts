@@ -12,7 +12,6 @@ import { lang, resolveLang, setLang, tr } from "../shared/i18n";
 import type { ModTranslator } from "../core/modPt";
 import { DONATE_URL } from "../shared/links";
 import type { GemInfo } from "../core/gemAvailability";
-import { importPobEquipped, type EquippedItem } from "../core/itemCompare";
 import type { MapTradeOptions } from "../core/mapTrade";
 import { applyGemLevels, gemLevelTable, importPob, pobSourceUrl } from "../core/pob";
 import type { Lookups } from "../core/route";
@@ -48,7 +47,6 @@ export class Hub {
   private session!: Session;
   private build: PobBuild | null = null;
   /** what the build wears, for "compare with my item" */
-  private equipped: EquippedItem[] = [];
   private gear!: GearService;
   private modPt: ModTranslator | null = null;
   private buildInfo: AppState["buildInfo"] = null;
@@ -130,7 +128,7 @@ export class Hub {
           this.diag.add("clipboard", r.ok ? "build importado do clipboard" : `não era um build válido (${r.error})`),
         );
       },
-      equipped: () => this.gear.merged(this.equipped),
+      equipped: () => this.gear.worn(),
       gearItem: (text) => {
         if (this.gear.register) {
           const slot = this.gear.add(text);
@@ -149,7 +147,6 @@ export class Hub {
     this.gear = new GearService(
       p,
       () => this.broadcast(),
-      () => this.equipped,
       (item) => {
         const league = this.prices.league();
         return league ? iconFor(this.prices.ninja, league, item) : null;
@@ -238,7 +235,6 @@ export class Hub {
       const saved = JSON.parse(text) as { code: string; at: number; stage?: number };
       this.buildSaved = saved;
       this.build = applyGemLevels(importPob(saved.code, saved.stage), this.gemLevels);
-      this.equipped = equippedOf(saved.code, saved.stage);
       this.buildInfo = { source: "saved", at: saved.at };
     } catch {
       /* no saved build */
@@ -251,7 +247,6 @@ export class Hub {
     if (!saved || !this.build || !(stage >= 0 && stage < this.build.stages.length)) return;
     try {
       this.build = applyGemLevels(importPob(saved.code, stage), this.gemLevels);
-      this.equipped = equippedOf(saved.code, stage);
     } catch {
       return;
     }
@@ -268,7 +263,6 @@ export class Hub {
         code = (await this.p.fetchText(url, kPobFetchTimeoutMs)).trim();
       }
       this.build = applyGemLevels(importPob(code), this.gemLevels);
-      this.equipped = equippedOf(code);
       const at = Date.now();
       this.buildInfo = { source, at };
       this.buildSaved = { code, at };
@@ -875,13 +869,4 @@ function sessionView(
     bestPrice: best && best.chaos !== null ? { name: best.name, chaos: best.chaos } : null,
     earnings: earned && { chaos: earned.chaos, lines: earned.lines.map(({ name, count, each }) => ({ name, count, each })), incomplete: earned.incomplete },
   };
-}
-
-/** The build's items; a build without items (or an odd export) just has nothing to compare with. */
-function equippedOf(code: string, stage?: number): EquippedItem[] {
-  try {
-    return importPobEquipped(code, stage);
-  } catch {
-    return [];
-  }
 }

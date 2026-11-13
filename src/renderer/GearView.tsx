@@ -58,14 +58,13 @@ export function GearPanelBody({ state }: { state: AppState }) {
   const on = gear.register;
   const selected = sel ? bySlot.get(sel) : undefined;
   const c = gear.copied;
-  const canCompare = !!state.build || registered > 0;
+  const canCompare = registered > 0;
   return (
     <>
       <div className={`gear${on ? " on" : ""}`}>
         <div className="row" style={{ margin: 0 }}>
           <span className="muted small" style={{ flex: 1 }}>
             {tr(`${registered} de 10 registrados no jogo`, `${registered} of 10 registered in game`)}
-            {gear.items.length > registered ? tr(" · o resto vem do build do PoB", " · the rest from the PoB build") : ""}
           </span>
           <button className={on ? "primary" : ""} onClick={() => void window.hub.setGearRegister(!on)}>
             {on ? tr("Terminar registro", "Finish registering") : registered ? tr("Registrar de novo", "Register again") : tr("Registrar meu equipamento", "Register my equipment")}

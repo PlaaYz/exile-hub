@@ -139,7 +139,7 @@ describe("equipment tab", () => {
   it("a copied item is compared with the registered one; art comes from the icon lookup", async () => {
     const { GearService } = await import("../src/app/gearService");
     let changes = 0;
-    const g = new GearService(platform, () => changes++, () => [], async (i) => `https://web.poecdn.com/${i.baseType}.png`);
+    const g = new GearService(platform, () => changes++, async (i) => `https://web.poecdn.com/${i.baseType}.png`);
     g.setRegister(true);
     expect(g.add(ringText("Old Loop", 40))).toBe("Ring 1");
     g.setRegister(false);
@@ -156,7 +156,7 @@ describe("equipment tab", () => {
 
   it("without a league the icon lookup waits", async () => {
     const { GearService } = await import("../src/app/gearService");
-    const g = new GearService(platform, () => {}, () => [], () => null);
+    const g = new GearService(platform, () => {}, () => null);
     g.compare(ringText("New Loop", 70));
     expect(g.view().copied?.item.icon).toBeNull();
   });

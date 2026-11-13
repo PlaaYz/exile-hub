@@ -29,8 +29,6 @@ export class GearService {
   constructor(
     private readonly p: Platform,
     private readonly changed: () => void,
-    /** what the imported PoB build wears */
-    private readonly pob: () => readonly EquippedItem[],
     /** the item's art on poe.ninja; null while no league is known */
     private readonly iconOf: (item: ParsedItem) => Promise<string | null> | null,
     /** mod line -> the UI language (null = keep the game's English) */
@@ -87,13 +85,13 @@ export class GearService {
     this.changed();
   }
 
-  /** What the player wears: registered items first, the PoB build for the other slots. */
-  merged(pob: readonly EquippedItem[]): EquippedItem[] {
-    return [...this.items, ...pob.filter((e) => !(e.slot in this.texts))];
+  /** What the player wears: only what was registered in game (owner, 2026-11-12: not the PoB build). */
+  worn(): readonly EquippedItem[] {
+    return this.items;
   }
 
   view(): GearView {
-    const worn = this.merged(this.pob());
+    const worn = this.items;
     this.findIcons([...worn.map((e) => e.item), ...(this.copied ? [this.copied] : [])]);
     const c = this.copied;
     let copied: GearView["copied"] = null;
