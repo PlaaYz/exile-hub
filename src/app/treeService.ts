@@ -63,7 +63,8 @@ export class TreeService {
       void this.load();
       return { status: "loading", character: name, level: session.characterLevel, pointsSeen: 0, budget: 0, progress: null };
     }
-    if (!name) return { status: "no-character", character: null, level: null, pointsSeen: 0, budget: 0, progress: null };
+    // without a character the build's tree is still shown, with nothing marked as taken
+    if (!name) return { status: "no-character", character: null, level: null, pointsSeen: 0, budget: 0, progress: compareTree(this.data, build, new Map()) };
     const allocated = passives.allocated(name);
     const level = session.characterLevel ?? 1;
     const pointsSeen = pointsIn(allocated);

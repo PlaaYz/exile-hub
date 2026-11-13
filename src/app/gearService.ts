@@ -33,6 +33,8 @@ export class GearService {
     private readonly pob: () => readonly EquippedItem[],
     /** the item's art on poe.ninja; null while no league is known */
     private readonly iconOf: (item: ParsedItem) => Promise<string | null> | null,
+    /** mod line -> the UI language (null = keep the game's English) */
+    private readonly translate: () => ((line: string) => string) | null = () => null,
   ) {}
 
   async load(): Promise<void> {
@@ -96,7 +98,8 @@ export class GearService {
     const c = this.copied;
     let copied: GearView["copied"] = null;
     if (c) {
-      const cmp = compareItem(c, worn);
+      const t = this.translate();
+      const cmp = compareItem(c, worn).map((x) => (t ? { ...x, onlyCandidate: x.onlyCandidate.map(t), onlyEquipped: x.onlyEquipped.map(t) } : x));
       copied = { item: this.itemView("", c, true), compare: cmp.length ? cmp : null };
     }
     return { register: this.registering, items: worn.map((e) => this.itemView(e.slot, e.item, !!e.fromGame)), copied };
@@ -104,6 +107,7 @@ export class GearService {
 
   private itemView(slot: string, item: ParsedItem, fromGame: boolean): GearItemView {
     const order = (k: string) => (k === "enchant" ? 0 : k === "implicit" ? 1 : 2);
+    const t = this.translate() ?? ((l: string) => l);
     return {
       slot,
       name: item.name || item.baseType,
@@ -111,7 +115,7 @@ export class GearService {
       rarity: item.rarity,
       sockets: item.sockets,
       icon: this.icons.get(iconKey(item)) ?? null,
-      lines: [...item.mods].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => m.text),
+      lines: [...item.mods].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => t(m.text)),
       fromGame,
     };
   }

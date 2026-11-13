@@ -33,6 +33,7 @@
       "identifier": "http:default",
       "allow": [
         { "url": "https://www.pathofexile.com/*" },
+        { "url": "https://br.pathofexile.com/*" },
         { "url": "https://poe.ninja/*" },
         { "url": "https://raw.githubusercontent.com/*" },
         { "url": "https://pobb.in/*" },

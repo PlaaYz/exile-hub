@@ -47,6 +47,8 @@ export interface HubApi {
   priceRecheck(id: number): Promise<void>;
   /** sends a listing's whisper in the game's chat (brings the game to the front); an error text or null */
   priceWhisper(text: string): Promise<string | null>;
+  /** shows another stage of the imported build (index in build.stages) */
+  setBuildStage(stage: number): Promise<void>;
   /** copy the diagnostic report and open a new GitHub issue to paste it in */
   reportProblem(): Promise<void>;
   /** Opens the donation page (only when the app has one; voluntary, unlocks nothing). */

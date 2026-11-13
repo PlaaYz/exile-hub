@@ -14,7 +14,7 @@ export function TreePanel({ tree }: { tree: Tree }) {
   const [full, setFull] = useState(false);
   const layout = useTreeLayout();
   if (tree.status === "loading") return <p className="muted small">{tr("Carregando a árvore passiva oficial…", "Loading the official passive tree…")}</p>;
-  if (tree.status === "no-character" || !tree.progress) {
+  if (!tree.progress) {
     return (
       <p className="muted small">
         {tr(
@@ -31,7 +31,7 @@ export function TreePanel({ tree }: { tree: Tree }) {
   const pct = Math.round((p.donePoints / p.buildPoints) * 100);
   return (
     <>
-      <h3>{tr("Árvore passiva", "Passive tree")} — {tree.character}</h3>
+      {tree.character && <h3>{tree.character}</h3>}
       <div className="row">
         <div className="bar">
           <div className="bar-fill" style={{ width: `${pct}%` }} />
@@ -88,9 +88,6 @@ export function TreePanel({ tree }: { tree: Tree }) {
       {p.offBuild.length > 0 && (
         <div className="muted small">{tr("Fora do build (candidatos a respec):", "Off the build (respec candidates):")} {p.offBuild.join(", ")}</div>
       )}
-      <div className="muted small">
-        {tr('Baseado nas linhas "allocated passive" do Client.txt; passe o mouse num notable para ver o que ele dá.', 'Based on the "allocated passive" lines of Client.txt; hover a notable to see what it gives.')}
-      </div>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { isSuspect, needsTradePrice, tradePriceByName, type TradeNamePrice } fro
 import type { EquippedItem } from "../core/itemCompare";
 import { mapModStatIds, mapTradeQuery, tradeSearchUrl, type MapTradeOptions } from "../core/mapTrade";
 import { NinjaClient, priceByName } from "../core/ninja";
+import { ModTranslator } from "../core/modPt";
 import { looksLikePob } from "../core/pob";
 import { PriceChecker } from "../core/pricecheck";
 import { StatIndex, type TradeStatsData } from "../core/stats";
@@ -243,6 +244,41 @@ export class PriceService {
       }
     })();
     return this.statIndex;
+  }
+
+  private translator: Promise<ModTranslator | null> | null = null;
+
+  /** Mod lines in Portuguese (GGG's own texts from the Brazilian trade site, cached daily like the English list). */
+  loadTranslator(): Promise<ModTranslator | null> {
+    if (this.translator) return this.translator;
+    const file = "trade-stats-pt.json";
+    const p = this.platform;
+    this.translator = (async () => {
+      const en = await this.loadStats();
+      if (!en) {
+        this.translator = null;
+        return null;
+      }
+      let text: string | null = null;
+      const age = await p.userFileAge(file);
+      if (age !== null && Date.now() - age < kStatsMaxAgeMs) text = await p.readUserFile(file);
+      if (!text) {
+        try {
+          const data = await fetchStats(p.fetch, p.userAgent, "https://br.pathofexile.com");
+          text = JSON.stringify(data);
+          await p.writeUserFile(file, text);
+        } catch (e) {
+          console.error("could not load the Portuguese stat list", e);
+          text = await p.readUserFile(file);
+        }
+      }
+      if (!text) {
+        this.translator = null; // try again later
+        return null;
+      }
+      return new ModTranslator(en.raw, JSON.parse(text) as TradeStatsData);
+    })();
+    return this.translator;
   }
 
   // ---- clipboard ------------------------------------------------------------------

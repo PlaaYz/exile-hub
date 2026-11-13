@@ -8,7 +8,8 @@ import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionEarnings, type FarmPrice } from "../core/farm";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
 import { FARM_BOSSES } from "../shared/farmData";
-import { resolveLang, setLang, tr } from "../shared/i18n";
+import { lang, resolveLang, setLang, tr } from "../shared/i18n";
+import type { ModTranslator } from "../core/modPt";
 import { DONATE_URL } from "../shared/links";
 import type { GemInfo } from "../core/gemAvailability";
 import { importPobEquipped, type EquippedItem } from "../core/itemCompare";
@@ -49,7 +50,10 @@ export class Hub {
   /** what the build wears, for "compare with my item" */
   private equipped: EquippedItem[] = [];
   private gear!: GearService;
+  private modPt: ModTranslator | null = null;
   private buildInfo: AppState["buildInfo"] = null;
+  /** build.json: the PoB code and the stage picked in the app (none = PoB's active one) */
+  private buildSaved: { code: string; at: number; stage?: number } | null = null;
   /** from "[WINDOW] Gained/Lost focus" in Client.txt; unknown at start = treat as focused */
   private gameFocused = true;
   /** game process running, as far as the log tells (closing line / new log session) */
@@ -150,7 +154,9 @@ export class Hub {
         const league = this.prices.league();
         return league ? iconFor(this.prices.ninja, league, item) : null;
       },
+      () => (lang() === "pt" && this.modPt ? (l) => this.modPt!.translate(l) : null),
     );
+    this.loadModPt();
     await this.gear.load();
     await this.loadProgress();
     await this.loadBuild();
@@ -179,7 +185,10 @@ export class Hub {
 
   setConfig(patch: Partial<AppConfig>): void {
     const prev = this.cfg.update(patch);
-    if (patch.language !== undefined) setLang(resolveLang(this.config.language));
+    if (patch.language !== undefined) {
+      setLang(resolveLang(this.config.language));
+      this.loadModPt();
+    }
     if (patch.leagueStart !== undefined && patch.leagueStart !== prev.leagueStart) this.session.rebuild(this.config.leagueStart);
     if (patch.clientLogPath !== undefined && patch.clientLogPath !== prev.clientLogPath) void this.startTail();
     if (patch.overlayEnabled !== undefined || patch.overlayHideUnfocused !== undefined) this.applyOverlayVisibility();
@@ -226,13 +235,29 @@ export class Hub {
     try {
       const text = await this.p.readUserFile("build.json");
       if (!text) return;
-      const saved = JSON.parse(text) as { code: string; at: number };
-      this.build = applyGemLevels(importPob(saved.code), this.gemLevels);
-      this.equipped = equippedOf(saved.code);
+      const saved = JSON.parse(text) as { code: string; at: number; stage?: number };
+      this.buildSaved = saved;
+      this.build = applyGemLevels(importPob(saved.code, saved.stage), this.gemLevels);
+      this.equipped = equippedOf(saved.code, saved.stage);
       this.buildInfo = { source: "saved", at: saved.at };
     } catch {
       /* no saved build */
     }
+  }
+
+  /** Shows another stage of the build ("Level 30", "Endgame"...): its tree, gems and items together. */
+  setBuildStage(stage: number): void {
+    const saved = this.buildSaved;
+    if (!saved || !this.build || !(stage >= 0 && stage < this.build.stages.length)) return;
+    try {
+      this.build = applyGemLevels(importPob(saved.code, stage), this.gemLevels);
+      this.equipped = equippedOf(saved.code, stage);
+    } catch {
+      return;
+    }
+    this.buildSaved = { ...saved, stage };
+    void this.p.writeUserFile("build.json", JSON.stringify(this.buildSaved)).catch((e) => console.error("could not save build", e));
+    this.broadcast();
   }
 
   async importBuild(input: string, source: "manual" | "clipboard" = "manual"): Promise<ImportResult> {
@@ -246,7 +271,8 @@ export class Hub {
       this.equipped = equippedOf(code);
       const at = Date.now();
       this.buildInfo = { source, at };
-      await this.p.writeUserFile("build.json", JSON.stringify({ code, at })).catch((e) => console.error("could not save build", e));
+      this.buildSaved = { code, at };
+      await this.p.writeUserFile("build.json", JSON.stringify(this.buildSaved)).catch((e) => console.error("could not save build", e));
       this.broadcast();
       return { ok: true };
     } catch (e) {
@@ -524,6 +550,17 @@ export class Hub {
       this.p.shell.setTradeCards?.(this.trades.length);
     }
     this.broadcast();
+  }
+
+  /** GGG's Portuguese mod texts, only needed with the app in Portuguese. */
+  private loadModPt(): void {
+    if (lang() !== "pt" || this.modPt) return;
+    void this.prices.loadTranslator().then((t) => {
+      if (t) {
+        this.modPt = t;
+        this.broadcast();
+      }
+    });
   }
 
   closeSessionSummary(): void {
@@ -841,9 +878,9 @@ function sessionView(
 }
 
 /** The build's items; a build without items (or an odd export) just has nothing to compare with. */
-function equippedOf(code: string): EquippedItem[] {
+function equippedOf(code: string, stage?: number): EquippedItem[] {
   try {
-    return importPobEquipped(code);
+    return importPobEquipped(code, stage);
   } catch {
     return [];
   }

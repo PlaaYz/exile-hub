@@ -379,3 +379,5 @@ body.mode-summary { background: var(--bg); overflow: hidden; }
 .gear-lines { margin: 6px 0; padding-left: 16px; color: #8888ff; font-size: 13px; }
 .gear-copied { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .gear-copied img { height: 44px; }
+.stage-select { gap: 8px; margin: 6px 0 10px; }
+.stage-select select { width: auto; flex: 1; }

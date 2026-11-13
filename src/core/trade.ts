@@ -395,8 +395,9 @@ export function defaultLeague(leagues: string[]): string | null {
   return leagues.find(isChallengeLeague) ?? leagues[0] ?? null;
 }
 
-export async function fetchStats(fetchFn: TradeFetch, userAgent: string): Promise<unknown> {
-  const res = await fetchFn(`${SITE}/api/trade/data/stats`, { headers: { "User-Agent": userAgent } });
+/** The trade stat list; `site` = the Brazilian trade site for GGG's Portuguese texts (same stat ids). */
+export async function fetchStats(fetchFn: TradeFetch, userAgent: string, site = SITE): Promise<unknown> {
+  const res = await fetchFn(`${site}/api/trade/data/stats`, { headers: { "User-Agent": userAgent } });
   if (!res.ok) throw new Error(`stats HTTP ${res.status}`);
   return res.json();
 }

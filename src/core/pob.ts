@@ -47,21 +47,54 @@ function attrs(s: string): Record<string, string> {
   return out;
 }
 
-export function parsePobXml(xml: string): PobBuild {
+/**
+ * A build's stages ("Level 30", "Level 60", "Endgame"...): PoB keeps passive trees, skill sets and item
+ * sets in three lists side by side; the stages are the trees, and the skill / item set of a stage is the
+ * one with the same title, else the one in the same position, else the active one.
+ */
+function specsOf(xml: string): { titles: string[]; active: number; nodes: string[] } {
+  const treeBlock = /<Tree\b([^>]*)>([\s\S]*?)<\/Tree>/.exec(xml);
+  if (!treeBlock) return { titles: [], active: 0, nodes: [] };
+  const specs = [...treeBlock[2].matchAll(/<Spec\b([^>]*?)(?:\/>|>)/g)].map((m) => attrs(m[1]));
+  const active = Math.min(Math.max((Number(attrs(treeBlock[1]).activeSpec) || 1) - 1, 0), Math.max(specs.length - 1, 0));
+  return { titles: specs.map((s, i) => s.title || `${tr("Árvore", "Tree")} ${i + 1}`), active, nodes: specs.map((s) => s.nodes ?? "") };
+}
+
+/** Which set of a list goes with stage `spec` (titled `title`): same title, else same position, else the active one. */
+export function setForStage<T extends { title?: string }>(sets: T[], spec: number, title: string, active: T | undefined): T | undefined {
+  const norm = (s: string | undefined) => (s ?? "").trim().toLowerCase();
+  return sets.find((s) => norm(s.title) !== "" && norm(s.title) === norm(title)) ?? sets[spec] ?? active ?? sets[0];
+}
+
+/** The tree list of the export: stage titles and which one PoB had open. */
+export function pobStages(xml: string): { titles: string[]; active: number } {
+  const { titles, active } = specsOf(xml);
+  return { titles, active };
+}
+
+export function parsePobXml(xml: string, stage?: number): PobBuild {
   if (!/<PathOfBuilding/.test(xml)) throw new Error(tr("não é uma exportação do Path of Building", "not a Path of Building export"));
 
   const buildTag = /<Build\b([^>]*)>/.exec(xml);
   const b = buildTag ? attrs(buildTag[1]) : {};
 
-  // --- skills: use the active skill set if the export has several
+  const specs = specsOf(xml);
+  const spec = stage !== undefined && stage >= 0 && stage < specs.titles.length ? stage : specs.active;
+  const title = specs.titles[spec] ?? "";
+
+  // --- skills: the stage's skill set (the active one when no stage was picked)
   let skillsXml = "";
   const skillsBlock = /<Skills\b([^>]*)>([\s\S]*?)<\/Skills>/.exec(xml);
   if (skillsBlock) {
-    const active = attrs(skillsBlock[1]).activeSkillSet;
-    const sets = [...skillsBlock[2].matchAll(/<SkillSet\b([^>]*)>([\s\S]*?)<\/SkillSet>/g)];
+    const activeId = attrs(skillsBlock[1]).activeSkillSet;
+    const sets = [...skillsBlock[2].matchAll(/<SkillSet\b([^>]*)>([\s\S]*?)<\/SkillSet>/g)].map((m) => {
+      const a = attrs(m[1]);
+      return { id: a.id, title: a.title, body: m[2] };
+    });
     if (sets.length) {
-      const pick = sets.find((s) => attrs(s[1]).id === active) ?? sets[0];
-      skillsXml = pick[2];
+      const active = sets.find((s) => s.id === activeId);
+      const pick = (stage === undefined ? active : setForStage(sets, spec, title, active)) ?? sets[0];
+      skillsXml = pick.body;
     } else {
       skillsXml = skillsBlock[2];
     }
@@ -92,18 +125,9 @@ export function parsePobXml(xml: string): PobBuild {
     });
   }
 
-  // --- passive tree: active spec
-  let treeNodes: number[] = [];
-  const treeBlock = /<Tree\b([^>]*)>([\s\S]*?)<\/Tree>/.exec(xml);
-  if (treeBlock) {
-    const activeSpec = Number(attrs(treeBlock[1]).activeSpec) || 1;
-    const specs = [...treeBlock[2].matchAll(/<Spec\b([^>]*?)(?:\/>|>)/g)];
-    const spec = specs[activeSpec - 1] ?? specs[0];
-    if (spec) {
-      const nodes = attrs(spec[1]).nodes;
-      if (nodes) treeNodes = nodes.split(",").map(Number).filter((n) => Number.isFinite(n));
-    }
-  }
+  // --- passive tree: the stage's spec
+  const nodes = specs.nodes[spec] ?? "";
+  const treeNodes = nodes ? nodes.split(",").map(Number).filter((n) => Number.isFinite(n)) : [];
 
   return {
     className: b.className ?? "",
@@ -111,11 +135,13 @@ export function parsePobXml(xml: string): PobBuild {
     level: Number(b.level) || 1,
     groups,
     treeNodes,
+    stages: specs.titles,
+    stage: spec,
   };
 }
 
-export function importPob(code: string): PobBuild {
-  return parsePobXml(decodePobCode(code));
+export function importPob(code: string, stage?: number): PobBuild {
+  return parsePobXml(decodePobCode(code), stage);
 }
 
 /** Fills `requiredLevel` on gems using a name -> required level table. */

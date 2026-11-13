@@ -88,6 +88,9 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
       if (Number.isInteger(id) && id > 0) hub.priceRecheck(id);
     },
     priceWhisper: async (text) => (typeof text === "string" && text.length <= 500 ? hub.priceWhisper(text) : null),
+    setBuildStage: async (stage) => {
+      if (Number.isInteger(stage) && stage >= 0 && stage < 100) hub.setBuildStage(stage);
+    },
     reportProblem: () => hub.reportProblem(),
     openDonate: () => hub.openDonate(),
     setGearRegister: async (on) => hub.setGearRegister(on === true),

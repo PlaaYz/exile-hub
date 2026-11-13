@@ -97,6 +97,9 @@ export interface PobBuild {
   level: number;
   groups: PobSkillGroup[];
   treeNodes: number[];
+  /** the build's stages (PoB tree titles: "Level 30", "Endgame"...) and the one shown */
+  stages: string[];
+  stage: number;
 }
 
 // ---- price check ----------------------------------------------------------------

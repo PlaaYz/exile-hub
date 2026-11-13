@@ -6,7 +6,7 @@
 import { tr } from "../shared/i18n";
 import type { ItemMod, ModKind, ParsedItem } from "./item";
 import { defences, pseudoStats, weaponDps, type PseudoStat } from "./itemCalc";
-import { decodePobCode } from "./pob";
+import { decodePobCode, pobStages, setForStage } from "./pob";
 
 export interface EquippedItem {
   /** PoB slot name ("Helmet", "Ring 1", "Weapon 1"...) */
@@ -154,7 +154,7 @@ const unescapeXml = (s: string) =>
   s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#10;/g, "\n").replace(/&amp;/g, "&");
 
 /** What the build wears: the active item set's slots (or the old top-level <Slot> list). */
-export function parsePobEquipped(xml: string): EquippedItem[] {
+export function parsePobEquipped(xml: string, stage?: number): EquippedItem[] {
   const block = /<Items\b([^>]*)>([\s\S]*?)<\/Items>/.exec(xml);
   if (!block) return [];
   const items = new Map<string, string>();
@@ -163,9 +163,16 @@ export function parsePobEquipped(xml: string): EquippedItem[] {
     if (id) items.set(id, unescapeXml(m[2].replace(/<ModRange[^>]*\/>/g, "")));
   }
   const activeSet = /\bactiveItemSet="(\d+)"/.exec(block[1])?.[1];
-  const sets = [...block[2].matchAll(/<ItemSet\b([^>]*)>([\s\S]*?)<\/ItemSet>/g)];
-  const set = sets.find((s) => /\bid="(\d+)"/.exec(s[1])?.[1] === activeSet) ?? sets[0];
-  const slotsXml = set ? set[2] : block[2];
+  const sets = [...block[2].matchAll(/<ItemSet\b([^>]*)>([\s\S]*?)<\/ItemSet>/g)].map((m) => ({
+    id: /\bid="(\d+)"/.exec(m[1])?.[1],
+    title: unescapeXml(/\btitle="([^"]*)"/.exec(m[1])?.[1] ?? ""),
+    body: m[2],
+  }));
+  const active = sets.find((s) => s.id === activeSet);
+  const stages = pobStages(xml);
+  const spec = stage !== undefined && stage >= 0 && stage < stages.titles.length ? stage : null;
+  const set = (spec === null ? active : setForStage(sets, spec, stages.titles[spec], active)) ?? sets[0];
+  const slotsXml = set ? set.body : block[2];
   const out: EquippedItem[] = [];
   for (const s of slotsXml.matchAll(/<Slot\b([^>]*?)\/?>/g)) {
     const name = /\bname="([^"]*)"/.exec(s[1])?.[1];
@@ -178,8 +185,8 @@ export function parsePobEquipped(xml: string): EquippedItem[] {
   return out;
 }
 
-export function importPobEquipped(code: string): EquippedItem[] {
-  return parsePobEquipped(decodePobCode(code));
+export function importPobEquipped(code: string, stage?: number): EquippedItem[] {
+  return parsePobEquipped(decodePobCode(code), stage);
 }
 
 /** "+68% total Elemental Resistance" -> "+#% total Elemental Resistance" (the sign stays). */

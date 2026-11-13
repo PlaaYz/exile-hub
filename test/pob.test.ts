@@ -90,3 +90,42 @@ describe("PoB import", () => {
     expect(pobSourceUrl("eNrtXetz")).toBeNull();
   });
 });
+
+describe("build stages", () => {
+  const xml = `<PathOfBuilding><Build className="Witch" level="90"/>
+<Skills activeSkillSet="2">
+  <SkillSet id="1" title="Leveling"><Skill label="L"><Gem nameSpec="Freezing Pulse" level="1"/></Skill></SkillSet>
+  <SkillSet id="2" title="Endgame"><Skill label="E"><Gem nameSpec="Vortex" level="20"/></Skill></SkillSet>
+</Skills>
+<Tree activeSpec="2"><Spec title="Leveling" nodes="1,2"/><Spec title="Endgame" nodes="1,2,3,4"/></Tree>
+<Items activeItemSet="1">
+  <Item id="1">Rarity: RARE
+Old Ring
+Iron Ring
+Implicits: 0
++10 to maximum Life</Item>
+  <Item id="2">Rarity: RARE
+New Ring
+Iron Ring
+Implicits: 0
++20 to maximum Life</Item>
+  <ItemSet id="1" title="Endgame"><Slot name="Ring 1" itemId="2"/></ItemSet>
+  <ItemSet id="2" title="Leveling"><Slot name="Ring 1" itemId="1"/></ItemSet>
+</Items></PathOfBuilding>`;
+
+  it("lists the trees as stages and opens PoB's active one", () => {
+    const b = parsePobXml(xml);
+    expect(b.stages).toEqual(["Leveling", "Endgame"]);
+    expect(b.stage).toBe(1);
+    expect(b.treeNodes).toEqual([1, 2, 3, 4]);
+  });
+
+  it("a picked stage takes the skill and item sets of the same title", async () => {
+    const { parsePobEquipped } = await import("../src/core/itemCompare");
+    const b = parsePobXml(xml, 0);
+    expect(b.treeNodes).toEqual([1, 2]);
+    expect(b.groups[0].gems[0].name).toBe("Freezing Pulse");
+    expect(parsePobEquipped(xml, 0)[0].item.name).toBe("Old Ring");
+    expect(parsePobEquipped(xml, 1)[0].item.name).toBe("New Ring");
+  });
+});

@@ -170,10 +170,28 @@ function PricePanel({ state }: { state: AppState }) {
   );
 }
 
+/** PoB builds with stages ("Level 30", "Endgame"...): the stage picked changes the tree, gems and items together. */
+function StageSelect({ build }: { build: AppState["build"] }) {
+  if (!build || build.stages.length < 2) return null;
+  return (
+    <label className="row stage-select">
+      <span className="muted small">{tr("Etapa da build", "Build stage")}</span>
+      <select value={build.stage} onChange={(e) => void window.hub.setBuildStage(Number(e.target.value))}>
+        {build.stages.map((t, i) => (
+          <option key={i} value={i}>
+            {t}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /** The build's passive tree against what the playing character has allocated (from Client.txt). */
 function PassiveTreePanel({ state }: { state: AppState }) {
   return (
     <PanelBox title={tr("Árvore passiva", "Passive tree")} className="panel-tall">
+      <StageSelect build={state.build} />
       {state.tree ? (
         <TreePanel tree={state.tree} />
       ) : (
@@ -293,6 +311,7 @@ function BuildPanel({ state }: { state: AppState }) {
         </button>
         {msg && <span className={msg.startsWith(tr("Falha ao importar", "Import failed")) ? "warn-text" : "muted"}>{msg}</span>}
       </div>
+      <StageSelect build={b} />
       {b && (
         <>
           <h3>{tr("Gemas", "Gems")}</h3>

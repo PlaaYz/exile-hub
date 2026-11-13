@@ -199,6 +199,12 @@ from the "Sockets:" line (PoB items have none), click = mods; below, the last Ct
 on listings that are not instant buyout (owner chose this over the trade site's "Travel to Hideout", which needs the
 POESESSID login: never): Hub.priceWhisper sends only a whisper of a listing on screen, after chat.rs bring_game_front
 (finds the game window via EnumWindows when the click came from our own window). send_chat limit 200 -> 500 chars.
+Build stages (2026-11-12, owner): PoB trees = stages (titles "Level 1-12", "Maps"...); a stage takes the skill set and item set
+of the same title, else the same position, else the active one (core/pob setForStage). build.json keeps the picked "stage";
+picker on the Build and Árvore tabs (HubApi.setBuildStage). The Árvore tab shows the followed build's tree even when the
+character is unknown (nothing marked). Mod lines in pt: core/modPt ModTranslator = English stat list + GGG's Brazilian one
+(br.pathofexile.com/api/trade/data/stats, userData/trade-stats-pt.json, daily) by stat id; buff/charge/ailment names stay
+English (KEEP table there); unknown lines stay English. Used on the Equipamento tab.
 0.4.2 (2026-11-11): who is playing survives restarts and logins. Session.onLogin keeps the last character as a guess
 (`assumed`): undone by another character's level-up/death, the area-level check (kLevelSlack) or the logged-out-area
 match; while assumed, its saved progress is never overwritten (saveCurrent). The owner's pick in the header is saved
