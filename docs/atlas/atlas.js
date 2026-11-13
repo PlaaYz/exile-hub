@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=11`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=12`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;
@@ -417,22 +417,36 @@ function changed() {
   history.replaceState(null, "", `#${tree}${picked.size ? encode() : ""}`);
 }
 
-// Short links: "~" + one bit per node (in the data file's order) as base64url, then "~index.choice"
-// for nodes with options. ~160 characters for a full tree instead of ~900 with plain ids.
-// shortcut: bits follow the node order of this league's data; a new league's rebuild can scramble old links
+// Short links: "~~" + base64url bits of a walk from the start: each allocated node, in walk order, gives one
+// bit per not yet seen neighbour (allocated or not), so only the tree's border is stored (~50 characters for
+// 150 points); then "~index.choice" for nodes with options. Older "~" + one bit per node links still load.
+// shortcut: bits follow this league's links and node order; a new league's rebuild can scramble old links
 // (old "#data:1,2.0,3" id links still load).
+const toB64 = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const fromB64 = (s) => { try { return atob(s.replace(/-/g, "+").replace(/_/g, "/")); } catch { return ""; } };
+
+/** Walks the tree from the start; `isOn(id)` decides each new neighbour (and may record it). */
+function walk(isOn) {
+  const seen = new Set([T.start]);
+  const queue = [T.start];
+  for (let i = 0; i < queue.length; i++) {
+    for (const next of [...(adj.get(queue[i]) ?? [])].sort((x, y) => x - y)) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      if (isOn(next)) queue.push(next);
+    }
+  }
+}
+
 function encode() {
-  const bytes = new Uint8Array(Math.ceil(T.nodes.length / 8));
-  const extra = [];
-  T.nodes.forEach(([id], i) => {
-    if (!picked.has(id)) return;
-    bytes[i >> 3] |= 1 << (i & 7);
-    if (choice.has(id)) extra.push(`~${i.toString(36)}.${choice.get(id)}`);
-  });
-  let end = bytes.length;
-  while (end && !bytes[end - 1]) end--;
-  const b64 = btoa(String.fromCharCode(...bytes.subarray(0, end))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return "~" + b64 + extra.join("");
+  const bits = [];
+  walk((id) => { const on = picked.has(id); bits.push(on); return on; });
+  while (bits.length && !bits[bits.length - 1]) bits.pop();
+  const bytes = new Uint8Array(Math.ceil(bits.length / 8));
+  bits.forEach((on, i) => { if (on) bytes[i >> 3] |= 1 << (i & 7); });
+  const index = new Map(T.nodes.map(([id], i) => [id, i]));
+  const extra = [...choice].filter(([id]) => picked.has(id)).map(([id, c]) => `~${index.get(id).toString(36)}.${c}`);
+  return "~~" + toB64(bytes) + extra.join("");
 }
 
 function restore(saved) {
@@ -441,10 +455,15 @@ function restore(saved) {
     picked.add(id);
     if (c != null && texts(id)?.v?.[c]) choice.set(id, c);
   };
-  if (saved.startsWith("~")) {
+  if (saved.startsWith("~~")) {
+    const [b64, ...extra] = saved.slice(2).split("~");
+    const bin = fromB64(b64);
+    const chosen = new Map(extra.map((e) => e.split(".")).map(([i, c]) => [T.nodes[parseInt(i, 36)]?.[0], Number(c)]));
+    let i = 0;
+    walk((id) => { const on = ((bin.charCodeAt(i >> 3) >> (i & 7)) & 1) === 1; i++; if (on) add(id, chosen.get(id)); return on; });
+  } else if (saved.startsWith("~")) {
     const [b64, ...extra] = saved.slice(1).split("~");
-    let bin = "";
-    try { bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/")); } catch { /* broken link: nothing */ }
+    const bin = fromB64(b64);
     const chosen = new Map(extra.map((e) => e.split(".")).map(([i, c]) => [parseInt(i, 36), Number(c)]));
     T.nodes.forEach(([id], i) => { if ((bin.charCodeAt(i >> 3) >> (i & 7)) & 1) add(id, chosen.get(i)); });
   } else {
