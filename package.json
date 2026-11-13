@@ -1,6 +1,6 @@
 {
   "name": "exile-hub",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "All-in-one companion for Path of Exile 1: campaign co-pilot, PoB import, overlay + second-screen dashboard",
   "private": true,
   "scripts": {
