@@ -4,6 +4,7 @@
 import { GEAR_SLOTS } from "../core/itemCompare";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register } from "@tauri-apps/plugin-global-shortcut";
 import { kOverlayInteractKey, kOverlayToggleKey, kStateBroadcastMs } from "../app/constants";
 import { Hub } from "../app/hub";
@@ -35,6 +36,8 @@ const OVERLAY_CALLS = new Set<keyof HubApi>([
 
 interface CallMsg {
   id: number;
+  /** label of the window that asked: the reply goes back to it */
+  from: string;
   method: keyof HubApi;
   args: unknown[];
 }
@@ -127,7 +130,7 @@ async function overlayApi(): Promise<HubApi> {
       new Promise((resolve, reject) => {
         const id = next++;
         pending.set(id, { resolve, reject });
-        void emitTo("dashboard", "hub-call", { id, method, args } satisfies CallMsg);
+        void emitTo("dashboard", "hub-call", { id, from: getCurrentWindow().label, method, args } satisfies CallMsg);
       });
   return new Proxy({} as HubApi, {
     // not a thenable: "await overlayApi()" must not mistake the proxy for a promise
@@ -143,8 +146,11 @@ async function overlayApi(): Promise<HubApi> {
   });
 }
 
+/** windows that talk to the hub through events (each is also its own window label) */
+const SECONDARY_WINDOWS = ["overlay", "price", "trades", "summary"];
+
 export async function installTauriHub(mode: string | null): Promise<void> {
-  if (mode === "overlay" || mode === "price" || mode === "trades" || mode === "summary") {
+  if (mode !== null && SECONDARY_WINDOWS.includes(mode)) {
     window.hub = await overlayApi();
     return;
   }
@@ -162,15 +168,15 @@ export async function installTauriHub(mode: string | null): Promise<void> {
   window.hub = api;
 
   await listen<CallMsg>("hub-call", async (e) => {
-    const { id, method, args } = e.payload;
+    const { id, from, method, args } = e.payload;
     const reply: ReplyMsg = { id };
     try {
-      if (!OVERLAY_CALLS.has(method)) throw new Error(`not allowed: ${String(method)}`);
+      if (!OVERLAY_CALLS.has(method) || !Array.isArray(args)) throw new Error(`not allowed: ${String(method)}`);
       reply.result = await (api[method] as (...a: unknown[]) => Promise<unknown>)(...args);
     } catch (err) {
       reply.error = errorText(err);
     }
-    void emitTo("overlay", "hub-reply", reply);
+    if (SECONDARY_WINDOWS.includes(from)) void emitTo(from, "hub-reply", reply);
   });
 
   await shell.init(info.hidden);

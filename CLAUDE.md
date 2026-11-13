@@ -270,6 +270,10 @@ Tauri (the only build since 2026-11-09; Electron code removed, its history is in
   electron-updater's "--force-run". Tauri installs to %LOCALAPPDATA%\Exile Hub, exe "Exile Hub.exe".
 - Never run the Electron app and the Tauri build at the same time: both write the same user files.
 - Debug the webviews with env WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9334.
+- Security (review 2026-11-12): our Rust commands are listed in src-tauri/build.rs (AppManifest) and granted ONLY in
+  capabilities/dashboard.json ("allow-<command>"): add a new command in both places. Secondary windows (overlay, price,
+  trades, summary) reach the hub through "hub-call" events only (OVERLAY_CALLS); replies go back to the asking window
+  (CallMsg.from). read_data accepts only plain relative names below data/.
 - Measured 2026-11-08, 60 s after start, PoB engine off: Tauri release 505 MB working set / 256 MB
   private (8 procs, exe 6.8 MB); Electron 0.2.1 minus its engine process ~506 MB WS / ~337 MB private
   (install 273 MB). Electron 0.2.1 also boots the PoB engine at start (+421 MB); the on-demand engine

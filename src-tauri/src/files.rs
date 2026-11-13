@@ -46,7 +46,9 @@ pub fn app_info(app: AppHandle) -> Result<AppInfo, String> {
 
 #[tauri::command]
 pub fn read_data(app: AppHandle, rel: String) -> Result<String, String> {
-    if rel.contains("..") || rel.contains(':') {
+    // only plain names below data/ ("json/gems.json"): no "..", drive, root ("\Windows") or UNC path
+    let ok = !rel.is_empty() && Path::new(&rel).components().all(|c| matches!(c, std::path::Component::Normal(_)));
+    if !ok || rel.contains(':') {
         return Err(format!("invalid data path: {rel}"));
     }
     fs::read_to_string(resources(&app)?.join("data").join(rel)).map_err(|e| e.to_string())
