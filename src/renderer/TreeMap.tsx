@@ -173,12 +173,6 @@ export function TreeMap({ progress, mode, height, layout: given }: { progress: P
   );
 }
 
-/** Names of the next points, in order ("1. Strength · 2. Art of the Gladiator"). */
-export function nextNames(progress: Progress, layout: TreeLayout | null, max = 6): string[] {
-  if (!layout) return [];
-  return progress.nextPath.slice(0, max).map((id) => layout.names[id] ?? `#${id}`);
-}
-
 /** Full-screen view with zoom (wheel) and drag. */
 export function TreeMapModal({ progress, onClose }: { progress: Progress; onClose: () => void }) {
   useEffect(() => {

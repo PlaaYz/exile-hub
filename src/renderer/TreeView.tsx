@@ -1,18 +1,12 @@
 import { useState } from "react";
 import { tr } from "../shared/i18n";
 import type { AppState } from "../shared/types";
-import { nextNames, TreeMap, TreeMapModal, useTreeLayout } from "./TreeMap";
+import { TreeMap, TreeMapModal } from "./TreeMap";
 
 type Tree = NonNullable<AppState["tree"]>;
 
-function pts(n: number | null): string {
-  if (n === null) return tr("fora do caminho do build", "off the build's path");
-  return n === 1 ? tr("1 ponto", "1 point") : tr(`${n} pontos`, `${n} points`);
-}
-
 export function TreePanel({ tree }: { tree: Tree }) {
   const [full, setFull] = useState(false);
-  const layout = useTreeLayout();
   if (tree.status === "loading") return <p className="muted small">{tr("Carregando a árvore passiva oficial…", "Loading the official passive tree…")}</p>;
   if (!tree.progress) {
     return (
@@ -54,40 +48,7 @@ export function TreePanel({ tree }: { tree: Tree }) {
           {tr("ampliar", "enlarge")}
         </button>
       </div>
-      {p.nextPath.length > 0 && (
-        <div className="tree-next">
-          <span className="muted small">{tr("Pegue nesta ordem: ", "Take them in this order: ")}</span>
-          {nextNames(p, layout, 12).map((n, i) => (
-            <span key={i} className="tree-next-step">
-              <b>{i + 1}</b> {n}
-            </span>
-          ))}
-          {p.nextPath.length > 12 && <span className="muted small"> … +{p.nextPath.length - 12}</span>}
-        </div>
-      )}
       {full && <TreeMapModal progress={p} onClose={() => setFull(false)} />}
-      {p.missing.length === 0 ? (
-        <p className="good">{tr("Todos os notables e keystones do build já estão alocados.", "Every notable and keystone of the build is allocated.")}</p>
-      ) : (
-        <>
-          <div className="muted small">{tr("Notables e keystones que faltam, do mais perto para o mais longe:", "Missing notables and keystones, nearest first:")}</div>
-          <ul className="tree-missing">
-            {p.missing.slice(0, 12).map((m) => (
-              <li key={m.id} title={m.stats.join("\n")}>
-                <span className={m.kind === "keystone" ? "f-asc" : "f-quest"}>{m.name}</span>
-                <span className="muted small"> · {pts(m.distance)}</span>
-              </li>
-            ))}
-          </ul>
-          {p.missing.length > 12 && <div className="muted small">… {tr("e mais", "and")} {p.missing.length - 12}{tr("", " more")}</div>}
-        </>
-      )}
-      {p.ascMissing.length > 0 && (
-        <div className="muted small">{tr("Ascendência que falta:", "Missing ascendancy:")} {p.ascMissing.join(", ")}</div>
-      )}
-      {p.offBuild.length > 0 && (
-        <div className="muted small">{tr("Fora do build (candidatos a respec):", "Off the build (respec candidates):")} {p.offBuild.join(", ")}</div>
-      )}
     </>
   );
 }
