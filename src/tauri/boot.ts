@@ -188,6 +188,7 @@ export async function installTauriHub(mode: string | null): Promise<void> {
     (s) => {
       hub.updateState = s;
       hub.broadcast();
+      if (s.status === "ready") shell.autoInstall();
     },
     (t, b) => shell.notify(t, b),
   );

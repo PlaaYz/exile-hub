@@ -303,6 +303,8 @@ export class TauriShell implements Shell {
    * takes 1-2 s) and is released when the game closes (~60 MB).
    */
   gameRunningChanged(running: boolean): void {
+    this.gameOn = running;
+    if (!running) this.autoInstall();
     if (this.overlayCloseTimer) clearTimeout(this.overlayCloseTimer);
     this.overlayCloseTimer = null;
     if (running) {
@@ -401,6 +403,21 @@ export class TauriShell implements Shell {
 
   /** Set by boot.ts once the updater exists. */
   updater: TauriUpdater | null = null;
+
+  private gameOn = false;
+  private autoInstallTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * A downloaded update installs on its own a minute after it is ready or after the game closes, never
+   * while the game runs (owner, 2026-11-12). The installer reopens the app.
+   */
+  autoInstall(): void {
+    if (this.autoInstallTimer) clearTimeout(this.autoInstallTimer);
+    this.autoInstallTimer = setTimeout(() => {
+      this.autoInstallTimer = null;
+      if (!this.gameOn && this.updater?.ready) this.quit();
+    }, 60_000);
+  }
 
   /** "Reiniciar e atualizar": save, then run the downloaded installer. */
   installUpdate(): void {

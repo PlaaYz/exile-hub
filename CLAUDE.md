@@ -214,8 +214,9 @@ Native controls use the dark palette (color-scheme: dark in styles.css and the s
 in-page lightbox (no new tab: the owner got stuck on the bare image).
 Verified in game by the owner (2026-11-11, 0.4.x): overlay hides on alt-tab (overlayHideUnfocused on), Ctrl+D popup
 (opens, drags, Esc, clipboard restored), F5 /hideout, equipment registration. Updater verified on a real update
-(0.4.3 -> 0.4.7 via "Reiniciar e atualizar", exe and registry checked, 2026-11-12). The download only installs on that
-button or a tray quit; force-killing the app for tests skips it. Still untested: trade cards with a real whisper, autostart after a reboot. SignPath Foundation: owner applied 2026-11-11
+(0.4.3 -> 0.4.7 via "Reiniciar e atualizar", exe and registry checked, 2026-11-12). Since 0.4.9 (owner 2026-11-12) checks every 30 min and
+installs on its own 1 min after "ready" or after the game closes, never while the game runs (TauriShell.autoInstall;
+the updater passes /R so the installer reopens the app). Force-killing the app for tests skips the install. Still untested: trade cards with a real whisper, autostart after a reboot. SignPath Foundation: owner applied 2026-11-11
 (answers in Claude outputs/signpath-pedido.md); when approved, sign in CI with their GitHub action, then add the Tauri
 updater .sig of the SIGNED exe. Donations (0.4.3): LivePix https://livepix.gg/exilehub (Pix, main button on #apoie, owner 2026-11-11) and the owner's USDT address on Solana (given 2026-11-11), shown ONLY on the site's #apoie section (copy
 button with a select+execCommand fallback, red "only USDT on Solana" warning) and in the README; links.ts DONATE_URL =

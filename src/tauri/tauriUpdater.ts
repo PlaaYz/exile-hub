@@ -1,12 +1,12 @@
 // Automatic updates on Tauri (tauri-plugin-updater): latest.json from the GitHub Releases, signed
-// with the project's key. Downloads in the background; installs on "Reiniciar e atualizar" or when the
-// user quits from the tray (like electron-updater's autoInstallOnAppQuit).
+// with the project's key. Downloads in the background; installs on its own while the game is closed
+// (TauriShell.autoInstall; the installer reopens the app), on "Reiniciar e atualizar" or on a tray quit.
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import type { AppState } from "../shared/types";
 import { tr } from "../shared/i18n";
 import { errorText } from "./errors";
 
-const kCheckEveryMs = 4 * 3600 * 1000;
+const kCheckEveryMs = 30 * 60 * 1000;
 
 export class TauriUpdater {
   state: AppState["update"];
@@ -53,8 +53,8 @@ export class TauriUpdater {
       this.notify(
         tr("Atualização pronta", "Update ready"),
         tr(
-          `Exile Hub ${u.version} será instalado quando você fechar o app (ou clique em "Reiniciar e atualizar").`,
-          `Exile Hub ${u.version} will be installed when you quit the app (or click "Restart and update").`,
+          `Exile Hub ${u.version} será instalado sozinho quando o jogo estiver fechado (ou clique em "Reiniciar e atualizar").`,
+          `Exile Hub ${u.version} installs on its own while the game is closed (or click "Restart and update").`,
         ),
       );
     } catch (e) {

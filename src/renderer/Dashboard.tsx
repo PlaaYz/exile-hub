@@ -240,7 +240,7 @@ function UpdateBadge({ u }: { u: AppState["update"] }) {
     checking: tr("procurando atualização…", "checking for updates…"),
     latest: tr("atualizado", "up to date"),
     downloading: `${tr("baixando", "downloading")} ${u.version ?? ""}${u.progress !== null ? ` (${u.progress}%)` : ""}…`,
-    ready: tr(`versão ${u.version} pronta: instala ao fechar o app`, `version ${u.version} ready: installs when you quit the app`),
+    ready: tr(`versão ${u.version} pronta: instala sozinha com o jogo fechado`, `version ${u.version} ready: installs on its own while the game is closed`),
     error: `${tr("não foi possível verificar atualizações", "could not check for updates")}${u.message ? ` (${u.message})` : ""}`,
   };
   return (
