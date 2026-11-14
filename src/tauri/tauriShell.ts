@@ -365,27 +365,25 @@ export class TauriShell implements Shell {
       const menu = await Menu.new({
         items: [
           { id: "open", text: tr("Abrir painel", "Open dashboard"), action: () => this.showDashboard(true) },
-          { item: "Separator" },
-          { id: "overlay", text: tr("Overlay no jogo (F9)", "In-game overlay (F9)"), checked: t.overlayEnabled, action: () => ctx.toggleOverlay() },
-          {
-            id: "price",
-            text: tr("Price check (Ctrl+C no item)", "Price check (Ctrl+C on an item)"),
-            checked: t.priceCheckEnabled,
-            action: () => ctx.setConfig({ priceCheckEnabled: !ctx.config().priceCheckEnabled }),
-          },
-          {
-            id: "gamestart",
-            text: tr("Abrir o painel quando o jogo abrir", "Open the dashboard when the game starts"),
-            checked: t.showDashboardOnGameStart,
-            action: () => ctx.setConfig({ showDashboardOnGameStart: !ctx.config().showDashboardOnGameStart }),
-          },
-          { id: "autostart", text: tr("Iniciar com o Windows", "Start with Windows"), checked: t.startWithWindows, action: () => ctx.setStartWithWindows(!t.startWithWindows) },
+          { id: "update", text: tr("Procurar atualizações", "Check for updates"), action: () => void this.checkUpdates() },
           { item: "Separator" },
           { id: "quit", text: tr("Sair", "Quit"), action: () => this.quit() },
         ],
       });
       await tray.setMenu(menu);
     })();
+  }
+
+  /** Tray "Procurar atualizações": a ready update installs now; otherwise check and say what was found. */
+  private async checkUpdates(): Promise<void> {
+    const u = this.updater;
+    if (!u) return;
+    if (u.ready) return this.installUpdate();
+    await u.check();
+    const s = u.state;
+    if (s.status === "latest") this.notify("Exile Hub", tr(`Você já está na versão mais nova (${s.current}).`, `You already have the latest version (${s.current}).`));
+    else if (s.status === "error" || s.status === "disabled") this.notify("Exile Hub", tr(`Não deu para procurar atualizações: ${s.message ?? "?"}`, `Could not check for updates: ${s.message ?? "?"}`));
+    // found one: the updater downloads it and says so itself, then it installs with the game closed
   }
 
   notify(title: string, body: string): void {
