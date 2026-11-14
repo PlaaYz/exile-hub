@@ -53,6 +53,12 @@ const kFarmTradeMaxAgeMs = 6 * 3600 * 1000;
  */
 const kFarmTradeGapMs = 60_000;
 const kFarmTradeMaxUsage = 0.5;
+/**
+ * After a round of farm lookups stops on errors (rate limit, network), no new round for this long.
+ * Without it the Farm tab asked again at once and restarted the round: a loop of searches that got
+ * the player's IP blocked by GGG at the 3.30 launch (2026-11-14).
+ */
+const kFarmTradePauseMs = 30 * 60 * 1000;
 /** A price check this recent pauses the farm lookups (the player comes first). */
 const kFarmTradeYieldMs = 30_000;
 const kFarmTradeFile = "farm-trade-prices.json";
@@ -83,6 +89,7 @@ export class PriceService {
   private farmTrade: FarmTradeCache | null = null;
   private farmTradeJob: Promise<void> | null = null;
   private farmTradeLeft = 0;
+  private farmTradePauseUntil = 0;
   /** bumps when the trade lookups finish: the farm tab asks for prices again */
   farmPricesVersion = 0;
   /** the last farm prices (session earnings use them without asking the network again) */
@@ -480,28 +487,35 @@ export class PriceService {
 
   /** Looks the items up one by one in the background, then tells the farm tab to ask again. */
   private startFarmTrade(league: string, names: string[], rates: Map<string, number> | null): void {
-    if (this.farmTradeJob) return;
+    if (this.farmTradeJob || Date.now() < this.farmTradePauseUntil) return;
     this.farmTradeLeft = names.length;
     this.farmTradeJob = (async () => {
       const cache = await this.loadFarmTrade(league);
       const keys = await this.loadItemKeys();
       let failures = 0;
+      let priced = 0;
       for (const name of names) {
         if (this.league() !== league) break;
         // the player's price checks come first
         while (Date.now() - this.lastUserTradeAt < kFarmTradeYieldMs) await new Promise((r) => setTimeout(r, 5000));
         if (this.trade.searchUsage > kFarmTradeMaxUsage) {
           this.ctx.addDiag("preço", "farm: pausado para não gastar o limite de buscas do trade");
+          this.farmTradePauseUntil = Date.now() + kFarmTradePauseMs;
           break;
         }
         try {
           cache.prices[name] = { at: Date.now(), price: await tradePriceByName(this.trade, league, name, rates, keys?.get(name)) };
+          priced++;
         } catch (e) {
-          // rate limit or network: stop for now, the next visit to the tab continues
+          // rate limit or network: stop, and no new round for a while (see kFarmTradePauseMs)
           if (++failures >= 2) {
             console.error("farm trade prices stopped", e);
+            this.ctx.addDiag("preço", `farm: buscas no trade paradas por 30 min (${(e as Error).message})`);
+            this.farmTradePauseUntil = Date.now() + kFarmTradePauseMs;
             break;
           }
+          await new Promise((r) => setTimeout(r, kFarmTradeGapMs));
+          continue;
         }
         this.farmTradeLeft--;
         // keep what is known so far (closing the app mid-way loses nothing) and show it
@@ -510,13 +524,19 @@ export class PriceService {
         this.ctx.broadcast();
         if (this.farmTradeLeft > 0) await new Promise((r) => setTimeout(r, kFarmTradeGapMs));
       }
-      this.ctx.addDiag("preço", `farm: preços do trade atualizados (${names.length} itens)`);
-    })().finally(() => {
-      this.farmTradeJob = null;
-      this.farmTradeLeft = 0;
-      this.farmPricesVersion++;
-      this.ctx.broadcast();
-    });
+      if (priced) this.ctx.addDiag("preço", `farm: preços do trade atualizados (${priced} de ${names.length} itens)`);
+      return priced;
+    })()
+      .catch(() => 0)
+      .then((priced) => {
+        this.farmTradeJob = null;
+        this.farmTradeLeft = 0;
+        // only news makes the Farm tab ask again (asking again restarts a round)
+        if (priced) {
+          this.farmPricesVersion++;
+          this.ctx.broadcast();
+        }
+      });
   }
 
   /**

@@ -310,7 +310,10 @@ Tauri (the only build since 2026-11-09; Electron code removed, its history is in
   broken, so names/descriptions are ours in pt, game names in English, no tips yet) + rewards 12/24/32/34/36 (GGG forum
   thread 4014108). Trade search limit is now also 600 per 6 h per IP: RateLimiter takes the server's own count from the
   state headers (missing hits dated before the shorter windows), a wait over 15 s fails at once with "tente em N min",
-  farm trade lookups 1/min, refreshed every 6 h, stop at 50% of any limit (searchUsage).
+  farm trade lookups 1/min, refreshed every 6 h, stop at 50% of any limit (searchUsage). ROOT CAUSE of the 3.30 block: a
+  loop. A round of farm lookups that stopped on errors bumped farmPricesVersion, the visible Farm tab asked again and a new
+  round started at once (new league = almost nothing on poe.ninja = dozens of lookups). Now a stopped round pauses new
+  rounds 30 min (kFarmTradePauseMs) and the tab is told only when a price actually arrived.
 - Vendor search: linkSearchCounts(n, r, g, b) (free sockets as \S to fit 50 chars) + chromatic recipe.
 - Stash value: not possible (wealthyexile uses its own approved OAuth client; no public API).
 
