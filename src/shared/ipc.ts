@@ -53,6 +53,8 @@ export interface HubApi {
   reportProblem(): Promise<void>;
   /** Opens the donation page (only when the app has one; voluntary, unlocks nothing). */
   openDonate(): Promise<void>;
+  /** puts a short text on the clipboard (a gem name to paste in the vendor's search) */
+  copyText(text: string): Promise<void>;
   /** "register my equipment" on/off: while on, items copied in game are kept as what you wear */
   setGearRegister(on: boolean): Promise<void>;
   /** closes the session summary window */

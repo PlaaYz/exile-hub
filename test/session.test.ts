@@ -248,3 +248,20 @@ describe("Session after a restart", () => {
     expect(s.endgame).toBe(true);
   });
 });
+
+describe("act timer and the game being closed", () => {
+  it("stands still while the game is closed and goes on from where it was", async () => {
+    const { RunTimer } = await import("../src/core/timer");
+    const t = new RunTimer();
+    const m = (n: number) => 1_800_000_000_000 + n * 60_000; // minute n of a real clock
+    t.onArea(1, m(0));
+    t.pause(m(1)); // game closed after 1 min
+    expect(t.snapshot(m(10)).actMs).toBe(60_000); // 10 min later: still 1 min
+    t.unpause(m(10));
+    expect(t.snapshot(m(11)).actMs).toBe(120_000);
+    t.pause(m(12));
+    t.onArea(2, m(20)); // a zone means the game runs again
+    expect(t.snapshot(m(20)).splits[1]).toBe(180_000);
+    expect(t.snapshot(m(21)).runMs).toBe(240_000);
+  });
+});

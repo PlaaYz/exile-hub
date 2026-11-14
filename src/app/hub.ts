@@ -310,6 +310,7 @@ export class Hub {
       }
     }
     this.scheduleSave();
+    if (!this.gameRunning) this.session.timer.pause(Date.now()); // act timers only run with the game open
     if (this.gameRunning) this.p.shell.gameRunningChanged?.(true);
     this.applyOverlayVisibility();
     this.applyCommandKeys();
@@ -398,10 +399,12 @@ export class Hub {
     if (ev.closing) {
       if (this.gameRunning) this.p.shell.gameRunningChanged?.(false);
       this.gameRunning = false;
+      this.session.timer.pause(Date.now());
       return;
     }
     if (ev.focused && !this.gameRunning) {
       this.gameRunning = true;
+      this.session.timer.unpause(Date.now());
       this.p.shell.gameRunningChanged?.(true);
       this.p.shell.hideSessionSummary?.(); // a new game session: last one's summary is old news
       if (this.config.showDashboardOnGameStart) this.p.shell.showDashboard(false);
@@ -714,6 +717,11 @@ export class Hub {
   }
 
   /** The donation page, a fixed link of the project (nothing from the renderer reaches the URL). */
+  /** Through the app, not the page: works without the window having the focus. */
+  copyText(text: string): Promise<void> {
+    return this.prices.writeClipboard(text);
+  }
+
   async openDonate(): Promise<void> {
     if (DONATE_URL.startsWith("https://")) this.p.openExternal(DONATE_URL);
   }

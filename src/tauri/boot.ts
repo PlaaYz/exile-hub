@@ -94,6 +94,9 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     setBuildStage: async (stage) => {
       if (Number.isInteger(stage) && stage >= 0 && stage < 100) hub.setBuildStage(stage);
     },
+    copyText: async (text) => {
+      if (typeof text === "string" && text.length > 0 && text.length <= 200) await hub.copyText(text);
+    },
     reportProblem: () => hub.reportProblem(),
     openDonate: () => hub.openDonate(),
     setGearRegister: async (on) => hub.setGearRegister(on === true),

@@ -300,6 +300,13 @@ function BuildPanel({ state }: { state: AppState }) {
   const [input, setInput] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** gem whose name was just copied (to paste in the vendor's search) */
+  const [copiedGem, setCopiedGem] = useState<string | null>(null);
+  const copyGem = (name: string) =>
+    void window.hub.copyText(name).then(() => {
+      setCopiedGem(name);
+      setTimeout(() => setCopiedGem((c) => (c === name ? null : c)), 2000);
+    });
   const lvl = state.characterLevel;
   const b = state.build;
 
@@ -350,14 +357,15 @@ function BuildPanel({ state }: { state: AppState }) {
                 {g.gems.map((gem, j) => {
                   const ready = gem.requiredLevel !== null && lvl !== null && gem.requiredLevel <= lvl;
                   return (
-                    <span
+                    <button
                       key={j}
                       className={`gem ${gem.support ? "support" : "active"}${ready ? " ready" : ""}${gem.enabled ? "" : " off"}`}
-                      title={gem.requiredLevel !== null ? `${tr("requer nível", "requires level")} ${gem.requiredLevel}` : tr("nível desconhecido", "unknown level")}
+                      title={`${gem.requiredLevel !== null ? `${tr("requer nível", "requires level")} ${gem.requiredLevel}` : tr("nível desconhecido", "unknown level")} · ${tr("clique para copiar o nome", "click to copy the name")}`}
+                      onClick={() => copyGem(gem.name)}
                     >
-                      {gem.name}
-                      {gem.requiredLevel !== null ? ` · ${gem.requiredLevel}` : ""}
-                    </span>
+                      {copiedGem === gem.name ? tr("copiado ✓", "copied ✓") : gem.name}
+                      {gem.requiredLevel !== null && copiedGem !== gem.name ? ` · ${gem.requiredLevel}` : ""}
+                    </button>
                   );
                 })}
               </div>

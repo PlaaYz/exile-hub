@@ -13,12 +13,33 @@ export class RunTimer {
   private lastAct: number | null = null;
   private actStart = 0;
   private splits: Record<number, number> = {};
+  /** the game is closed since then: the clock stands still (owner, 2026-11-13) */
+  private pausedAt: number | null = null;
+
+  get pausedSince(): number | null {
+    return this.pausedAt;
+  }
+
+  /** The game closed: the clock stops. */
+  pause(now: number): void {
+    if (this.pausedAt === null) this.pausedAt = now;
+  }
+
+  /** The game is back: the closed time does not count. */
+  unpause(now: number): void {
+    if (this.pausedAt === null) return;
+    const gap = Math.max(0, now - this.pausedAt);
+    this.pausedAt = null;
+    if (this.runStart) this.runStart += gap;
+    if (this.lastAct !== null) this.actStart += gap;
+  }
 
   getState(): TimerState {
     return { runStart: this.runStart, lastAct: this.lastAct, actStart: this.actStart, splits: { ...this.splits } };
   }
 
   setState(s: TimerState): void {
+    this.pausedAt = null;
     this.runStart = s.runStart;
     this.lastAct = s.lastAct;
     this.actStart = s.actStart;
@@ -34,6 +55,7 @@ export class RunTimer {
   }
 
   reset(): void {
+    this.pausedAt = null;
     this.runStart = 0;
     this.lastAct = null;
     this.actStart = 0;
@@ -42,6 +64,7 @@ export class RunTimer {
 
   onArea(act: number, now: number): void {
     if (act <= 0) return;
+    this.unpause(now); // entering a zone means the game runs
     if (this.runStart === 0) this.runStart = now;
     if (this.lastAct === null) {
       this.lastAct = act;
@@ -55,7 +78,8 @@ export class RunTimer {
     }
   }
 
-  snapshot(now: number): TimerSnapshot {
+  snapshot(at: number): TimerSnapshot {
+    const now = this.pausedAt ?? at;
     const act = this.lastAct;
     const actMs = act === null ? 0 : (this.splits[act] ?? 0) + Math.max(0, now - this.actStart);
     return {

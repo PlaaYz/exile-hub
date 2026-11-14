@@ -101,7 +101,8 @@ export class Session {
       level: this.characterLevel,
       cursor: this.tracker.cursor,
       timer: this.timer.getState(),
-      savedAt: now,
+      // a paused clock (game closed) counts nothing from the pause on
+      savedAt: this.timer.pausedSince ?? now,
       lastArea: this.areaId ?? undefined,
     };
   }
