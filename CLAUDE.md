@@ -306,6 +306,11 @@ Tauri (the only build since 2026-11-09; Electron code removed, its history is in
 - Challenges tab: GGG has no API for completed challenges -> ticked by hand, per patch, in
   userData/challenges-progress.json. The list is data/challenges.json on GitHub main (fetched, 6 h
   cache, bundled fallback): update it each league without an app release (3.30 list still empty).
+- 3.30 Covens (2026-11-14): data/challenges.json filled from poedb.tw/us/Covens_challenges (objectives; poedb's names are
+  broken, so names/descriptions are ours in pt, game names in English, no tips yet) + rewards 12/24/32/34/36 (GGG forum
+  thread 4014108). Trade search limit is now also 600 per 6 h per IP: RateLimiter takes the server's own count from the
+  state headers (missing hits dated before the shorter windows), a wait over 15 s fails at once with "tente em N min",
+  farm trade lookups 1/min, refreshed every 6 h, stop at 50% of any limit (searchUsage).
 - Vendor search: linkSearchCounts(n, r, g, b) (free sockets as \S to fit 50 chars) + chromatic recipe.
 - Stash value: not possible (wealthyexile uses its own approved OAuth client; no public API).
 

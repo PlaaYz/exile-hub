@@ -80,3 +80,16 @@ describe("RateLimiter", () => {
     expect(order).toEqual([1, 2, 3]);
   });
 });
+
+describe("RateLimiter and the server's own count", () => {
+  it("counts what the server already saw (e.g. before an app restart) and reports the usage", () => {
+    const c = fakeClock();
+    const rl = new RateLimiter(c, 1);
+    // GGG's search rules in Nov 2026: the 6 h window already has 385 of 600
+    rl.update({ rules: "5:10:60,15:60:300,30:300:1800,600:21600:3600", state: "1:10:0,1:60:0,1:300:0,385:21600:0" });
+    expect(rl.usage()).toBeCloseTo(385 / 600, 2);
+    expect(rl.waitMs()).toBe(0);
+    rl.update({ rules: "5:10:60,15:60:300,30:300:1800,600:21600:3600", state: "1:10:0,1:60:0,1:300:0,599:21600:0" });
+    expect(rl.waitMs()).toBeGreaterThan(3600 * 1000); // the 6 h budget is spent: no more searches for hours
+  });
+});

@@ -61,9 +61,23 @@ export class RateLimiter {
     const now = this.clock.now();
     const rules = parseRules(h.rules);
     if (rules.length) this.rules = rules;
-    for (const s of parseState(h.state)) {
+    const states = parseState(h.state);
+    for (const s of states) {
       if (s.restricted > 0) this.blockedUntil = Math.max(this.blockedUntil, now + s.restricted * 1000);
     }
+    // the server's own count wins: requests made before an app restart (or by another program on this
+    // IP) count too. The missing ones are dated just before the shorter windows, so they fill this
+    // window without clogging the short ones (shortest rule first: its missing ones are recent).
+    const pairs = states.map((s, i) => [s, this.rules[i]] as const).filter(([s, r]) => r && s.period === r.period);
+    pairs.sort((a, b) => a[1].period - b[1].period);
+    let shorter = 0; // longest period already handled, in seconds
+    for (const [s, r] of pairs) {
+      const local = this.stamps.filter((t) => t > now - r.period * 1000).length;
+      const at = shorter ? now - shorter * 1000 - 1 : now;
+      for (let k = local; k < Math.min(s.hits, r.max); k++) this.stamps.push(at);
+      shorter = r.period;
+    }
+    this.stamps.sort((a, b) => a - b);
     const retry = Number(h.retryAfter);
     if (h.retryAfter && Number.isFinite(retry) && retry > 0) {
       this.blockedUntil = Math.max(this.blockedUntil, now + retry * 1000);
@@ -84,6 +98,17 @@ export class RateLimiter {
       }
     }
     return wait;
+  }
+
+  /** Share of the fullest rule already used (0..1): background work backs off well before the limit. */
+  usage(): number {
+    const now = this.clock.now();
+    let used = 0;
+    for (const r of this.rules) {
+      const n = this.stamps.filter((t) => t > now - r.period * 1000).length;
+      used = Math.max(used, n / r.max);
+    }
+    return used;
   }
 
   /** Resolves when it is safe to send one request; calls are served in order. */

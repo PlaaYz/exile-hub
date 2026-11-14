@@ -45,12 +45,14 @@ export interface PriceContext {
 /** Items kept in the "recent checks" list. */
 const kRecentChecks = 10;
 /** Farm items priced on the trade site are looked up again after this long. */
-const kFarmTradeMaxAgeMs = 3600 * 1000;
+const kFarmTradeMaxAgeMs = 6 * 3600 * 1000;
 /**
- * Pause between farm lookups. The trade site allows about 30 searches per 5 minutes: this uses
- * about half of that and leaves the rest to the player's own price checks.
+ * Pause between farm lookups. GGG allows 600 trade searches per 6 hours per IP (seen 2026-11-14,
+ * besides 30 per 5 min): one a minute at most, and none once half of any limit is used, so the
+ * player's own price checks always have room.
  */
-const kFarmTradeGapMs = 20_000;
+const kFarmTradeGapMs = 60_000;
+const kFarmTradeMaxUsage = 0.5;
 /** A price check this recent pauses the farm lookups (the player comes first). */
 const kFarmTradeYieldMs = 30_000;
 const kFarmTradeFile = "farm-trade-prices.json";
@@ -488,6 +490,10 @@ export class PriceService {
         if (this.league() !== league) break;
         // the player's price checks come first
         while (Date.now() - this.lastUserTradeAt < kFarmTradeYieldMs) await new Promise((r) => setTimeout(r, 5000));
+        if (this.trade.searchUsage > kFarmTradeMaxUsage) {
+          this.ctx.addDiag("preço", "farm: pausado para não gastar o limite de buscas do trade");
+          break;
+        }
         try {
           cache.prices[name] = { at: Date.now(), price: await tradePriceByName(this.trade, league, name, rates, keys?.get(name)) };
         } catch (e) {

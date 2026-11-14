@@ -1,7 +1,679 @@
 {
-  "league": "Path of Exile 3.30",
+  "league": "Covens of Umbra (3.30)",
   "patch": "3.30",
-  "updated": "",
-  "rewards": [],
-  "challenges": []
+  "updated": "2026-11-14",
+  "rewards": [
+    12,
+    24,
+    32,
+    34,
+    36
+  ],
+  "source": "Objetivos conferidos no poedb.tw (Covens challenges); recompensas no fórum oficial da GGG",
+  "challenges": [
+    {
+      "id": "c01",
+      "name": "Orbs básicas",
+      "description": "Use Transmutation, Augmentation, Alteration e Alchemy (a bancada de craft também conta).",
+      "difficulty": 1,
+      "category": "crafting",
+      "tips": [],
+      "parts": [
+        "Orb of Transmutation",
+        "Orb of Augmentation",
+        "Orb of Alteration",
+        "Orb of Alchemy"
+      ]
+    },
+    {
+      "id": "c02",
+      "name": "Primeiros passos na Covens",
+      "description": "Mate um monstro único com pelo menos 1 Fate e coloque uma Viscera no Wickerman.",
+      "difficulty": 1,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Kill a Unique Monster empowered by at least 1 Fate",
+        "Place a Viscera in your Wickerman"
+      ]
+    },
+    {
+      "id": "c03",
+      "name": "Receitas de vendedor I",
+      "description": "Receba pelo vendedor (por receita, não comprando): Life Flask, Mana Flask, anel e amuleto básicos.",
+      "difficulty": 1,
+      "category": "crafting",
+      "tips": [],
+      "parts": [
+        "Life Flask",
+        "Mana Flask",
+        "Ruby, Topaz or Sapphire Ring",
+        "Agate, Turquoise or Citrine Amulet"
+      ]
+    },
+    {
+      "id": "c04",
+      "name": "Chefes dos atos 1 a 5",
+      "description": "Derrote Merveil, Vaal Oversoul, Dominus, Malachai e Kitava (ato 5).",
+      "difficulty": 1,
+      "category": "campanha",
+      "tips": [],
+      "parts": [
+        "Act 1: Merveil, the Twisted",
+        "Act 2: Vaal Oversoul",
+        "Act 3: Dominus, Ascendant",
+        "Act 4: Malachai, The Nightmare",
+        "Act 5: Kitava, the Insatiable"
+      ]
+    },
+    {
+      "id": "c05",
+      "name": "Panteão com Fate",
+      "description": "Derrote os 8 deuses do Panteão com pelo menos 1 Fate.",
+      "difficulty": 3,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Tukohama",
+        "Abberath",
+        "Ryslatha",
+        "Ralakesh",
+        "Gruthkul",
+        "Yugul",
+        "Shakari",
+        "Garukhan"
+      ]
+    },
+    {
+      "id": "c06",
+      "name": "Wickerman completo",
+      "description": "Tenha uma Viscera em todos os slots do Wickerman.",
+      "difficulty": 3,
+      "category": "liga",
+      "tips": []
+    },
+    {
+      "id": "c07",
+      "name": "Chefes dos atos 6 a 10",
+      "description": "Derrote Brine King, Arakaali, Lunaris e Solaris, Depraved Trinity e Kitava (ato 10).",
+      "difficulty": 2,
+      "category": "campanha",
+      "tips": [],
+      "parts": [
+        "Act 6: Tsoagoth, The Brine King",
+        "Act 7: Arakaali, Spinner of Shadows",
+        "Act 8: Lunaris, Eternal Moon and Solaris, Eternal Sun",
+        "Act 9: The Depraved Trinity",
+        "Act 10: Kitava, the Insatiable"
+      ]
+    },
+    {
+      "id": "c08",
+      "name": "Mecânicas de liga I",
+      "description": "Faça 5 destes encontros o número de vezes pedido (30 cada).",
+      "difficulty": 2,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Complete Ore Deposits x30",
+        "Open Strongboxes x30",
+        "Defeat Mercenaries x30",
+        "Defeat Rogue Exiles x30",
+        "Activate Shrines x30",
+        "Defeat Monsters with Essences x30",
+        "Defeat Possessed Monsters x30",
+        "Have Sacred Flora spread Wisps x30"
+      ],
+      "need": 5
+    },
+    {
+      "id": "c09",
+      "name": "Mecânicas de liga II",
+      "description": "Faça 5 destes encontros o número de vezes pedido.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Complete Rituals x50",
+        "Complete Ultimatum Waves x50",
+        "Defeat Incursion Architects x50",
+        "Complete Expeditions x30",
+        "Complete Unstable Breaches or Hives x30",
+        "Complete Legion Encounters x30",
+        "Complete Immortal Syndicate Member Encounters x80",
+        "Complete Blights x30",
+        "Capture Red Beasts x100",
+        "Complete Abysses x30"
+      ],
+      "need": 5
+    },
+    {
+      "id": "c10",
+      "name": "Chefes únicos com Fate",
+      "description": "Derrote 50 chefes de mapa únicos com Fate.",
+      "difficulty": 3,
+      "category": "liga",
+      "tips": []
+    },
+    {
+      "id": "c11",
+      "name": "Atlas completo",
+      "description": "Complete todos os mapas não-únicos do Atlas.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": []
+    },
+    {
+      "id": "c12",
+      "name": "Mecânicas de endgame",
+      "description": "Faça 5 destes encontros de endgame o número de vezes pedido.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Claim rewards from Rare Maps successfully completed by your Atlas Runners x30",
+        "Open Unique Strongboxes x5",
+        "Defeat Infamous Mercenaries x5",
+        "Defeat Possessed Rogue Exiles x10",
+        "Activate Apparition or Evolving Shrines x10",
+        "Defeat an Essence Monster that has at least 1 of the following Essences: Hysteria, Horror, Delirium, Insanity",
+        "Defeat Possessed Map Bosses x10",
+        "Defeat Bosses from Sacred Flora in Maps x3"
+      ],
+      "need": 5
+    },
+    {
+      "id": "c13",
+      "name": "Encontros nível 81+",
+      "description": "Faça 5 destes encontros em área nível 81 ou mais, o número de vezes pedido.",
+      "difficulty": 4,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Complete all Rituals in Maps with at least one Blood-filled Vessel applied x10",
+        "Fully Completed Ultimatums x10",
+        "Defeat Queen Atziri in the Temple of Atzoatl x5",
+        "Complete Logbooks with at least 10 Remnants active x5",
+        "Complete Hive Fortresses or defeat Breach Marshals x5",
+        "Domains of Timeless Conflict with at least 25 reward crystals shattered x3",
+        "Complete Syndicate Safehouses x5",
+        "Complete Blighted or Blight Ravaged Maps x5",
+        "Defeat Bestiary Bosses x3",
+        "Complete Abyssal Depths x5"
+      ],
+      "need": 5
+    },
+    {
+      "id": "c14",
+      "name": "400 tiers de Fate",
+      "description": "Mate chefes únicos de mapas vermelhos somando 400 tiers de Fate invocados.",
+      "difficulty": 4,
+      "category": "liga",
+      "tips": []
+    },
+    {
+      "id": "c15",
+      "name": "Orbs avançadas",
+      "description": "Use 12 destas currencies (a bancada de craft também conta).",
+      "difficulty": 3,
+      "category": "crafting",
+      "tips": [],
+      "parts": [
+        "Orb of Chance",
+        "Orb of Scouring",
+        "Orb of Fusing",
+        "Jeweller's Orb",
+        "Chromatic Orb",
+        "Vaal Orb",
+        "Orb of Annulment",
+        "Regal Orb",
+        "Chaos Orb",
+        "Exalted Orb",
+        "Blessed Orb",
+        "Ancient Orb",
+        "Divine Orb",
+        "Fracturing Orb",
+        "Sacred Orb",
+        "Hinekora's Lock",
+        "Mirror of Kalandra"
+      ],
+      "need": 12
+    },
+    {
+      "id": "c16",
+      "name": "Quatro Voidstones",
+      "description": "Encaixe as 4 Voidstones no Atlas.",
+      "difficulty": 4,
+      "category": "bosses",
+      "tips": []
+    },
+    {
+      "id": "c17",
+      "name": "Ascendência",
+      "description": "Use o Ascendancy Device nos 4 Labirintos e ganhe uma Bloodline Class.",
+      "difficulty": 3,
+      "category": "campanha",
+      "tips": [],
+      "parts": [
+        "Use the Ascendancy Device in the Labyrinth",
+        "Use the Ascendancy Device in the Cruel Labyrinth",
+        "Use the Ascendancy Device in the Merciless Labyrinth",
+        "Use the Ascendancy Device in the Eternal Labyrinth",
+        "Gain a Bloodline Class"
+      ]
+    },
+    {
+      "id": "c18",
+      "name": "Recompensas de Fate",
+      "description": "Derrote chefes com Fate e receba 10 destes tipos de recompensa o número de vezes pedido.",
+      "difficulty": 4,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Unique Item x30",
+        "Gem x30",
+        "Increased Item Rarity x30",
+        "Currency Items x30",
+        "Viscera Item x30",
+        "Threads x30",
+        "Stacked Decks x30",
+        "Gold x30",
+        "Maps x30",
+        "Fated Equipment x60",
+        "Dreadmaidens' Sacrament",
+        "Hide of the Vendigo",
+        "Corpse Rose",
+        "Ordered Fate",
+        "Doedre's Tongue"
+      ],
+      "need": 10
+    },
+    {
+      "id": "c19",
+      "name": "Cartas de adivinhação",
+      "description": "Abra 100 Stacked Decks e entregue 50 sets de Divination Cards.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Open Stacked Decks x100",
+        "Turn in Divination Card Sets x50"
+      ]
+    },
+    {
+      "id": "c20",
+      "name": "Receitas de vendedor II",
+      "description": "Receba pelo vendedor: mapa tier 16, item único, item com influência e Exalted Orb.",
+      "difficulty": 3,
+      "category": "crafting",
+      "tips": [],
+      "parts": [
+        "Tier 16 Map",
+        "Unique Item",
+        "Item with Influence",
+        "Exalted Orb"
+      ]
+    },
+    {
+      "id": "c21",
+      "name": "Mirage",
+      "description": "Faça 3 destes encontros de Mirage.",
+      "difficulty": 3,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Choose Wishes x30",
+        "Choose Wishes with Sigils of Navira x10",
+        "Choose Wishes with Sigils of Ruzhan x10",
+        "Choose Wishes with Sigils of Kelari x10",
+        "Defeat Map Bosses in Miraged Areas x50",
+        "Defeat Saresh, of the Weeping Black"
+      ],
+      "need": 3
+    },
+    {
+      "id": "c22",
+      "name": "Viscera variadas",
+      "description": "Coloque 8 destas Visceras no Wickerman.",
+      "difficulty": 3,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Minotaur Head",
+        "Hydra Head",
+        "Chimera Head",
+        "Phoenix Head",
+        "Constrictor Head",
+        "Purifier Head",
+        "Enslaver Head",
+        "Eradicator Head",
+        "Baran's Head",
+        "Veritania's Head",
+        "Drox's Head",
+        "Al-Hezmin's Head",
+        "Nightmarish Book of Depravity",
+        "Nightmarish Head of Uhtred",
+        "Nightmarish Core of the Unbreakable",
+        "Nightmarish Wings of Lycia",
+        "Nightmarish Wings of Catarina"
+      ],
+      "need": 8
+    },
+    {
+      "id": "c23",
+      "name": "Mapas únicos",
+      "description": "Complete 15 destes mapas únicos.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Vaults of Atziri",
+        "Maelström of Chaos",
+        "The Coward's Trial",
+        "Acton's Nightmare",
+        "Poorjoy's Asylum",
+        "Mao Kun",
+        "Oba's Cursed Trove",
+        "Olmec's Sanctum",
+        "Death and Taxes",
+        "Whakawairua Tuahu",
+        "The Vinktar Square",
+        "Caer Blaidd, Wolfpack's Den",
+        "The Putrid Cloister",
+        "Hallowed Ground",
+        "The Twilight Temple",
+        "Pillars of Arun",
+        "Doryani's Machinarium",
+        "Hall of the Grandmasters"
+      ],
+      "need": 15
+    },
+    {
+      "id": "c24",
+      "name": "Mil Threads",
+      "description": "Complete mapas somando 1000 Threads aplicados.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": []
+    },
+    {
+      "id": "c25",
+      "name": "Corrupção",
+      "description": "Faça 3 destas tarefas de corrupção.",
+      "difficulty": 3,
+      "category": "crafting",
+      "tips": [],
+      "parts": [
+        "Use Vaal Orbs x20",
+        "Use Volatile Vaal Orbs x3",
+        "Use Tainted Currency x20",
+        "Double Corrupt Items x5",
+        "Turn in Divination Card Sets that reward Corrupted Items x15"
+      ],
+      "need": 3
+    },
+    {
+      "id": "c26",
+      "name": "Fates tier 3",
+      "description": "Derrote chefes de mapa T16 com 100%+ de Atlas Drops invocando 10 destes Fates tier 3.",
+      "difficulty": 4,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Crowkeeper",
+        "Sanguine",
+        "Incandescent",
+        "Dryad",
+        "Deathbringer",
+        "Torchbearer",
+        "Blood Moon",
+        "Wildfire",
+        "Murderous",
+        "Gravewalker",
+        "Houndmaster",
+        "Black Frost",
+        "Conjurer",
+        "Golemancer",
+        "Doomsayer",
+        "Avalanche",
+        "Butcher",
+        "Alchemist",
+        "Stormcaller",
+        "Tempestuous"
+      ],
+      "need": 10
+    },
+    {
+      "id": "c27",
+      "name": "Mecânicas misturadas",
+      "description": "Faça 6 destes encontros de conteúdo de liga.",
+      "difficulty": 4,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Defeat a Rare Sacred Fauna fertilised by Ritual ground",
+        "Defeat a Chaos-Blessed Rogue Exile",
+        "Defeat an Architect while affected by a Tempest",
+        "Defeat a Possessed Runic monster",
+        "Defeat a Breach Marshal while Delirious",
+        "Defeat a Legion General that has been tagged by a Sentinel",
+        "Defeat a Syndicate member while affected by a Shrine",
+        "Open a Blighted Strongbox",
+        "Capture a Beast holding an Essence",
+        "Defeat a Chaplain of the Well"
+      ],
+      "need": 6
+    },
+    {
+      "id": "c28",
+      "name": "Chefes e encontros",
+      "description": "Derrote 7 destes chefes ou encontros.",
+      "difficulty": 4,
+      "category": "bosses",
+      "tips": [],
+      "parts": [
+        "The Trialmaster",
+        "The King in the Mists",
+        "Oshabi",
+        "Catarina",
+        "Aul",
+        "Olroth",
+        "Lycia",
+        "Farrul",
+        "Simulacrum",
+        "It That Was Tul and It That Was Esh",
+        "Saresh",
+        "Zorath"
+      ],
+      "need": 7
+    },
+    {
+      "id": "c29",
+      "name": "Anomalias do Atlas",
+      "description": "Complete 30 Atlas Anomalies.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": []
+    },
+    {
+      "id": "c30",
+      "name": "Mapas raros com Fate",
+      "description": "Derrote o chefe final de 12 destes mapas raros T16, com 100%+ de Atlas Drops e Fate tier 3.",
+      "difficulty": 5,
+      "category": "liga",
+      "tips": [],
+      "parts": [
+        "Maze of the Minotaur",
+        "Lair of the Hydra",
+        "Pit of the Chimera",
+        "Forge of the Phoenix",
+        "Map occupied by the Constrictor",
+        "Map occupied by the Purifier",
+        "Map occupied by the Enslaver",
+        "Map occupied by the Eradicator",
+        "Map contains Baran's Citadel",
+        "Map contains Veritania's Citadel",
+        "Map contains Drox's Citadel",
+        "Map contains Al-Hezmin's Citadel",
+        "Abomination",
+        "Citadel",
+        "Fortress",
+        "Sanctuary",
+        "Ziggurat"
+      ],
+      "need": 12
+    },
+    {
+      "id": "c31",
+      "name": "25.000% de Atlas Drops",
+      "description": "Some 25.000% de Atlas Drops completando mapas.",
+      "difficulty": 4,
+      "category": "mapas",
+      "tips": []
+    },
+    {
+      "id": "c32",
+      "name": "Eldritch",
+      "description": "Faça 2 destes encontros Eldritch o número de vezes pedido.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Activate Eater of Worlds Altars x250",
+        "Activate Searing Exarch Altars x250",
+        "Defeat Maven-Witnessed Map Bosses x200"
+      ],
+      "need": 2
+    },
+    {
+      "id": "c33",
+      "name": "Árvore do Atlas cheia",
+      "description": "Aloque todos os 150 pontos da árvore do Atlas.",
+      "difficulty": 3,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Atlas Passive Tree x150"
+      ]
+    },
+    {
+      "id": "c34",
+      "name": "Pinnacles com Grim Fate",
+      "description": "Derrote 5 destes chefes pinnacle com os Grim Fates invocados.",
+      "difficulty": 5,
+      "category": "bosses",
+      "tips": [],
+      "parts": [
+        "Sirus, Awakener of Worlds",
+        "The Elder",
+        "The Maven",
+        "The Searing Exarch",
+        "The Eater of Worlds",
+        "High Templar Venarius",
+        "The Shaper",
+        "Incarnation of Dread",
+        "Incarnation of Fear",
+        "Incarnation of Neglect"
+      ],
+      "need": 5
+    },
+    {
+      "id": "c35",
+      "name": "Mapas de Originator",
+      "description": "Some 300 modificadores explícitos completando mapas com influência de Originator.",
+      "difficulty": 4,
+      "category": "mapas",
+      "tips": []
+    },
+    {
+      "id": "c36",
+      "name": "Threads concentrados",
+      "description": "Complete mapas raros T14+ com 100%+ de Atlas Drops e 8 Threads de um só tipo, em 5 destes tipos.",
+      "difficulty": 4,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Ritual x10",
+        "Ultimatum x10",
+        "Incursion x10",
+        "Expedition x10",
+        "Breach x10",
+        "Legion x10",
+        "Betrayal x10",
+        "Blight x10",
+        "Bestiary x10",
+        "Abyss x10"
+      ],
+      "need": 5
+    },
+    {
+      "id": "c37",
+      "name": "Mapas Nightmare",
+      "description": "Complete 3 destes mapas Nightmare (T17) 5 vezes cada.",
+      "difficulty": 4,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Abomination x5",
+        "Citadel x5",
+        "Fortress x5",
+        "Sanctuary x5",
+        "Ziggurat x5"
+      ],
+      "need": 3
+    },
+    {
+      "id": "c38",
+      "name": "Coven Queen",
+      "description": "Derrote a Coven Queen de 3 destas formas.",
+      "difficulty": 5,
+      "category": "bosses",
+      "tips": [],
+      "parts": [
+        "Without being affected by more than 4 stacks of Corpserot",
+        "Without being affected by Blackfire or Blackfire Tornado",
+        "Without being hit by Crowstorm Vortex",
+        "Without being hit by Blackfire Detonation"
+      ],
+      "need": 3
+    },
+    {
+      "id": "c39",
+      "name": "Ubers com Grim Fate",
+      "description": "Derrote 3 destes pinnacles em área nível 85 com os Grim Fates invocados.",
+      "difficulty": 5,
+      "category": "bosses",
+      "tips": [],
+      "parts": [
+        "Sirus, Awakener of Worlds",
+        "The Elder",
+        "The Maven",
+        "The Searing Exarch",
+        "The Eater of Worlds",
+        "High Templar Venarius",
+        "The Shaper",
+        "Incarnation of Dread",
+        "Incarnation of Fear",
+        "Incarnation of Neglect"
+      ],
+      "need": 3
+    },
+    {
+      "id": "c40",
+      "name": "Desafios finais",
+      "description": "Faça 4 destes encontros o número de vezes pedido.",
+      "difficulty": 5,
+      "category": "mapas",
+      "tips": [],
+      "parts": [
+        "Reach level 100",
+        "Use the Divine Font in the Endgame Labyrinth x50",
+        "Complete Rare Shaper, Elder, Conqueror or Memory Guardian Maps with at least 100% Atlas Drops x50",
+        "Complete Rare Tier 16 Maps with at least 8 applied Threads of any League Mechanic. Maps with multiple sets of 8 Threads will count multiple times towards this Challenge. x150",
+        "Defeat Level 83 or higher Rare monsters with at least 6 modifiers x100",
+        "Defeat Map Bosses in Rare Tier 16 Maps that have been Empowered by a Tier 3 Fate x100"
+      ],
+      "need": 4
+    }
+  ]
 }

@@ -27,6 +27,17 @@ export interface StatFilter extends MatchedMod {
   max?: number | null;
 }
 
+/** Longest wait a request may sit out before it fails with a "try again in N min" message. */
+const kMaxWaitMs = 15_000;
+
+function rateLimitText(waitMs: number): string {
+  const min = Math.max(1, Math.ceil(waitMs / 60_000));
+  return tr(
+    `limite de buscas do trade da GGG atingido: tente de novo em ${min} min`,
+    `GGG's trade search limit reached: try again in ${min} min`,
+  );
+}
+
 export interface TradeListing {
   amount: number;
   currency: string;
@@ -248,7 +259,15 @@ export class TradeClient {
     private readonly userAgent: string,
   ) {}
 
+  /** Share of the trade search limit already used (0..1). */
+  get searchUsage(): number {
+    return this.searchLimiter.usage();
+  }
+
   private async call(limiter: RateLimiter, url: string, init: { method?: string; body?: string } = {}) {
+    // a long block (GGG's penalty, or the hourly budget spent) fails now instead of "searching..." for minutes
+    const wait = limiter.waitMs();
+    if (wait > kMaxWaitMs) throw new Error(rateLimitText(wait));
     await limiter.acquire();
     const res = await this.fetchFn(url, {
       ...init,
@@ -265,7 +284,7 @@ export class TradeClient {
         .filter(Boolean)
         .join(",");
     limiter.update({ rules: join(""), state: join("-state"), retryAfter: res.headers.get("retry-after") });
-    if (res.status === 429) throw new Error(tr("limite de requisições do trade atingido, tente de novo em instantes", "trade site rate limit reached, try again in a moment"));
+    if (res.status === 429) throw new Error(rateLimitText(limiter.waitMs()));
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
       try {
