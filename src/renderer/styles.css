@@ -275,6 +275,9 @@ body.mode-price { background: #0e1116; }
 
 /* price search editor */
 .search-flags { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 4px 0 6px; }
+/* one compact row: the mods must start right under the item name */
+.search-flags label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.search-flags select { width: auto; padding: 2px 4px; }
 .mod.pseudo .mod-text { color: #e0c060; }
 .calc-line { margin: 4px 0; font-variant-numeric: tabular-nums; }
 

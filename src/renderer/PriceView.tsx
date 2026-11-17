@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { tr } from "../shared/i18n";
 import type { ItemComparison } from "../core/itemCompare";
 import type { PriceFilters, PriceModFilter, PriceRange, PriceRecent, PriceView, SellerStatus, TradeStatus } from "../shared/types";
@@ -146,17 +146,54 @@ function RangeRow({
 }
 
 /** The trade search as the player wants it: filters and mods, then "Buscar". */
+/** The search runs by itself this long after the last change (quick changes in a row = one search: GGG's limits). */
+const kAutoSearchMs = 1000;
+
 function SearchEditor({ p }: { p: PriceView }) {
-  const [mods, setMods] = useState<PriceModFilter[]>(p.mods);
-  const [f, setF] = useState<PriceFilters>(p.filters);
-  // state is re-sent every second as a new object: only reset local edits when the content changes
+  const [mods, setModsState] = useState<PriceModFilter[]>(p.mods);
+  const [f, setFState] = useState<PriceFilters>(p.filters);
+  // what the timer sends: the newest edits, not the ones of the render that started it
+  const latest = useRef({ mods: p.mods, f: p.filters });
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // state is re-sent every second as a new object: only reset local edits when the content changes, and
+  // never while an edit is waiting to be searched (an older search's echo would undo it)
   const key = `${p.seq}|${JSON.stringify(p.mods)}|${JSON.stringify(p.filters)}`;
   useEffect(() => {
-    setMods(p.mods);
-    setF(p.filters);
+    if (timer.current) return;
+    setModsState(p.mods);
+    setFState(p.filters);
+    latest.current = { mods: p.mods, f: p.filters };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  // another item (or closing the panel) drops a search still waiting for this one
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+    },
+    [p.seq],
+  );
   if (p.tradeStatus === "n/a") return null;
 
+  const schedule = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      const { mods: ms, f: fs } = latest.current;
+      void window.hub.priceResearch({ mods: ms.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min, max: m.max ?? null })), filters: fs });
+    }, kAutoSearchMs);
+  };
+  const setMods = (fn: (ms: PriceModFilter[]) => PriceModFilter[]) => {
+    const next = fn(latest.current.mods);
+    latest.current = { ...latest.current, mods: next };
+    setModsState(next);
+    schedule();
+  };
+  const setF = (v: PriceFilters | ((x: PriceFilters) => PriceFilters)) => {
+    const next = typeof v === "function" ? v(latest.current.f) : v;
+    latest.current = { ...latest.current, f: next };
+    setFState(next);
+    schedule();
+  };
   const setMod = (i: number, patch: Partial<PriceModFilter>) => setMods((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)));
   const setRange = (k: keyof PriceFilters, r: PriceRange) => setF((x) => ({ ...x, [k]: r }));
   const d = p.calc.dps;
@@ -183,7 +220,7 @@ function SearchEditor({ p }: { p: PriceView }) {
       <div className="search-flags">
         <label className="small">
           {tr("venda:", "sale:")}{" "}
-          <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as TradeStatus })}>
+          <select value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value as TradeStatus }))}>
             {TRADE_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {tradeStatusLabel(s)}
@@ -193,13 +230,13 @@ function SearchEditor({ p }: { p: PriceView }) {
         </label>
         {rareish && (
           <label className="check small">
-            <input type="checkbox" checked={f.baseType} onChange={(e) => setF({ ...f, baseType: e.target.checked })} />
+            <input type="checkbox" checked={f.baseType} onChange={(e) => setF((x) => ({ ...x, baseType: e.target.checked }))} />
             {tr("só esta base", "this base only")} ({p.item.baseType})
           </label>
         )}
         <label className="small">
           {tr("corrompido", "corrupted")}{" "}
-          <select value={f.corrupted} onChange={(e) => setF({ ...f, corrupted: e.target.value as PriceFilters["corrupted"] })}>
+          <select value={f.corrupted} onChange={(e) => setF((x) => ({ ...x, corrupted: e.target.value as PriceFilters["corrupted"] }))}>
             <option value="any">{tr("tanto faz", "either")}</option>
             <option value="no">{tr("não", "no")}</option>
             <option value="yes">{tr("sim", "yes")}</option>
@@ -210,7 +247,7 @@ function SearchEditor({ p }: { p: PriceView }) {
             <input
               type="checkbox"
               checked={inf.enabled}
-              onChange={(e) => setF({ ...f, influences: f.influences.map((x, j) => (j === i ? { ...x, enabled: e.target.checked } : x)) })}
+              onChange={(e) => setF((x) => ({ ...x, influences: x.influences.map((y, j) => (j === i ? { ...y, enabled: e.target.checked } : y)) }))}
             />
             {inf.name}
           </label>
@@ -233,19 +270,6 @@ function SearchEditor({ p }: { p: PriceView }) {
           </label>
         ))}
         {p.unmatched.length > 0 && <div className="muted small">{tr("Não reconhecidos (fora da busca):", "Not recognised (left out of the search):")} {p.unmatched.join(" · ")}</div>}
-      </div>
-      <div className="row buttons">
-        <button
-          disabled={p.tradeStatus === "loading"}
-          onClick={() =>
-            void window.hub.priceResearch({
-              mods: mods.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min, max: m.max ?? null })),
-              filters: f,
-            })
-          }
-        >
-          {p.tradeStatus === "loading" ? tr("Buscando…", "Searching…") : tr("Buscar", "Search")}
-        </button>
       </div>
     </>
   );
@@ -577,16 +601,11 @@ export function PricePanelBody({ p, recent = [] }: { p: PriceView | null; recent
     );
   }
   const cpd = p.chaosPerDivine;
-  return (
+  // rare / magic: the trade search is the price, the rest folds below the listings; uniques, gems and
+  // currency keep their poe.ninja price on top
+  const rareish = p.item.rarity === "Rare" || p.item.rarity === "Magic";
+  const details = (
     <>
-      <div className="price-item">{itemTitle(p)}</div>
-      <div className="muted small">
-        {p.item.rarity} · {p.item.itemClass}
-        {p.item.itemLevel !== null ? ` · ilvl ${p.item.itemLevel}` : ""} · {tr("liga", "league")} {p.league}
-        {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""}
-      </div>
-      <PriceSummary p={p} />
-      <SimilarBlock p={p} />
       <CalcLine p={p} />
       <ModTiers p={p} />
       {p.ninja && (
@@ -595,6 +614,21 @@ export function PricePanelBody({ p, recent = [] }: { p: PriceView | null; recent
           {p.ninja.listings !== null ? ` (${p.ninja.listings} ${tr("anúncios", "listings")})` : ""}
         </div>
       )}
+    </>
+  );
+  return (
+    <>
+      <div className="price-item">{itemTitle(p)}</div>
+      <div className="muted small">
+        {p.item.rarity} · {p.item.itemClass}
+        {p.item.itemLevel !== null ? ` · ilvl ${p.item.itemLevel}` : ""} · {tr("liga", "league")} {p.league}
+        {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""}
+      </div>
+      {!rareish && <PriceSummary p={p} />}
+      {!rareish && details}
+      <SearchEditor p={p} />
+      {rareish && <PriceSummary p={p} />}
+      <SimilarBlock p={p} />
       <BulkTable p={p} />
       {p.trade && p.trade.listings.length > 0 && (
         <table className="listings">
@@ -621,7 +655,12 @@ export function PricePanelBody({ p, recent = [] }: { p: PriceView | null; recent
           {p.trade.more > 0 && <button onClick={() => void window.hub.priceMore()}>{tr("Mais resultados", "More results")} ({p.trade.more})</button>}
         </div>
       )}
-      <SearchEditor p={p} />
+      {rareish && (
+        <details className="price-more">
+          <summary className="muted small">{tr("Detalhes do item", "Item details")}</summary>
+          {details}
+        </details>
+      )}
       <RecentChecks recent={recent} current={p.at} />
     </>
   );
