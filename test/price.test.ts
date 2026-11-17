@@ -284,6 +284,45 @@ describe("PriceChecker", () => {
     expect(t.bodies[2].query.status).toEqual({ option: "any" });
   });
 
+  it("a newer research wins over an older one still running", async () => {
+    const rl = { "x-rate-limit-rules": "Ip", "x-rate-limit-ip": "5:10:60", "x-rate-limit-ip-state": "1:10:0" };
+    const ids = (body: any): string[] => (body.query.stats?.[0]?.filters ?? []).filter((f: any) => !f.disabled).map((f: any) => f.id);
+    let releaseOld: () => void = () => {};
+    const oldHeld = new Promise<void>((r) => (releaseOld = r));
+    let searches = 0;
+    const fn: TradeFetch = async (_url, init) => {
+      if (init?.method === "POST") {
+        const body = JSON.parse(init.body!);
+        searches++;
+        const only = ids(body);
+        // the first research (life only) answers after the second one (cold only) was sent
+        if (only.length === 1 && only[0] === "explicit.life") await oldHeld;
+        if (only.length === 1 && only[0] === "explicit.cold") setTimeout(releaseOld, 0);
+        const total = only.includes("explicit.cold") ? 7 : 3;
+        return json({ id: only.includes("explicit.cold") ? "new" : "old", total, result: ["r1"] }, rl);
+      }
+      return json({ result: [{ listing: { indexed: "2026-11-08T10:00:00Z", price: { amount: 5, currency: "chaos" } } }] }, rl);
+    };
+    const pc = new PriceChecker({
+      ninja: new NinjaClient(fakeNinja().fn, "test"),
+      trade: new TradeClient(fn, "test"),
+      stats: async () => stats,
+      onUpdate: () => {},
+      now: () => 1000,
+    });
+    pc.check(ring, "Allflame");
+    await settle();
+    const v = pc.view!;
+    const only = (id: string) => v.mods.map((m) => ({ statId: m.statId, enabled: m.statId === id, min: m.min, max: null }));
+    pc.research({ mods: only("explicit.life"), filters: v.filters });
+    await settle();
+    pc.research({ mods: only("explicit.cold"), filters: v.filters });
+    for (let i = 0; i < 5; i++) await settle();
+    expect(searches).toBeGreaterThanOrEqual(3);
+    expect(pc.view!.tradeStatus).toBe("done");
+    expect(pc.view!.trade!.total).toBe(7);
+  });
+
   it("drops results of an item that was replaced by a newer copy", async () => {
     const { pc } = make();
     pc.check(ring, "Allflame");

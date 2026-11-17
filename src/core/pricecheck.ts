@@ -64,7 +64,8 @@ const kSameItemMs = 10_000;
 
 export class PriceChecker {
   private seq = 0;
-  private current: { item: ParsedItem; view: PriceView; text: string; queryId: string | null; rest: string[] } | null = null;
+  /** `search` counts this item's trade searches: only the newest one may change the view (a re-search can overtake an older one) */
+  private current: { item: ParsedItem; view: PriceView; text: string; queryId: string | null; rest: string[]; search: number } | null = null;
 
   constructor(private readonly d: PriceCheckDeps) {}
 
@@ -130,7 +131,7 @@ export class PriceChecker {
       const cmp = compareItem(item, equipped);
       view.compare = cmp.length ? cmp : null;
     }
-    this.current = { item, view, text, queryId: null, rest: [] };
+    this.current = { item, view, text, queryId: null, rest: [], search: 0 };
     this.emit();
     void this.runNinja(seq, league, item);
     if (view.tradeStatus === "loading") void this.prepareMods(seq, item).then(() => this.runTrade(seq, league));
@@ -194,6 +195,7 @@ export class PriceChecker {
       const p = byId.get(m.statId);
       return p ? { ...m, enabled: p.enabled, min: p.min, max: p.max } : m;
     });
+    cur.search++;
     this.patch(cur.view.seq, { mods, filters: patch.filters, tradeStatus: "loading", tradeError: null, similar: null });
     void this.runTrade(cur.view.seq, cur.view.league);
   }
@@ -269,6 +271,8 @@ export class PriceChecker {
   private async runTrade(seq: number, league: string): Promise<void> {
     const cur = this.current;
     if (!cur || cur.view.seq !== seq) return;
+    const search = cur.search;
+    const newest = () => this.current === cur && cur.search === search;
     let item = cur.item;
     if ((item.rarity === "Rare" || item.rarity === "Magic") && item.unidentified) {
       item = { ...item, rarity: "Normal" }; // search by base type
@@ -279,22 +283,21 @@ export class PriceChecker {
       const rates = await this.d.ninja.currencyRates(league).catch(() => null);
       const listings = withChaos(res.listings, rates);
       const chaos = listings.map((l) => l.chaos).filter((c): c is number => c !== null);
-      if (this.current === cur) {
-        cur.queryId = res.id;
-        cur.rest = res.rest;
-      }
+      if (!newest()) return; // a newer search for this item was asked meanwhile: its answer counts
+      cur.queryId = res.id;
+      cur.rest = res.rest;
       this.patch(seq, {
         tradeStatus: "done",
         trade: { total: res.total, url: res.url, listings, medianChaos: median(chaos), more: res.rest.length },
       });
-      if (res.total < kFewResults) await this.runSimilar(seq, league, item, rates);
+      if (res.total < kFewResults) await this.runSimilar(seq, league, item, rates, newest);
     } catch (e) {
-      this.patch(seq, { tradeStatus: "error", tradeError: (e as Error).message });
+      if (newest()) this.patch(seq, { tradeStatus: "error", tradeError: (e as Error).message });
     }
   }
 
   /** Few results: the same search with every enabled minimum 20% lower, to still show a price idea. */
-  private async runSimilar(seq: number, league: string, item: ParsedItem, rates: Map<string, number> | null): Promise<void> {
+  private async runSimilar(seq: number, league: string, item: ParsedItem, rates: Map<string, number> | null, newest: () => boolean): Promise<void> {
     const cur = this.current;
     if (!cur || cur.view.seq !== seq) return;
     const lower = (v: number | null) => (v === null ? null : v > 0 ? Math.floor(v * kSimilarFactor) : v);
@@ -308,7 +311,7 @@ export class PriceChecker {
       const res = await this.d.trade.search(league, buildQuery(item, mods as StatFilter[], filters));
       const listings = withChaos(res.listings, rates).slice(0, 5);
       const chaos = listings.map((l) => l.chaos).filter((c): c is number => c !== null);
-      this.patch(seq, { similar: { total: res.total, url: res.url, listings, medianChaos: median(chaos) } });
+      if (newest()) this.patch(seq, { similar: { total: res.total, url: res.url, listings, medianChaos: median(chaos) } });
     } catch {
       /* the main search already answered; similar items are a bonus */
     }
