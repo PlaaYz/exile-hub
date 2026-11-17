@@ -96,6 +96,7 @@ export function cleanSearchPatch(patch: unknown): PriceSearchPatch | null {
     .filter((m) => !!m && typeof m.statId === "string" && m.statId.length < 200 && typeof m.enabled === "boolean")
     .slice(0, 80)
     .map((m) => ({ statId: m.statId as string, enabled: m.enabled as boolean, min: numOrNull(m.min), max: numOrNull(m.max) }));
+  if (typeof p.seq !== "number" || !Number.isInteger(p.seq)) return null;
   const f = p.filters as Record<string, unknown>;
   const corrupted = f.corrupted === "yes" || f.corrupted === "no" ? f.corrupted : "any";
   const filters: PriceFilters = {
@@ -121,7 +122,7 @@ export function cleanSearchPatch(patch: unknown): PriceSearchPatch | null {
     es: cleanRange(f.es),
     ward: cleanRange(f.ward),
   };
-  return { mods, filters };
+  return { seq: p.seq as number, mods, filters };
 }
 
 /** Renderer input for the map trade search: known keys, sane numbers, known mod ids only. */

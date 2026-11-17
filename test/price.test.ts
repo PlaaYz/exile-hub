@@ -276,6 +276,7 @@ describe("PriceChecker", () => {
     expect(pc.view!.similar?.total).toBe(2);
 
     pc.research({
+      seq: v.seq,
       mods: v.mods.map((m) => ({ statId: m.statId, enabled: m.statId === "explicit.life", min: m.statId === "explicit.life" ? 50 : m.min, max: m.statId === "explicit.life" ? 80 : null })),
       filters: { ...v.filters, status: "any" as const },
     });
@@ -314,13 +315,63 @@ describe("PriceChecker", () => {
     await settle();
     const v = pc.view!;
     const only = (id: string) => v.mods.map((m) => ({ statId: m.statId, enabled: m.statId === id, min: m.min, max: null }));
-    pc.research({ mods: only("explicit.life"), filters: v.filters });
+    pc.research({ seq: v.seq, mods: only("explicit.life"), filters: v.filters });
     await settle();
-    pc.research({ mods: only("explicit.cold"), filters: v.filters });
+    pc.research({ seq: v.seq, mods: only("explicit.cold"), filters: v.filters });
     for (let i = 0; i < 5; i++) await settle();
     expect(searches).toBeGreaterThanOrEqual(3);
     expect(pc.view!.tradeStatus).toBe("done");
     expect(pc.view!.trade!.total).toBe(7);
+  });
+
+  it("'more results' asked while a newer search runs does not mix in the old search's listings", async () => {
+    const rl = { "x-rate-limit-rules": "Ip", "x-rate-limit-ip": "5:10:60", "x-rate-limit-ip-state": "1:10:0" };
+    const hasCold = (body: any) => (body.query.stats?.[0]?.filters ?? []).some((f: any) => !f.disabled && f.id === "explicit.cold");
+    let releaseOldMore: () => void = () => {};
+    const oldMoreHeld = new Promise<void>((r) => (releaseOldMore = r));
+    const fn: TradeFetch = async (url, init) => {
+      if (init?.method === "POST") {
+        const p = hasCold(JSON.parse(init.body!)) ? "n" : "o";
+        return json({ id: p === "n" ? "new" : "old", total: 12, result: Array.from({ length: 12 }, (_, i) => `${p}${i + 1}`) }, rl);
+      }
+      const ids = /fetch\/([^?]+)/.exec(url)![1].split(",");
+      if (ids[0] === "o11") await oldMoreHeld; // the old "more" answers after the new search landed
+      if (ids[0] === "n1") setTimeout(releaseOldMore, 0);
+      return json({ result: ids.map((id) => ({ listing: { indexed: "2026-11-08T10:00:00Z", price: { amount: id.startsWith("n") ? 9 : 1, currency: "chaos" } } })) }, rl);
+    };
+    const pc = new PriceChecker({
+      ninja: new NinjaClient(fakeNinja().fn, "test"),
+      trade: new TradeClient(fn, "test"),
+      stats: async () => stats,
+      onUpdate: () => {},
+      now: () => 1000,
+    });
+    pc.check(ring, "Allflame");
+    await settle();
+    expect(pc.view!.trade!.more).toBe(2);
+    const v = pc.view!;
+    pc.research({ seq: v.seq, mods: v.mods.map((m) => ({ statId: m.statId, enabled: m.statId === "explicit.cold", min: m.min, max: null })), filters: v.filters });
+    const asked = pc.more();
+    for (let i = 0; i < 6; i++) await settle();
+    await asked;
+    const t = pc.view!.trade!;
+    expect(t.listings.every((l) => l.amount === 9)).toBe(true);
+    expect(t.more).toBe(2);
+  });
+
+  it("a research meant for the previous item is ignored", async () => {
+    const { pc, t } = make();
+    pc.check(ring, "Allflame");
+    await settle();
+    const old = pc.view!;
+    pc.check(`${ring}\n+5 to Strength`, "Allflame"); // another copy = a new item
+    await settle();
+    const searchesBefore = t.bodies.length;
+    const filtersBefore = JSON.stringify(pc.view!.filters);
+    pc.research({ seq: old.seq, mods: old.mods.map((m) => ({ statId: m.statId, enabled: false, min: null, max: null })), filters: { ...old.filters, status: "any" as const } });
+    await settle();
+    expect(t.bodies.length).toBe(searchesBefore);
+    expect(JSON.stringify(pc.view!.filters)).toBe(filtersBefore);
   });
 
   it("drops results of an item that was replaced by a newer copy", async () => {

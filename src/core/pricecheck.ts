@@ -170,32 +170,38 @@ export class PriceChecker {
     const cur = this.current;
     if (!cur?.queryId || !cur.rest.length || !cur.view.trade) return;
     const seq = cur.view.seq;
+    const search = cur.search;
     const ids = cur.rest.slice(0, kFetchBatch);
     try {
       const [listings, rates] = await Promise.all([
         this.d.trade.fetchListings(cur.queryId, ids),
         this.d.ninja.currencyRates(cur.view.league).catch(() => null),
       ]);
-      if (this.current !== cur) return;
+      // a newer search for this item answered meanwhile: these listings belong to the old one
+      if (this.current !== cur || cur.search !== search) return;
       cur.rest = cur.rest.slice(ids.length);
       const trade = cur.view.trade!;
       const all = [...trade.listings, ...withChaos(listings, rates)];
       this.patch(seq, { trade: { ...trade, listings: all, more: cur.rest.length } });
     } catch (e) {
-      this.patch(seq, { tradeError: (e as Error).message });
+      if (cur.search === search) this.patch(seq, { tradeError: (e as Error).message });
     }
   }
 
   /** Re-run the trade search with the player's choices (popup / panel): mods and filters. */
   research(patch: PriceSearchPatch): void {
     const cur = this.current;
-    if (!cur || cur.view.tradeStatus === "n/a") return;
+    // a request made for the previous item (sent just before a new Ctrl+D) must not land on this one
+    if (!cur || cur.view.tradeStatus === "n/a" || patch.seq !== cur.view.seq) return;
     const byId = new Map(patch.mods.map((p) => [p.statId, p]));
     const mods = cur.view.mods.map((m) => {
       const p = byId.get(m.statId);
       return p ? { ...m, enabled: p.enabled, min: p.min, max: p.max } : m;
     });
     cur.search++;
+    // the old search's next page is no use any more ("Mais resultados" waits for the new search)
+    cur.queryId = null;
+    cur.rest = [];
     this.patch(cur.view.seq, { mods, filters: patch.filters, tradeStatus: "loading", tradeError: null, similar: null });
     void this.runTrade(cur.view.seq, cur.view.league);
   }

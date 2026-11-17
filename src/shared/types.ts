@@ -157,6 +157,8 @@ export interface PriceFilters {
 
 /** What the player changed in the search (popup / panel). */
 export interface PriceSearchPatch {
+  /** the item this was made for (PriceView.seq): ignored once another item replaced it */
+  seq: number;
   mods: { statId: string; enabled: boolean; min: number | null; max: number | null }[];
   filters: PriceFilters;
 }

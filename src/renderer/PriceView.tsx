@@ -179,7 +179,7 @@ function SearchEditor({ p }: { p: PriceView }) {
     timer.current = setTimeout(() => {
       timer.current = null;
       const { mods: ms, f: fs } = latest.current;
-      void window.hub.priceResearch({ mods: ms.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min, max: m.max ?? null })), filters: fs });
+      void window.hub.priceResearch({ seq: p.seq, mods: ms.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min, max: m.max ?? null })), filters: fs });
     }, kAutoSearchMs);
   };
   const setMods = (fn: (ms: PriceModFilter[]) => PriceModFilter[]) => {
