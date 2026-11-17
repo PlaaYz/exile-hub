@@ -12,7 +12,7 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import type { Shell, TrayState } from "../app/platform";
 import { lang, tr } from "../shared/i18n";
 import type { AppConfig, AppState, DisplayInfo } from "../shared/types";
-import type { TauriUpdater } from "./tauriUpdater";
+import { updateLog, type TauriUpdater } from "./tauriUpdater";
 
 const kDashboardSize = { width: 1180, height: 780 };
 const kOverlayMargin = 24;
@@ -303,6 +303,7 @@ export class TauriShell implements Shell {
    * takes 1-2 s) and is released when the game closes (~60 MB).
    */
   gameRunningChanged(running: boolean): void {
+    if (running !== this.gameOn) updateLog(`game ${running ? "running" : "closed"}`);
     this.gameOn = running;
     if (!running) this.autoInstall();
     if (this.overlayCloseTimer) clearTimeout(this.overlayCloseTimer);
@@ -411,8 +412,10 @@ export class TauriShell implements Shell {
    */
   autoInstall(): void {
     if (this.autoInstallTimer) clearTimeout(this.autoInstallTimer);
+    updateLog(`auto-install in 60 s (game running: ${this.gameOn}, ready: ${!!this.updater?.ready})`);
     this.autoInstallTimer = setTimeout(() => {
       this.autoInstallTimer = null;
+      updateLog(`auto-install timer (game running: ${this.gameOn}, ready: ${!!this.updater?.ready})`);
       if (!this.gameOn && this.updater?.ready) this.quit();
     }, 60_000);
   }
@@ -430,6 +433,7 @@ export class TauriShell implements Shell {
         if (this.updater?.ready) await this.updater.install();
       } catch (e) {
         console.error("quit", e);
+        updateLog(`quit/install error: ${String(e)}`);
       } finally {
         await invoke("app_quit");
       }

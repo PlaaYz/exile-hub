@@ -1,12 +1,32 @@
 // Automatic updates on Tauri (tauri-plugin-updater): latest.json from the GitHub Releases, signed
 // with the project's key. Downloads in the background; installs on its own while the game is closed
 // (TauriShell.autoInstall; the installer reopens the app), on "Reiniciar e atualizar" or on a tray quit.
+import { invoke } from "@tauri-apps/api/core";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import type { AppState } from "../shared/types";
 import { tr } from "../shared/i18n";
 import { errorText } from "./errors";
 
 const kCheckEveryMs = 30 * 60 * 1000;
+
+const kLogFile = "update.log";
+const kLogLines = 200;
+let logChain: Promise<void> = Promise.resolve();
+
+/**
+ * One line in userData/update.log: what the updater did and when. Installs that silently did not happen
+ * (seen 2026-11: a few days in a row on the owner's PC) leave nothing else to go on.
+ */
+export function updateLog(msg: string): void {
+  const line = `${new Date().toISOString()} ${msg}`;
+  logChain = logChain
+    .then(async () => {
+      const old = (await invoke<string | null>("read_user_file", { name: kLogFile })) ?? "";
+      const lines = [...old.split("\n").filter(Boolean), line].slice(-kLogLines);
+      await invoke("write_user_file", { name: kLogFile, text: lines.join("\n") + "\n" });
+    })
+    .catch(() => {});
+}
 
 export class TauriUpdater {
   state: AppState["update"];
@@ -27,6 +47,7 @@ export class TauriUpdater {
   }
 
   start(packaged: boolean): void {
+    updateLog(`start v${this.state.current} packaged=${packaged} args=${JSON.stringify(location.search)}`);
     if (!packaged) return this.set({ status: "disabled", message: "modo desenvolvimento" });
     void this.check();
     this.timer = setInterval(() => void this.check(), kCheckEveryMs);
@@ -37,6 +58,7 @@ export class TauriUpdater {
     this.set({ status: "checking", message: null });
     try {
       const u = await check();
+      updateLog(`check: ${u ? `found ${u.version}` : "up to date"}`);
       if (!u) return this.set({ status: "latest" });
       this.set({ status: "downloading", version: u.version, progress: 0 });
       let total = 0;
@@ -49,6 +71,7 @@ export class TauriUpdater {
         }
       });
       this.update = u;
+      updateLog(`downloaded ${u.version}`);
       this.set({ status: "ready", progress: 100 });
       this.notify(
         tr("Atualização pronta", "Update ready"),
@@ -58,6 +81,7 @@ export class TauriUpdater {
         ),
       );
     } catch (e) {
+      updateLog(`check/download error: ${errorText(e)}`);
       this.set({ status: "error", message: errorText(e) });
     }
   }
@@ -70,6 +94,8 @@ export class TauriUpdater {
   async install(): Promise<void> {
     if (!this.update) return;
     if (this.timer) clearInterval(this.timer);
+    updateLog(`install ${this.update.version}: running the installer`);
+    await logChain; // the app exits as soon as the installer starts
     await this.update.install();
   }
 }
