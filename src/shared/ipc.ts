@@ -41,6 +41,8 @@ export interface HubApi {
   reportProblem(): Promise<void>;
   /** Opens the donation page (only when the app has one; voluntary, unlocks nothing). */
   openDonate(): Promise<void>;
+  /** opens poelab.com in the browser (fixed link) */
+  openLabSite(): Promise<void>;
   /** puts a short text on the clipboard (a gem name to paste in the vendor's search) */
   copyText(text: string): Promise<void>;
   /** "register my equipment" on/off: while on, items copied with the price key are kept as what you wear */

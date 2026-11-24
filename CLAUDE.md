@@ -413,6 +413,12 @@ close notification. Normal maps are not valued (the log has no drops).
 - `Hub` in main.ts delegates log/route/timer state to `core/session.ts` (tested in test/session.test.ts).
 - Client.txt line formats come from community docs: check them against a real log first.
 
+Lab tab (0.4.15, 2026-11-23): core/lab.ts LabTracker. Run = first "N_/EndGame_Labyrinth_*" room (not Labyrinth_Airlock
+= plaza, not *_trials_*) until any other area / login / game close; levels 33/55/68/75 = Normal/Cruel/Merciless/Eternal;
+fights boss_1/boss_2, the final one ends in "_end"; finished = final fight entered, no death after it (the log has no
+"completed" line). Today's way: learned from same-UTC-day runs of that level (verified: rooms repeat), detours dropped by
+seed. poelab.com is only opened in the browser (links.ts LAB_SITE_URL). Gain/cost typed (localStorage exile-hub.lab.v1).
+
 ## Constraints
 Read-only on the game: Client.txt, one clipboard read per key press. No memory reading or injection.
 GGG's rules (pathofexile.com/developer/docs, read 2026-11-23): macros invoked by hand, one set function, one action in

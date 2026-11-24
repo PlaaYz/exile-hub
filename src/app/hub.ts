@@ -9,7 +9,7 @@ import { sessionEarnings, type FarmPrice } from "../core/farm";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
 import { FARM_BOSSES } from "../shared/farmData";
 import { resolveLang, setLang, tr } from "../shared/i18n";
-import { DONATE_URL } from "../shared/links";
+import { DONATE_URL, LAB_SITE_URL } from "../shared/links";
 import type { GemInfo } from "../core/gemAvailability";
 import { applyGemLevels, gemLevelTable, importPob, pobSourceUrl } from "../core/pob";
 import type { Lookups } from "../core/route";
@@ -662,6 +662,11 @@ export class Hub {
     if (DONATE_URL.startsWith("https://")) this.p.openExternal(DONATE_URL);
   }
 
+  /** Fixed link: opens the day's Lab map in the browser (the app reads nothing from that site). */
+  async openLabSite(): Promise<void> {
+    this.p.openExternal(LAB_SITE_URL);
+  }
+
   async reportProblem(): Promise<void> {
     await this.copyDiagReport();
     this.p.openExternal(`${kIssuesUrl}?title=${encodeURIComponent(tr(`Problema na versão ${this.p.appVersion}`, `Problem in version ${this.p.appVersion}`))}`);
@@ -735,6 +740,7 @@ export class Hub {
       farmPricesVersion: this.prices.farmPricesVersion,
       tree: this.tree.state(this.build),
       maps: this.log.maps.stats(),
+      lab: this.log.lab.stats(),
       diag: {
         entries: this.diag.recent(),
         lastLineAt: this.diag.lastLineAt,

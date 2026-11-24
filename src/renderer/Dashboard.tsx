@@ -9,6 +9,7 @@ import { DiagPanelBody } from "./DiagView";
 import { SearchPanelBody } from "./SearchView";
 import { SessionsPanelBody } from "./SessionsView";
 import { FarmPanelBody } from "./FarmView";
+import { LabPanelBody } from "./LabView";
 import { MapsPanelBody } from "./MapsView";
 import { TreePanel } from "./TreeView";
 import { PricePanelBody } from "./PriceView";
@@ -20,6 +21,7 @@ const ALL_PANELS: { id: Panel; label: () => string }[] = [
   { id: "price", label: () => tr("Preço", "Price") },
   { id: "gear", label: () => tr("Equipamento", "Equipment") },
   { id: "maps", label: () => tr("Mapas", "Maps") },
+  { id: "lab", label: () => "Lab" },
   { id: "sessions", label: () => tr("Sessões", "Sessions") },
   { id: "farm", label: () => "Farm" },
   { id: "search", label: () => tr("Buscas", "Searches") },
@@ -728,6 +730,11 @@ export function DashboardApp() {
         {visible.includes("price") && <PricePanel state={state} />}
         {visible.includes("gear") && <GearPanel state={state} />}
         {visible.includes("maps") && <MapsPanel state={state} />}
+        {visible.includes("lab") && (
+          <PanelBox title={tr("Lab (Labirinto)", "Labyrinth")}>
+            <LabPanelBody lab={state.lab} />
+          </PanelBox>
+        )}
         {visible.includes("sessions") && <SessionsPanel state={state} />}
         {visible.includes("farm") && <FarmPanel state={state} />}
         {visible.includes("search") && <SearchPanel state={state} />}

@@ -237,6 +237,7 @@ export type Panel =
   | "price"
   | "gear"
   | "maps"
+  | "lab"
   | "sessions"
   | "farm"
   | "search"
@@ -336,6 +337,8 @@ export interface AppState {
   };
   /** map runs found in Client.txt (whole log at start, then live) */
   maps: MapStats;
+  /** Labyrinth runs found in Client.txt */
+  lab: import("../core/lab").LabStats;
   /** passive tree of the current character (from Client.txt) vs the PoB build; null without a build */
   /** the imported build's passive tree, as a guide (not compared with the character: owner, 2026-11-12) */
   tree: {

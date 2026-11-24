@@ -33,7 +33,7 @@ const RISKS: FarmRisk[] = ["safe", "low", "medium", "high", "negative"];
 
 type AllOverrides = Record<string, FarmOverrides>;
 
-function load<T>(key: string, fallback: T): T {
+export function load<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -41,7 +41,7 @@ function load<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
-function save(key: string, v: unknown): void {
+export function save(key: string, v: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(v));
   } catch {
@@ -50,7 +50,7 @@ function save(key: string, v: unknown): void {
 }
 
 /** Number input that keeps what is being typed and reports a number (or undefined when cleared). */
-function NumInput({
+export function NumInput({
   value,
   placeholder,
   onChange,

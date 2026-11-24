@@ -88,6 +88,7 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     },
     reportProblem: () => hub.reportProblem(),
     openDonate: () => hub.openDonate(),
+    openLabSite: () => hub.openLabSite(),
     setGearRegister: async (on) => hub.setGearRegister(on === true),
     removeGear: async (slot) => {
       if (typeof slot === "string" && GEAR_SLOTS.includes(slot)) hub.removeGear(slot);

@@ -4,6 +4,7 @@ import { BossRunTracker } from "../core/bossRuns";
 import { parseLine, type LogEvent } from "../core/clientLog";
 import type { DiagKind } from "../core/diag";
 import { GameSessionTracker } from "../core/gameSessions";
+import { LabTracker } from "../core/lab";
 import { MapTracker } from "../core/maps";
 import { PassiveTracker } from "../core/passives";
 import { kBackfillBytes } from "./constants";
@@ -44,6 +45,7 @@ export class LogService {
   bossRuns = new BossRunTracker();
   passives = new PassiveTracker();
   maps = new MapTracker();
+  lab = new LabTracker();
   sessions: GameSessionTracker;
   private follower: LogFollower | null = null;
   error: string | null = null;
@@ -88,6 +90,7 @@ export class LogService {
     const runs = new BossRunTracker();
     const passives = new PassiveTracker();
     const maps = new MapTracker();
+    const lab = new LabTracker();
     const sessions = new GameSessionTracker(this.ctx.actOf);
     // who is playing, by the same rules as the live session: a login forgets, a level-up or the
     // death of one of the account's characters names them
@@ -98,6 +101,7 @@ export class LogService {
       runs.feed(ev);
       passives.feed(ev);
       maps.feed(ev);
+      lab.feed(ev);
       sessions.feed(ev);
       noteCharacter(characters, ev);
       if (ev.type === "levelup") playing = ev.character;
@@ -121,10 +125,11 @@ export class LogService {
     this.bossRuns = runs;
     this.passives = passives;
     this.maps = maps;
+    this.lab = lab;
     this.sessions = sessions;
     this.ctx.addDiag(
       "app",
-      `log completo lido: ${maps.runs.length} mapas, ${runs.runs.length} runs de boss, personagens com passivos: ${passives.characters().length}`,
+      `log completo lido: ${maps.runs.length} mapas, ${lab.runs.length} runs de lab, ${runs.runs.length} runs de boss, personagens com passivos: ${passives.characters().length}`,
     );
     this.ctx.onScanDone(playing);
     this.ctx.broadcast();
@@ -144,11 +149,12 @@ export class LogService {
       const b = this.passives.feed(ev);
       const c = this.maps.feed(ev);
       const d = this.sessions.feed(ev);
+      const e = this.lab.feed(ev);
       if (this.bossRuns.runs.length > bossBefore) {
         this.ctx.addDiag("boss", `run de boss começou: ${this.bossRuns.runs[this.bossRuns.runs.length - 1].boss}`);
       }
       if (this.maps.runs.length > mapsBefore) this.ctx.addDiag("mapa", `novo mapa (#${this.maps.runs.length} no log)`);
-      if (a || b || c || d) this.ctx.broadcast();
+      if (a || b || c || d || e) this.ctx.broadcast();
     }
     this.ctx.onEvent(ev);
   }

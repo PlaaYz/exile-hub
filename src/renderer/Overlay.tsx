@@ -2,6 +2,7 @@ import { tr } from "../shared/i18n";
 import { fmtMs, useHubState } from "./hooks";
 import { PriceSummary, TierSummary, itemTitle } from "./PriceView";
 import { Frags, StepView } from "./StepView";
+import { LabHint } from "./LabView";
 import { MapHint } from "./MapsView";
 
 const kOverlayMaxSteps = 9;
@@ -38,7 +39,7 @@ export function OverlayApp() {
           {tr("Registrando equipamento: Ctrl+D em cada item equipado", "Registering equipment: Ctrl+D on each equipped item")} ({state.gear.items.filter((g) => g.fromGame).length}/10)
         </div>
       )}
-      <MapHint maps={state.maps} />
+      {state.lab.current ? <LabHint lab={state.lab} /> : <MapHint maps={state.maps} />}
       {state.endgame ? endgameView() : campaignView()}
 
       {interactive && (
