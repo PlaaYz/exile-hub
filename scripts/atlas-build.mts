@@ -1,7 +1,6 @@
 // Builds the site's Atlas tree files from GGG's official export (github.com/grindinggear/atlastree-export).
-// Portuguese texts: GGG's own translation first (the English and Brazilian atlas tree pages, paired node
-// by node), then data/atlas-ptbr.json (the owner's table: texts the official tree lacks or has not
-// translated yet; English with numbers as "#" -> Portuguese).
+// Portuguese texts: data/atlas-ptbr.json (English with numbers as "#" -> Portuguese). GGG's site pages are not
+// read (its Terms forbid extracting data from the site; removed by the owner, 2026-11-23).
 // Usage: npx vite-node scripts/atlas-build.mts <tag e.g. 3.30.0>
 // Writes docs/atlas/{data,ruthless}.json and img/, and prints the texts left in English: add them to the table.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -47,60 +46,10 @@ const missing = new Set<string>();
 
 /** GGG's markup "[Thread|Threads]" / "[Mirage]" -> the text the game shows ("Threads", "Mirage"). */
 const plain = (text: string) => text.replace(/\[([^\]|]+)\|([^\]]+)\]/g, "$2").replace(/\[([^\]]+)\]/g, "$1");
-const flatKey = (text: string) => plain(text).replace(/\s+/g, " ").trim().replace(NUM, "#");
-
-/**
- * GGG's own translation: the atlas tree pages of pathofexile.com and br.pathofexile.com carry the tree
- * data; the same node's texts in both languages make an English -> Portuguese template (numbers as
- * "#"; only when both have the same count of numbers). These pages may still show the previous patch.
- */
-async function officialTable(): Promise<Map<string, string>> {
-  const tree = async (host: string) => {
-    const res = await fetch(`https://${host}/atlas-skill-tree`, { headers: { "User-Agent": "ExileHub atlas build (contact: exilehub.contato@gmail.com)" } });
-    if (!res.ok) throw new Error(`${host} HTTP ${res.status}`);
-    const html = await res.text();
-    // the object after "passiveSkillTreeData", read as data (brace matching, strings respected)
-    const start = html.indexOf("{", html.indexOf("passiveSkillTreeData"));
-    let depth = 0;
-    let quoted = false;
-    let end = start;
-    for (; end < html.length; end++) {
-      const c = html[end];
-      if (quoted) {
-        if (c === "\\") end++;
-        else if (c === '"') quoted = false;
-      } else if (c === '"') quoted = true;
-      else if (c === "{") depth++;
-      else if (c === "}" && --depth === 0) break;
-    }
-    return JSON.parse(html.slice(start, end + 1)) as { nodes: Record<string, RawNode> };
-  };
-  const [en, pt] = await Promise.all([tree("www.pathofexile.com"), tree("br.pathofexile.com")]);
-  const table = new Map<string, string>();
-  const pair = (a: string[] | undefined, b: string[] | undefined) => {
-    if (!a || !b || a.length !== b.length) return;
-    a.forEach((text, i) => {
-      const nums = (plain(text).match(NUM) ?? []).length;
-      const t = plain(b[i]).replace(/[ 	]+/g, " ").trim();
-      if ((t.match(NUM) ?? []).length === nums && t !== plain(text).trim()) table.set(flatKey(text), t.replace(NUM, "#"));
-    });
-  };
-  for (const [id, n] of Object.entries(en.nodes)) {
-    const m = pt.nodes[id];
-    if (!m) continue;
-    pair(n.stats, m.stats);
-    pair(n.reminderText, m.reminderText);
-    pair(n.flavourText, m.flavourText);
-    n.variantEffects?.forEach((v, i) => pair(v.stats, m.variantEffects?.[i]?.stats));
-  }
-  return table;
-}
-const OFFICIAL = await officialTable();
-console.log(`${OFFICIAL.size} official translations`);
 
 function lookup(line: string): string | undefined {
   const key = line.replace(NUM, "#");
-  const p = OFFICIAL.get(key.replace(/\s+/g, " ").trim()) ?? PTBR[key] ?? FLAT.get(key.replace(/\s+/g, " "));
+  const p = PTBR[key] ?? FLAT.get(key.replace(/\s+/g, " ").trim());
   if (p === undefined) return undefined;
   const nums = line.match(NUM) ?? [];
   let i = 0;

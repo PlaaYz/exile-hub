@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Exile Hub — app de apoio para Path of Exile</title>
-<meta name="description" content="App gratuito para Path of Exile 1 em português e inglês: rota da campanha, price check com Ctrl+D, mapas, farm de bosses com lucro por hora, sessões e overlay. Só lê o Client.txt e APIs oficiais.">
+<meta name="description" content="App gratuito para Path of Exile 1 em português e inglês: rota da campanha, price check com Ctrl+D, mapas, farm de bosses com lucro por hora, sessões e overlay. Preços do poe.ninja.">
 <meta property="og:title" content="Exile Hub — app de apoio para Path of Exile">
 <meta property="og:description" content="Campaign route, price check, maps, boss farming and sessions in one free app (English / Português).">
 <meta property="og:image" content="https://plaayz.github.io/exile-hub/icon.png">
@@ -380,7 +380,7 @@ nav.top .links + .lang-toggle { margin-left: 0; }
           <svg class="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><polyline fill="none" stroke="#7ee787" stroke-width="2" points="0,28 30,26 60,27 90,20 120,21 150,14 175,10 200,6"/></svg>
           <div class="price-big">≈ 210 div</div>
           <div class="row"><span class="dim"><span class="pt">7 dias</span><span class="en">7 days</span></span><span class="good">+6%</span></div>
-          <div class="row"><span class="dim"><span class="pt">compra instantânea</span><span class="en">instant buyout</span></span><span><span class="pt">18 anúncios</span><span class="en">18 listings</span></span></div>
+          <div class="row"><span class="dim">poe.ninja</span><span><span class="pt">18 anúncios</span><span class="en">18 listings</span></span></div>
         </div>
       </div>
     </div>
@@ -391,9 +391,9 @@ nav.top .links + .lang-toggle { margin-left: 0; }
   <div class="wrap">
     <h2><span class="pt">Recursos</span><span class="en">Features</span></h2>
     <p class="sub pt">Cada aba substitui uma ferramenta que você deixaria aberta no navegador. Tudo funciona a partir do
-      próprio jogo, sem precisar copiar nada à mão.</p>
+      próprio jogo.</p>
     <p class="sub en">Each tab replaces a tool you would otherwise keep open in the browser. Everything works from the
-      game itself, with nothing to copy by hand.</p>
+      game itself.</p>
     <div class="grid">
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></div>
@@ -404,8 +404,8 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2m0 8v2"/></svg></div>
         <h3>Price check</h3>
-        <p class="pt"><kbd>Ctrl</kbd>+<kbd>D</kbd> sobre o item e o preço aparece ao lado do mouse: poe.ninja e trade oficial.</p>
-        <p class="en"><kbd>Ctrl</kbd>+<kbd>D</kbd> over an item and its price shows next to the mouse: poe.ninja and the official trade site.</p>
+        <p class="pt"><kbd>Ctrl</kbd>+<kbd>D</kbd> sobre o item e o preço aparece ao lado do mouse, com dados do poe.ninja.</p>
+        <p class="en"><kbd>Ctrl</kbd>+<kbd>D</kbd> over an item and its price shows next to the mouse, from poe.ninja.</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></div>
@@ -428,8 +428,8 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 12l10 10 10-10z"/><path d="M12 7l-5 5 5 5 5-5z"/></svg></div>
         <h3><span class="pt">Build do PoB</span><span class="en">PoB build</span></h3>
-        <p class="pt">Copie o código ou link do Path of Building e a build é importada. A árvore mostra o que falta.</p>
-        <p class="en">Copy a Path of Building code or link and the build is imported. The tree shows what is missing.</p>
+        <p class="pt">Cole o código ou link do Path of Building e a build é importada, com gemas, etapas e a árvore.</p>
+        <p class="en">Paste a Path of Building code or link and the build is imported, with gems, stages and the tree.</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
@@ -525,23 +525,21 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       <div class="text">
         <div class="tag">Price check</div>
         <h3><span class="pt">Preço do item sem sair do jogo</span><span class="en">Item prices without leaving the game</span></h3>
-        <p class="pt">Passe o mouse sobre o item e aperte <kbd>Ctrl</kbd>+<kbd>D</kbd>. Uma janela abre ao lado do mouse e a
-          sua área de transferência volta ao que era.</p>
-        <p class="en">Hover an item and press <kbd>Ctrl</kbd>+<kbd>D</kbd>. A window opens next to the mouse and your
-          clipboard goes back to what it was.</p>
+        <p class="pt">Passe o mouse sobre o item e aperte <kbd>Ctrl</kbd>+<kbd>D</kbd>. Uma janela abre ao lado do mouse
+          com o preço e os detalhes do item.</p>
+        <p class="en">Hover an item and press <kbd>Ctrl</kbd>+<kbd>D</kbd>. A window opens next to the mouse with
+          the price and the item's details.</p>
         <ul class="pt">
           <li>Moedas, cartas, únicos e gemas pelo poe.ninja, com tendência de 7 dias</li>
-          <li>Raros no trade oficial: totais de resistência e vida, DPS da arma e defesas em qualidade 20</li>
-          <li>Tier de cada mod e comparação com o que você está usando: registre seu equipamento com Ctrl+C e veja o que ganha e perde, inclusive DPS e defesas</li>
-          <li>Tipo de venda à escolha, sempre começando em compra instantânea</li>
-          <li>Itens parecidos quando há poucos resultados e as últimas 10 buscas guardadas</li>
+          <li>DPS da arma e defesas em qualidade 20 (raros e mágicos não têm preço no poe.ninja)</li>
+          <li>Tier de cada mod e comparação com o que você está usando: registre seu equipamento com Ctrl+D e veja o que ganha e perde, inclusive DPS e defesas</li>
+          <li>As últimas 10 consultas ficam guardadas</li>
         </ul>
         <ul class="en">
           <li>Currency, cards, uniques and gems from poe.ninja, with a 7-day trend</li>
-          <li>Rares on the official trade site: resistance and life totals, weapon DPS and defences at quality 20</li>
-          <li>Each mod's tier and a comparison with what you wear: register your gear with Ctrl+C and see what you gain and lose, DPS and defences included</li>
-          <li>Pick the sale type, always starting at instant buyout</li>
-          <li>Similar items when results are few, and your last 10 checks kept</li>
+          <li>Weapon DPS and defences at quality 20 (poe.ninja has no prices for rares and magic items)</li>
+          <li>Each mod's tier and a comparison with what you wear: register your gear with Ctrl+D and see what you gain and lose, DPS and defences included</li>
+          <li>Your last 10 checks are kept</li>
         </ul>
       </div>
       <div class="win" aria-hidden="true">
@@ -553,12 +551,6 @@ nav.top .links + .lang-toggle { margin-left: 0; }
           <div class="row"><span><span class="pt">Resistência elemental total</span><span class="en">Total elemental resistance</span></span><span>98%</span></div>
           <div class="row"><span><span class="pt">Vida máxima total</span><span class="en">Total maximum life</span></span><span>71</span></div>
           <div class="row"><span><span class="pt">Comparado ao seu Anel 1</span><span class="en">Compared with your Ring 1</span></span><span class="good"><span class="pt">+32 res · +18 vida</span><span class="en">+32 res · +18 life</span></span></div>
-          <div style="margin:10px 0 6px" class="dim"><span class="pt">Venda: compra instantânea · 37 resultados</span><span class="en">Sale: instant buyout · 37 results</span></div>
-          <table class="mini">
-            <tr><td>4 chaos</td><td class="dim"><span class="pt">compra instantânea</span><span class="en">instant buyout</span></td></tr>
-            <tr><td>5 chaos</td><td class="dim"><span class="pt">compra instantânea</span><span class="en">instant buyout</span></td></tr>
-            <tr><td>7 chaos</td><td class="dim"><span class="pt">compra instantânea</span><span class="en">instant buyout</span></td></tr>
-          </table>
         </div>
       </div>
     </div>
@@ -575,14 +567,14 @@ nav.top .links + .lang-toggle { margin-left: 0; }
           <li>29 bosses pinnacle e uber e 5 mapas T17</li>
           <li>Chance de lucrar em 10 runs: seguro, baixo, médio, alto ou negativo</li>
           <li>Ordena por lucro por hora ou por kill</li>
-          <li>Itens sem preço no poe.ninja são buscados no trade em segundo plano</li>
+          <li>Preços do poe.ninja; para o que ele não tem, você digita o preço</li>
           <li>Taxas de drop, preços e minutos editáveis, com a fonte de cada boss</li>
         </ul>
         <ul class="en">
           <li>29 pinnacle and uber bosses and 5 T17 maps</li>
           <li>Chance to profit over 10 runs: safe, low, medium, high or negative</li>
           <li>Sort by profit per hour or per kill</li>
-          <li>Items poe.ninja does not price are looked up on the trade site in the background</li>
+          <li>Prices from poe.ninja; type a price for what it lacks</li>
           <li>Editable drop rates, prices and minutes, with each boss's source</li>
         </ul>
       </div>
@@ -642,23 +634,23 @@ nav.top .links + .lang-toggle { margin-left: 0; }
 <section class="alt" id="seguranca">
   <div class="wrap">
     <h2><span class="pt">Feito para jogar dentro das regras</span><span class="en">Built to play by the rules</span></h2>
-    <p class="sub pt">O Exile Hub só lê o que o próprio jogo e as APIs públicas já oferecem. As teclas de atalho fazem uma
-      única ação por tecla apertada, como o Awakened PoE Trade.</p>
-    <p class="sub en">Exile Hub only reads what the game itself and the public APIs already provide. Hotkeys do a single
-      action per key press, like Awakened PoE Trade.</p>
+    <p class="sub pt">O Exile Hub foi feito com base nas regras que a GGG publica para ferramentas de terceiros. As teclas de
+      atalho fazem uma única ação por tecla apertada.</p>
+    <p class="sub en">Exile Hub is built around the rules GGG publishes for third-party tools. Hotkeys do a single action per
+      key press.</p>
     <div class="safe-grid">
       <div class="safe yes">
         <h3>✓ <span class="pt">O que o app usa</span><span class="en">What the app uses</span></h3>
         <ul class="pt">
           <li>O arquivo de log do jogo (<code>Client.txt</code>)</li>
-          <li>A área de transferência, quando você copia um item ou uma build</li>
-          <li>APIs públicas: trade oficial e poe.ninja, respeitando os limites da GGG</li>
+          <li>A área de transferência, uma única leitura cada vez que você aperta Ctrl+D</li>
+          <li>Preços do poe.ninja e os dados da árvore que a GGG publica no GitHub</li>
           <li>Atalhos que você aperta: uma tecla = uma ação</li>
         </ul>
         <ul class="en">
           <li>The game's log file (<code>Client.txt</code>)</li>
-          <li>The clipboard, when you copy an item or a build</li>
-          <li>Public APIs: the official trade site and poe.ninja, within GGG's rate limits</li>
+          <li>The clipboard, read once each time you press Ctrl+D</li>
+          <li>Prices from poe.ninja and the tree data GGG publishes on GitHub</li>
           <li>Hotkeys you press: one key = one action</li>
         </ul>
       </div>
@@ -739,9 +731,9 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       </details>
       <details>
         <summary>Posso tomar ban por usar?</summary>
-        <p>O app segue as regras que a GGG publica para ferramentas de terceiros: lê só o log e APIs públicas, não lê a
-          memória do jogo e cada atalho faz uma única ação. É o mesmo tipo de acesso de ferramentas conhecidas como o
-          Awakened PoE Trade. Ainda assim, ele não é oficial nem aprovado pela GGG.</p>
+        <p>O app foi feito para seguir as regras que a GGG publica para ferramentas de terceiros: lê o log, lê a área de
+          transferência uma vez por tecla, não lê a memória do jogo e cada atalho faz uma única ação. Ainda assim, ele não
+          é oficial nem aprovado pela GGG, e ninguém além dela pode dar garantia.</p>
       </details>
       <details>
         <summary>O Windows mostrou um aviso azul ao instalar. É seguro?</summary>
@@ -793,9 +785,9 @@ nav.top .links + .lang-toggle { margin-left: 0; }
       </details>
       <details>
         <summary>Can I get banned for using it?</summary>
-        <p>The app follows the rules GGG publishes for third-party tools: it only reads the log and public APIs, never
-          reads the game's memory, and every hotkey does a single action. That is the same kind of access as well-known
-          tools like Awakened PoE Trade. Still, it is not official or approved by GGG.</p>
+        <p>The app is built to follow the rules GGG publishes for third-party tools: it reads the log, reads the clipboard
+          once per key press, never reads the game's memory, and every hotkey does a single action. Still, it is not
+          official or approved by GGG, and only GGG can give a guarantee.</p>
       </details>
       <details>
         <summary>Windows showed a blue warning when installing. Is it safe?</summary>
@@ -895,12 +887,12 @@ nav.top .links + .lang-toggle { margin-left: 0; }
 const TEXT = {
   pt: {
     title: "Exile Hub — app de apoio para Path of Exile",
-    description: "App gratuito para Path of Exile 1 em português e inglês: rota da campanha, price check com Ctrl+D, mapas, farm de bosses com lucro por hora, sessões e overlay. Só lê o Client.txt e APIs oficiais.",
+    description: "App gratuito para Path of Exile 1 em português e inglês: rota da campanha, price check com Ctrl+D, mapas, farm de bosses com lucro por hora, sessões e overlay. Preços do poe.ninja.",
     support: "Apoie",
   },
   en: {
     title: "Exile Hub — a free Path of Exile companion app",
-    description: "Free Path of Exile 1 companion app in English and Portuguese: campaign route, Ctrl+D price check, maps, boss farming with profit per hour, sessions and an overlay. Reads only Client.txt and official APIs.",
+    description: "Free Path of Exile 1 companion app in English and Portuguese: campaign route, Ctrl+D price check, maps, boss farming with profit per hour, sessions and an overlay. Prices from poe.ninja.",
     support: "Support",
   },
 };

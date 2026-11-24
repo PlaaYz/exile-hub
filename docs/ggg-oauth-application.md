@@ -27,8 +27,8 @@ Exile Hub
 **Description**
 ```
 Exile Hub is a free, open-source desktop companion for Path of Exile 1 (Windows). It follows the
-player's own Client.txt to guide the campaign, track maps and sessions, and price items through the
-official trade site and poe.ninja. With OAuth we would like to show the player the value of their
+player's own Client.txt to guide the campaign, track maps and sessions, and price items through
+poe.ninja. With OAuth we would like to show the player the value of their
 own stash tabs and identify which of their characters is being played (name, class, level, league),
 which today the app can only guess from the log. Data is read only for the signed-in player, kept on
 their own computer, never shared or sold. The app is free, has no ads and no paid features, shows

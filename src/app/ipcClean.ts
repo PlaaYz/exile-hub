@@ -1,10 +1,6 @@
 // Validation of everything the renderer sends to the main process. Pure (no Electron): tested.
 import { cleanChatCommands, DEFAULT_CHAT_COMMANDS, isValidKey, normaliseKey } from "../core/chatCommands";
-import type { MapTradeOptions } from "../core/mapTrade";
-import { MAP_MODS } from "../core/searchRegex";
-import type { AppConfig, PriceFilters, PriceRange, PriceSearchPatch, TradeStatus } from "../shared/types";
-
-const TRADE_STATUSES: readonly string[] = ["securable", "available", "onlineleague", "online", "any"] satisfies TradeStatus[];
+import type { AppConfig } from "../shared/types";
 
 export const DEFAULT_CONFIG: AppConfig = {
   clientLogPath: null,
@@ -75,69 +71,4 @@ export function cleanChallengeTick(id: unknown, done: unknown, part: unknown): {
   if (typeof id !== "string" || id.length === 0 || id.length > 40 || typeof done !== "boolean") return null;
   if (part !== null && part !== undefined && !(typeof part === "number" && Number.isInteger(part) && part >= 0 && part < 100)) return null;
   return { id, done, part: typeof part === "number" ? part : null };
-}
-
-const numOrNull = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) && Math.abs(v) < 1e7 ? v : null);
-
-function cleanRange(v: unknown): PriceRange | null {
-  if (!v || typeof v !== "object") return null;
-  const r = v as Record<string, unknown>;
-  return { enabled: r.enabled === true, min: numOrNull(r.min), max: numOrNull(r.max) };
-}
-
-/**
- * A re-search from a window (popup / panel): mods by stat id with min/max, and the filters with
- * known keys only. Returns null when it is not a search patch at all.
- */
-export function cleanSearchPatch(patch: unknown): PriceSearchPatch | null {
-  const p = patch as Record<string, unknown> | null;
-  if (!p || typeof p !== "object" || !Array.isArray(p.mods) || !p.filters || typeof p.filters !== "object") return null;
-  const mods = (p.mods as Record<string, unknown>[])
-    .filter((m) => !!m && typeof m.statId === "string" && m.statId.length < 200 && typeof m.enabled === "boolean")
-    .slice(0, 80)
-    .map((m) => ({ statId: m.statId as string, enabled: m.enabled as boolean, min: numOrNull(m.min), max: numOrNull(m.max) }));
-  if (typeof p.seq !== "number" || !Number.isInteger(p.seq)) return null;
-  const f = p.filters as Record<string, unknown>;
-  const corrupted = f.corrupted === "yes" || f.corrupted === "no" ? f.corrupted : "any";
-  const filters: PriceFilters = {
-    status: TRADE_STATUSES.includes(f.status as string) ? (f.status as TradeStatus) : "securable",
-    baseType: f.baseType === true,
-    itemLevel: cleanRange(f.itemLevel),
-    quality: cleanRange(f.quality),
-    links: cleanRange(f.links),
-    gemLevel: cleanRange(f.gemLevel),
-    mapTier: cleanRange(f.mapTier),
-    corrupted,
-    influences: Array.isArray(f.influences)
-      ? (f.influences as Record<string, unknown>[])
-          .filter((i) => !!i && typeof i.name === "string" && i.name.length < 30)
-          .slice(0, 8)
-          .map((i) => ({ name: i.name as string, enabled: i.enabled === true }))
-      : [],
-    pdps: cleanRange(f.pdps),
-    edps: cleanRange(f.edps),
-    dps: cleanRange(f.dps),
-    armour: cleanRange(f.armour),
-    evasion: cleanRange(f.evasion),
-    es: cleanRange(f.es),
-    ward: cleanRange(f.ward),
-  };
-  return { seq: p.seq as number, mods, filters };
-}
-
-/** Renderer input for the map trade search: known keys, sane numbers, known mod ids only. */
-export function cleanMapTradeOptions(o: unknown): MapTradeOptions {
-  const x = (o ?? {}) as Record<string, unknown>;
-  const num = (v: unknown, max: number) =>
-    typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.min(max, Math.round(v)) : null;
-  const known = new Set(MAP_MODS.map((m) => m.id));
-  return {
-    exclude: Array.isArray(x.exclude) ? x.exclude.filter((id): id is string => typeof id === "string" && known.has(id)) : [],
-    minQuantity: num(x.minQuantity, 500),
-    minPackSize: num(x.minPackSize, 500),
-    tierMin: num(x.tierMin, 17),
-    tierMax: num(x.tierMax, 17),
-    rarity: x.rarity === "rare" || x.rarity === "magic" || x.rarity === "normal" ? x.rarity : "any",
-    corrupted: x.corrupted === "yes" || x.corrupted === "no" ? x.corrupted : "any",
-  };
 }

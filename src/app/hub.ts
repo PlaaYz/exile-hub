@@ -8,17 +8,15 @@ import { describeEvent, type DiagKind } from "../core/diag";
 import { sessionEarnings, type FarmPrice } from "../core/farm";
 import { sessionDurationMs, type GameSession } from "../core/gameSessions";
 import { FARM_BOSSES } from "../shared/farmData";
-import { lang, resolveLang, setLang, tr } from "../shared/i18n";
-import type { ModTranslator } from "../core/modPt";
+import { resolveLang, setLang, tr } from "../shared/i18n";
 import { DONATE_URL } from "../shared/links";
 import type { GemInfo } from "../core/gemAvailability";
-import type { MapTradeOptions } from "../core/mapTrade";
 import { applyGemLevels, gemLevelTable, importPob, pobSourceUrl } from "../core/pob";
 import type { Lookups } from "../core/route";
 import { gemColors } from "../core/searchRegex";
 import { Session, type ProgressData } from "../core/session";
 import type { FarmPricesResult, ImportResult } from "../shared/ipc";
-import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, PriceSearchPatch, TradeAction, TradeCard, TreeLayout } from "../shared/types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, PobBuild, TradeAction, TradeCard, TreeLayout } from "../shared/types";
 import type { TradeOffer } from "../core/tradeWhisper";
 
 /** Buy request cards kept, and for how long. */
@@ -48,7 +46,6 @@ export class Hub {
   private build: PobBuild | null = null;
   /** what the build wears, for "compare with my item" */
   private gear!: GearService;
-  private modPt: ModTranslator | null = null;
   private buildInfo: AppState["buildInfo"] = null;
   /** build.json: the PoB code and the stage picked in the app (none = PoB's active one) */
   private buildSaved: { code: string; at: number; stage?: number } | null = null;
@@ -122,24 +119,7 @@ export class Hub {
       config,
       broadcast,
       addDiag,
-      onPobText: (text) => {
-        this.diag.add("clipboard", "código/link do Path of Building copiado: importando");
-        void this.importBuild(text, "clipboard").then((r) =>
-          this.diag.add("clipboard", r.ok ? "build importado do clipboard" : `não era um build válido (${r.error})`),
-        );
-      },
       equipped: () => this.gear.worn(),
-      gearItem: (text) => {
-        if (this.gear.register) {
-          const slot = this.gear.add(text);
-          this.diag.add("clipboard", slot ? `equipamento registrado: ${slot}` : "item copiado no registro de equipamento, mas não é um item que se equipa");
-          return true;
-        }
-        // Ctrl+C compares and Ctrl+D prices; without a price key, Ctrl+C still prices
-        if (!this.config.priceCheckKey || !this.p.copyItem) return false;
-        if (this.gear.compare(text)) this.diag.add("clipboard", "item copiado: comparado com o seu equipamento");
-        return true;
-      },
     });
     this.tree = new TreeService(p, broadcast);
     this.challenges = new ChallengeService(p);
@@ -151,16 +131,14 @@ export class Hub {
         const league = this.prices.league();
         return league ? iconFor(this.prices.ninja, league, item) : null;
       },
-      () => (lang() === "pt" && this.modPt ? (l) => this.modPt!.translate(l) : null),
     );
-    this.loadModPt();
     await this.gear.load();
     await this.loadProgress();
     await this.loadBuild();
     this.startWithWindowsCache = await p.shell.startWithWindows().catch(() => false);
   }
 
-  /** After the windows exist: follow the log, watch the clipboard, load leagues. */
+  /** After the windows exist: follow the log, load leagues. */
   async start(): Promise<void> {
     this.ready = true;
     if (!this.config.clientLogPath) {
@@ -170,7 +148,6 @@ export class Hub {
       await this.startTail();
     }
     void this.prices.loadLeagues();
-    await this.prices.applyClipboardWatch();
     this.updateTray();
     this.applyOverlayVisibility();
     this.broadcast();
@@ -182,14 +159,10 @@ export class Hub {
 
   setConfig(patch: Partial<AppConfig>): void {
     const prev = this.cfg.update(patch);
-    if (patch.language !== undefined) {
-      setLang(resolveLang(this.config.language));
-      this.loadModPt();
-    }
+    if (patch.language !== undefined) setLang(resolveLang(this.config.language));
     if (patch.leagueStart !== undefined && patch.leagueStart !== prev.leagueStart) this.session.rebuild(this.config.leagueStart);
     if (patch.clientLogPath !== undefined && patch.clientLogPath !== prev.clientLogPath) void this.startTail();
     if (patch.overlayEnabled !== undefined || patch.overlayHideUnfocused !== undefined) this.applyOverlayVisibility();
-    if (patch.priceCheckEnabled !== undefined) void this.prices.applyClipboardWatch();
     if (
       patch.chatCommandsEnabled !== undefined ||
       patch.chatCommands !== undefined ||
@@ -255,7 +228,7 @@ export class Hub {
     this.broadcast();
   }
 
-  async importBuild(input: string, source: "manual" | "clipboard" = "manual"): Promise<ImportResult> {
+  async importBuild(input: string): Promise<ImportResult> {
     try {
       let code = input.trim();
       const url = pobSourceUrl(code);
@@ -264,13 +237,12 @@ export class Hub {
       }
       this.build = applyGemLevels(importPob(code), this.gemLevels);
       const at = Date.now();
-      this.buildInfo = { source, at };
+      this.buildInfo = { source: "manual", at };
       this.buildSaved = { code, at };
       await this.p.writeUserFile("build.json", JSON.stringify(this.buildSaved)).catch((e) => console.error("could not save build", e));
       this.broadcast();
       return { ok: true };
     } catch (e) {
-      // copied text that only looked like a PoB code: stay quiet
       return { ok: false, error: (e as Error).message };
     }
   }
@@ -332,7 +304,7 @@ export class Hub {
   private farmWarmAt = 0;
 
   /**
-   * Farm prices for the sessions' expected earnings (poe.ninja; the trade site fills the gaps later):
+   * Farm prices for the sessions' expected earnings (poe.ninja):
    * asked again when missing (the league may not have loaded yet) or older than an hour, at most once
    * a minute.
    */
@@ -461,47 +433,31 @@ export class Hub {
   }
 
   /**
-   * Ctrl+D: the game copies the item under the mouse (Ctrl+Alt+C, with mod tiers), the clipboard
-   * watcher prices it and the popup opens next to it; the player's clipboard is put back afterwards.
+   * Ctrl+D: the game copies the item under the mouse (Ctrl+Alt+C, with mod tiers) and the app reads it
+   * once (GGG's rule: one clipboard read per key press). While registering it is kept as worn equipment,
+   * else the popup opens next to it with the price and the Equipamento tab compares it.
    */
   private async runPriceKey(): Promise<void> {
     const p = this.p;
     if (!p.copyItem) return;
-    const before = await p.readClipboard().catch(() => "");
-    this.prices.expectHotkeyItem(before, () => void p.shell.showPricePopup?.());
     try {
-      await p.copyItem();
+      const text = await p.copyItem();
+      if (this.gear.register) {
+        const slot = this.gear.add(text);
+        this.diag.add("clipboard", slot ? `equipamento registrado: ${slot}` : "item copiado no registro de equipamento, mas não é um item que se equipa");
+      } else {
+        this.gear.compare(text);
+        if (this.prices.check(text)) void p.shell.showPricePopup?.();
+      }
     } catch (e) {
-      this.prices.cancelHotkey();
       this.diag.add("preço", `atalho de preço: ${e instanceof Error ? e.message : String(e)}`);
-      this.broadcast();
     }
+    this.broadcast();
   }
 
-  priceMore(): Promise<void> {
-    return this.prices.more();
-  }
   priceRecheck(id: number): void {
     this.prices.recheck(id);
   }
-  /** Only a whisper of a listing on screen is sent: the text never comes from the page itself. */
-  async priceWhisper(text: string): Promise<string | null> {
-    const v = this.prices.view;
-    const shown = [...(v?.trade?.listings ?? []), ...(v?.similar?.listings ?? [])];
-    if (!shown.some((l) => l.whisper === text)) return tr("anúncio não encontrado", "listing not found");
-    if (!this.p.sendChat || !this.p.focusGame) return tr("indisponível nesta versão", "not available in this build");
-    if (!(await this.p.focusGame())) return tr("abra o jogo primeiro", "open the game first");
-    try {
-      await this.p.sendChat(text);
-      this.diag.add("comando", `whisper para ${text.split(" ")[0]}`);
-      return null;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.diag.add("comando", `whisper não enviado: ${msg}`);
-      return msg;
-    }
-  }
-
   // ---- buy requests (whispers from the trade site) -------------------------------------------
 
   private trades: TradeCard[] = [];
@@ -547,17 +503,6 @@ export class Hub {
       this.p.shell.setTradeCards?.(this.trades.length);
     }
     this.broadcast();
-  }
-
-  /** GGG's Portuguese mod texts, only needed with the app in Portuguese. */
-  private loadModPt(): void {
-    if (lang() !== "pt" || this.modPt) return;
-    void this.prices.loadTranslator().then((t) => {
-      if (t) {
-        this.modPt = t;
-        this.broadcast();
-      }
-    });
   }
 
   closeSessionSummary(): void {
@@ -667,15 +612,6 @@ export class Hub {
     await this.p.shell.moveDashboard(id, fullscreen);
     this.setConfig({ dashboardDisplayId: id, dashboardFullscreen: fullscreen });
   }
-  priceResearch(patch: PriceSearchPatch): void {
-    this.prices.research(patch);
-  }
-  priceOpenTrade(): void {
-    this.prices.openItemTrade();
-  }
-  openMapTrade(o: MapTradeOptions): Promise<{ ok: boolean; total?: number; missing: string[]; error?: string }> {
-    return this.prices.openMapTrade(o);
-  }
   farmPrices(): Promise<FarmPricesResult> {
     return this.prices.farmPrices();
   }
@@ -719,7 +655,7 @@ export class Hub {
   /** The donation page, a fixed link of the project (nothing from the renderer reaches the URL). */
   /** Through the app, not the page: works without the window having the focus. */
   copyText(text: string): Promise<void> {
-    return this.prices.writeClipboard(text);
+    return this.p.writeClipboard(text);
   }
 
   async openDonate(): Promise<void> {
@@ -744,7 +680,7 @@ export class Hub {
       `liga: ${s.league ?? "?"} · price check: ${c.priceCheckEnabled ? "ligado" : "desligado"} · build: ${s.build ? `${s.build.className}/${s.build.ascendClass}` : "nenhum"} · árvore: ${s.tree?.status ?? "-"}`,
       `mapa atual: ${s.maps.current ? `${s.maps.current.name} T${s.maps.current.tier}` : "-"} · mapas hoje: ${s.maps.today?.maps ?? 0}`,
     ];
-    await this.prices.writeClipboard(this.diag.report(header));
+    await this.p.writeClipboard(this.diag.report(header));
     this.diag.add("app", "relatório copiado para a área de transferência");
     this.broadcast();
   }
@@ -806,7 +742,7 @@ export class Hub {
         gameRunning: this.gameRunning,
         gameFocused: this.gameFocused,
         overlayVisible: this.p.shell.overlayVisible,
-        clipboardWatch: this.prices.watching,
+        priceKey: this.priceKey(),
         version: this.p.appVersion,
       },
       update: { ...this.updateState, current: this.updateState.current || this.p.appVersion },

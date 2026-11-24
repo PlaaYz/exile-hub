@@ -5,7 +5,6 @@ import {
   decodePobCode,
   gemLevelTable,
   importPob,
-  looksLikePob,
   parsePobXml,
   pobSourceUrl,
 } from "../src/core/pob";
@@ -58,15 +57,6 @@ describe("PoB import", () => {
       .replace(/\//g, "_");
     expect(decodePobCode(code)).toBe(XML);
     expect(importPob(`  ${code}\n`).groups).toHaveLength(2);
-  });
-
-  it("recognises clipboard text worth importing", () => {
-    expect(looksLikePob("https://pobb.in/AbC_12")).toBe(true);
-    expect(looksLikePob("https://pastebin.com/xyz123")).toBe(true);
-    expect(looksLikePob("eNrt" + "A".repeat(400))).toBe(true); // real codes are thousands of chars
-    expect(looksLikePob("short")).toBe(false);
-    expect(looksLikePob("a normal sentence ".repeat(30))).toBe(false);
-    expect(looksLikePob("https://example.com/a")).toBe(false);
   });
 
   it("rejects junk", () => {

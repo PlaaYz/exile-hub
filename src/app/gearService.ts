@@ -1,14 +1,13 @@
-// "Register my equipment": while on, every item the player copies in game (Ctrl+C over each equipped
-// item on the character screen) is kept as what they wear in its slot. Otherwise an item copied with
-// Ctrl+C (Ctrl+D is the price key) is compared with what is worn: these real items (exact rolls, DPS and
-// defences) first, the PoB build for the slots that were never registered. Kept in userData/gear.json.
+// "Register my equipment": while on, every item checked with the price key (Ctrl+D over each equipped
+// item on the character screen) is kept as what they wear in its slot. Otherwise the
+// item being priced is also compared with what is worn (exact rolls, DPS and defences). Kept in userData/gear.json.
 import { parseItem, type ParsedItem } from "../core/item";
 import { compareItem, gearSlotFor, GEAR_SLOTS, type EquippedItem } from "../core/itemCompare";
 import type { GearItemView, GearView } from "../shared/types";
 import type { Platform } from "./platform";
 
 const kFile = "gear.json";
-/** Registering turns itself off after this long without a new item (else price checks stay off). */
+/** Registering turns itself off after this long without a new item (else the price key keeps registering). */
 const kRegisterIdleMs = 3 * 60 * 1000;
 
 export class GearService {
@@ -31,8 +30,6 @@ export class GearService {
     private readonly changed: () => void,
     /** the item's art on poe.ninja; null while no league is known */
     private readonly iconOf: (item: ParsedItem) => Promise<string | null> | null,
-    /** mod line -> the UI language (null = keep the game's English) */
-    private readonly translate: () => ((line: string) => string) | null = () => null,
   ) {}
 
   async load(): Promise<void> {
@@ -69,7 +66,7 @@ export class GearService {
     return slot;
   }
 
-  /** An item copied with Ctrl+C outside registration: shown against what is worn. False when it is not equipment. */
+  /** An item checked outside registration: shown against what is worn. False when it is not equipment. */
   compare(text: string): boolean {
     const item = parseItem(text);
     if (!item || !gearSlotFor(item, new Set())) return false;
@@ -96,8 +93,7 @@ export class GearService {
     const c = this.copied;
     let copied: GearView["copied"] = null;
     if (c) {
-      const t = this.translate();
-      const cmp = compareItem(c, worn).map((x) => (t ? { ...x, onlyCandidate: x.onlyCandidate.map(t), onlyEquipped: x.onlyEquipped.map(t) } : x));
+      const cmp = compareItem(c, worn);
       copied = { item: this.itemView("", c, true), compare: cmp.length ? cmp : null };
     }
     return { register: this.registering, items: worn.map((e) => this.itemView(e.slot, e.item, !!e.fromGame)), copied };
@@ -105,7 +101,6 @@ export class GearService {
 
   private itemView(slot: string, item: ParsedItem, fromGame: boolean): GearItemView {
     const order = (k: string) => (k === "enchant" ? 0 : k === "implicit" ? 1 : 2);
-    const t = this.translate() ?? ((l: string) => l);
     return {
       slot,
       name: item.name || item.baseType,
@@ -114,7 +109,7 @@ export class GearService {
       itemClass: item.itemClass,
       sockets: item.sockets,
       icon: this.icons.get(iconKey(item)) ?? null,
-      lines: [...item.mods].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => t(m.text)),
+      lines: [...item.mods].sort((a, b) => order(a.kind) - order(b.kind)).map((m) => m.text),
       fromGame,
     };
   }

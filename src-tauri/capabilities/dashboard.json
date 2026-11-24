@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "dashboard",
-  "description": "The dashboard runs the app: windows, tray, clipboard, HTTP to the PoE sites, files through our own commands.",
+  "description": "The dashboard runs the app: windows, tray, clipboard, HTTP to poe.ninja, GitHub and the PoB code sites, files through our own commands.",
   "windows": ["dashboard"],
   "permissions": [
     "core:default",
@@ -14,10 +14,7 @@
     "allow-copy-item",
     "allow-focus-game",
     "allow-cursor-pos",
-    "allow-clipboard-watch",
-    "allow-clipboard-unwatch",
     "allow-send-chat",
-    "allow-bring-game-front",
     "allow-app-info",
     "allow-read-data",
     "allow-read-user-file",
@@ -39,7 +36,6 @@
     "core:window:allow-set-ignore-cursor-events",
     "core:tray:default",
     "core:menu:default",
-    "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "dialog:allow-open",
     "global-shortcut:allow-register",
@@ -55,8 +51,6 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://www.pathofexile.com/*" },
-        { "url": "https://br.pathofexile.com/*" },
         { "url": "https://poe.ninja/*" },
         { "url": "https://raw.githubusercontent.com/*" },
         { "url": "https://pobb.in/*" },

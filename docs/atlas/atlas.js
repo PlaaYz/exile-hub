@@ -54,7 +54,7 @@ const texts = (id) => T.info[id]?.[L];
 // ---- loading ----------------------------------------------------------------------------
 
 async function load(name, saved) {
-  const res = await fetch(`${name}.json?v=16`); // same number as atlas.js?v= in index.html
+  const res = await fetch(`${name}.json?v=17`); // same number as atlas.js?v= in index.html
   T = await res.json();
   tree = name;
   $("ver").textContent = T.version;

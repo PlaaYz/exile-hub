@@ -171,18 +171,6 @@ button.gem:hover { border-color: var(--accent); color: var(--accent); }
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
   min-width: 68px;
 }
-.listings { border-collapse: collapse; margin: 6px 0; font-variant-numeric: tabular-nums; }
-.listings td { padding: 2px 14px 2px 0; }
-.mods { display: grid; gap: 4px; }
-.mod { display: flex; gap: 8px; align-items: center; }
-.mod-text { flex: 1; }
-.mod-text.kind-implicit, .mod-text.kind-enchant { color: var(--enter); }
-.mod-text.kind-crafted { color: var(--craft); }
-.mod-text.kind-fractured { color: var(--quest); }
-.mod-min {
-  width: 72px; background: #0b0e13; color: var(--text); border: 1px solid var(--border);
-  border-radius: 6px; padding: 3px 6px; font: inherit;
-}
 
 /* overlay */
 .overlay {
@@ -273,23 +261,9 @@ body.mode-price { background: #0e1116; }
 .price-popup-bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #151a22; cursor: move; user-select: none; }
 .price-popup-body { overflow: auto; padding: 8px 10px; flex: 1; }
 
-/* price search editor */
-.search-flags { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 4px 0 6px; }
-/* one compact row: the mods must start right under the item name */
-.search-flags label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-.search-flags select { width: auto; padding: 2px 4px; }
-.mod.pseudo .mod-text { color: #e0c060; }
 .calc-line { margin: 4px 0; font-variant-numeric: tabular-nums; }
 
-.seller::before { content: '●'; margin-right: 4px; font-size: 10px; }
-.seller.online::before { color: #6cc46c; }
-.seller.afk::before { color: #e0c060; }
-.seller.offline::before { color: #6b7380; }
-.seller.instant::before { content: '⚡'; color: #e8b84a; }
-button.whisper { margin-left: 8px; padding: 0 6px; font-size: 11px; line-height: 16px; }
-button.whisper.bad { color: var(--red, #f0716b); }
 
-.listings tr.bait { opacity: 0.55; }
 
 /* poe.ninja 7-day trend */
 .trend { font-size: 12px; white-space: nowrap; }
@@ -316,7 +290,6 @@ body.mode-trades { background: transparent; }
 .good-text { color: #6cc46c; }
 .compare { margin: 4px 0 8px; }
 .compare-rows td:nth-child(n + 2) { text-align: right; white-space: nowrap; padding-left: 8px; }
-.similar { margin: 6px 0; padding: 6px 8px; border: 1px dashed var(--border); border-radius: 6px; }
 .recent-checks { display: flex; flex-wrap: wrap; gap: 4px; }
 .recent-checks button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recent-checks button.active { border-color: #4b6a9b; }

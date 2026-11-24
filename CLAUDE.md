@@ -414,8 +414,18 @@ close notification. Normal maps are not valued (the log has no drops).
 - Client.txt line formats come from community docs: check them against a real log first.
 
 ## Constraints
-Read-only on the game: Client.txt, clipboard, official APIs only. No memory reading, injection or
-synthetic input. Respect GGG rate limits.
+Read-only on the game: Client.txt, one clipboard read per key press. No memory reading or injection.
+GGG's rules (pathofexile.com/developer/docs, read 2026-11-23): macros invoked by hand, one set function, one action in
+the game each (one chat line = one action); screen/clipboard read at most ONCE per manual key press, the user aware of
+it; only the documented API and data exports (skilltree-export, atlastree-export) may be used, reverse-engineering
+other endpoints breaks the Terms (7i); extracting data from their website is forbidden.
+Owner, 2026-11-23: "remova tudo que possa ser proibido" -> removed, do NOT bring back: every www./br.pathofexile.com
+request (trade search/fetch/exchange, trade data lists, leagues, pt mod texts, atlas page texts), listings, bulk,
+whisper button + bring_game_front, map trade button, farm trade prices, the clipboard watcher (Ctrl+C equipment,
+automatic PoB import) and the clipboard restore. The capability no longer grants clipboard read or pathofexile.com.
+Now: copy_item (Rust) waits for the clipboard sequence number to move and reads once; Ctrl+D registers equipment while
+registering, else prices (poe.ninja only, rares have none) and compares. Leagues = poe.ninja /economy/leagues. Notes
+above about those features are history. Kept: chat keys, trade cards (manual, one chat line), item art URLs.
 
 ## graphify
 

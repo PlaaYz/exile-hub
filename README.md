@@ -13,8 +13,8 @@ dá para trocar em Configurações). Ele junta num só
 lugar o que hoje fica espalhado em várias ferramentas: rota da campanha, build do Path of Building,
 price check, mapas, farm de bosses e sessões de jogo.
 
-O app só **lê** dados: o `Client.txt` do jogo, a área de transferência e as APIs oficiais e
-públicas (trade do site oficial, poe.ninja). Não lê a memória do jogo nem injeta nada. A única
+O app só **lê** dados: o `Client.txt` do jogo, a área de transferência (uma vez, quando você aperta
+Ctrl+D) e os preços do poe.ninja. Não usa a API do site de trade, não lê a memória do jogo nem injeta nada. A única
 entrada sintética são atalhos que você mesmo aperta: uma tecla equivale a uma ação.
 
 ### Painel e overlay
@@ -34,27 +34,18 @@ entrada sintética são atalhos que você mesmo aperta: uma tecla equivale a uma
 - No cabeçalho você escolhe o personagem quando o log não consegue identificá-lo.
 
 ### Build (Path of Building)
-- Copie um código do PoB ou um link do pobb.in ou pastebin e a build é importada sozinha.
-- A árvore passiva compara o que você já alocou com a build: pontos que faltam, caminho até os
-  próximos notáveis e um mapa da árvore no painel.
+- Cole um código do PoB ou um link do pobb.in ou pastebin na aba Build.
+- A aba Árvore mostra a árvore passiva da build, etapa por etapa.
 
 ### Price check
-- Com o mouse sobre um item no jogo, aperte **Ctrl+D** (ou dê Ctrl+C). Uma janela abre ao lado do
-  mouse com o preço.
+- Com o mouse sobre um item no jogo, aperte **Ctrl+D**. Uma janela abre ao lado do mouse com o preço.
+  O texto do item fica na área de transferência.
 - Moedas, cartas, fragmentos, únicos e gemas são precificados pelo poe.ninja, com a tendência dos
-  últimos 7 dias.
-- Itens raros são buscados no trade oficial. O app soma totais (resistências, vida, atributos),
-  calcula DPS de armas e defesas em qualidade 20 e mostra o tier de cada mod.
-- Você escolhe o tipo de venda (compra instantânea, online etc.). A busca começa sempre em compra
-  instantânea.
-- Compara o item com o que você está usando. Registre seu equipamento uma vez (botão "Registrar meu
-  equipamento" e Ctrl+C em cada item na tela do personagem) e veja o que ganha e perde, inclusive DPS e defesas.
-  Sem registro, compara com o build importado do PoB.
-- Com poucos resultados, o app procura itens parecidos com mínimos 20% menores.
-- Moedas em quantidade usam a troca em massa do trade e marcam como "suspeito" as ofertas muito
-  abaixo do poe.ninja.
-- As últimas 10 buscas ficam guardadas para refazer com um clique.
-- Respeita os limites de requisição da GGG.
+  últimos 7 dias. Raros e mágicos não têm preço lá.
+- Mostra DPS de armas e defesas em qualidade 20 e o tier de cada mod.
+- A aba Equipamento compara o item com o que você está usando. Registre seu equipamento uma vez (botão
+  "Registrar meu equipamento" e Ctrl+D em cada item na tela do personagem) e veja o que ganha e perde.
+- As últimas 10 consultas ficam guardadas para refazer com um clique.
 
 ### Trocas
 - Quando alguém sussurra para comprar um item seu (modelo do site de trade), aparece um cartão no
@@ -75,8 +66,8 @@ entrada sintética são atalhos que você mesmo aperta: uma tecla equivale a uma
 - Ordena por lucro por hora ou por kill.
 - O tempo por run vem das suas próprias lutas, medidas no `Client.txt`, ou de um valor que você
   digita. Não há tempos padrão inventados.
-- Itens que o poe.ninja não tem, ou que ele precifica de forma absurda, são buscados no trade em
-  segundo plano.
+- Itens que o poe.ninja não tem, ou que ele precifica de forma absurda, contam como 0 até você digitar
+  um preço.
 - Taxas de drop, preços e minutos são editáveis. As taxas são estimativas da comunidade, e cada
   boss mostra a fonte.
 
@@ -127,8 +118,8 @@ language; switch it in Settings). It brings together what
 separate tools do today: campaign route, Path of Building build, price check, maps, boss farming and
 play sessions.
 
-The app only **reads**: the game's `Client.txt`, the clipboard and official/public APIs (the
-official trade site, poe.ninja). No memory reading and no injection. The only synthetic input is
+The app only **reads**: the game's `Client.txt`, the clipboard (once, when you press Ctrl+D) and
+poe.ninja prices. It does not use the trade site's API. No memory reading and no injection. The only synthetic input is
 hotkeys you press yourself, one key = one action.
 
 ### Dashboard and overlay
@@ -148,24 +139,18 @@ hotkeys you press yourself, one key = one action.
 - A header picker chooses the character when the log cannot tell.
 
 ### Build (Path of Building)
-- Copy a PoB code or a pobb.in or pastebin link and the build is imported on its own.
-- The passive tree compares what you have allocated with the build: missing points, the path to the
-  next notables and a tree map in the dashboard.
+- Paste a PoB code or a pobb.in or pastebin link on the Build tab.
+- The Tree tab shows the build's passive tree, stage by stage.
 
 ### Price check
-- Hover an item in game and press **Ctrl+D** (or Ctrl+C). A window opens next to the mouse with the
-  price.
-- Currency, cards, fragments, uniques and gems are priced from poe.ninja, with a 7-day trend.
-- Rares are searched on the official trade site. The app builds pseudo totals (resistances, life,
-  attributes), computes weapon DPS and defences at quality 20 and shows each mod's tier.
-- You pick the sale type (instant buyout, online...). Every search starts at instant buyout.
-- It compares the item with what you wear. Register your gear once ("Register my equipment", then Ctrl+C on each
-  item on the character screen) and see what you gain and lose, DPS and defences included. Without it, it compares
-  with the imported PoB build.
-- With few results, it searches similar items with minimums 20% lower.
-- Bulk currency uses the trade bulk exchange and flags offers far below poe.ninja as suspicious.
+- Hover an item in game and press **Ctrl+D**. A window opens next to the mouse with the price. The item
+  text stays on the clipboard.
+- Currency, cards, fragments, uniques and gems are priced from poe.ninja, with a 7-day trend. It has no
+  prices for rares and magic items.
+- Shows weapon DPS and defences at quality 20 and each mod's tier.
+- The Equipment tab compares the item with what you wear. Register your gear once ("Register my equipment",
+  then Ctrl+D on each item on the character screen) and see what you gain and lose.
 - The last 10 checks are kept for a one-click recheck.
-- GGG rate limits are respected.
 
 ### Trades
 - When someone whispers to buy one of your items (trade site template), a card shows the item and
@@ -184,7 +169,7 @@ hotkeys you press yourself, one key = one action.
 - Ranks by profit per hour or per kill.
 - Time per run comes from your own fights, measured in `Client.txt`, or a value you type. There are
   no made-up default times.
-- Items poe.ninja lacks or prices absurdly are looked up on the trade site in the background.
+- Items poe.ninja lacks or prices absurdly count as 0 until you type a price.
 - Drop rates, prices and minutes are editable. Rates are community estimates, and each boss shows
   its source.
 

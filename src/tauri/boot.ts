@@ -8,7 +8,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register } from "@tauri-apps/plugin-global-shortcut";
 import { kOverlayInteractKey, kOverlayToggleKey, kStateBroadcastMs } from "../app/constants";
 import { Hub } from "../app/hub";
-import { cleanChallengeTick, cleanConfigPatch, cleanMapTradeOptions, cleanSearchPatch } from "../app/ipcClean";
+import { cleanChallengeTick, cleanConfigPatch } from "../app/ipcClean";
 import type { HubApi } from "../shared/ipc";
 import type { AppState } from "../shared/types";
 import { TauriPlatform, type AppInfo } from "./tauriPlatform";
@@ -23,11 +23,7 @@ const OVERLAY_CALLS = new Set<keyof HubApi>([
   "routeNext",
   "routePrev",
   "toggleOverlayInteractive",
-  "priceResearch",
-  "priceOpenTrade",
-  "priceMore",
   "priceRecheck",
-  "priceWhisper",
   "closePricePopup",
   "tradeAction",
   "closeSessionSummary",
@@ -71,11 +67,6 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
     moveDashboard: (id, fs) => hub.moveDashboard(id, fs === true),
     toggleOverlay: async () => hub.toggleOverlay(),
     toggleOverlayInteractive: async () => hub.toggleOverlayInteractive(),
-    priceResearch: async (patch) => {
-      const p = cleanSearchPatch(patch);
-      if (p) hub.priceResearch(p);
-    },
-    priceOpenTrade: async () => hub.priceOpenTrade(),
     farmPrices: () => hub.farmPrices(),
     setStartWithWindows: (on) => hub.setStartWithWindows(on === true),
     copyDiagReport: () => hub.copyDiagReport(),
@@ -86,11 +77,9 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
       const ok = ["invite", "trade", "thanks", "sold", "kick", "dismiss"];
       if (typeof id === "string" && id.length < 20 && ok.includes(action)) await hub.tradeAction(id, action);
     },
-    priceMore: () => hub.priceMore(),
     priceRecheck: async (id) => {
       if (Number.isInteger(id) && id > 0) hub.priceRecheck(id);
     },
-    priceWhisper: async (text) => (typeof text === "string" && text.length <= 500 ? hub.priceWhisper(text) : null),
     setBuildStage: async (stage) => {
       if (Number.isInteger(stage) && stage >= 0 && stage < 100) hub.setBuildStage(stage);
     },
@@ -113,7 +102,6 @@ function localApi(hub: Hub, shell: TauriShell): HubApi {
       return c ? hub.setChallenge(c.id, c.done, c.part) : hub.getChallenges();
     },
     installUpdate: async () => hub.installUpdate(),
-    openMapTrade: (o) => hub.openMapTrade(cleanMapTradeOptions(o)),
   };
 }
 

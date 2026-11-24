@@ -57,7 +57,7 @@ export function DiagPanelBody({ state }: { state: AppState }) {
           label="Overlay"
           detail={!state.config.overlayEnabled ? tr("desligado (F9)", "off (F9)") : d.overlayVisible ? tr("visível", "visible") : tr("escondido", "hidden")}
         />
-        <Status ok={d.clipboardWatch} label="Price check" detail={d.clipboardWatch ? `${tr("ligado · liga", "on · league")} ${state.league ?? "?"}` : tr("desligado", "off")} />
+        <Status ok={!!d.priceKey} label="Price check" detail={d.priceKey ? `${d.priceKey} · ${tr("liga", "league")} ${state.league ?? "?"}` : tr("desligado", "off")} />
         <Status
           ok={state.characterName ? true : null}
           label={tr("Personagem", "Character")}
@@ -84,7 +84,7 @@ export function DiagPanelBody({ state }: { state: AppState }) {
 
       <h3>{tr("O que o app entendeu (mais recente primeiro)", "What the app understood (newest first)")}</h3>
       {d.entries.length === 0 ? (
-        <p className="muted small">{tr("Nada ainda. Abra o jogo, troque de zona, copie um item com Ctrl+C: tudo aparece aqui.", "Nothing yet. Start the game, change zones, copy an item with Ctrl+C: everything shows up here.")}</p>
+        <p className="muted small">{tr("Nada ainda. Abra o jogo, troque de zona, confira um item com Ctrl+D: tudo aparece aqui.", "Nothing yet. Start the game, change zones, check an item with Ctrl+D: everything shows up here.")}</p>
       ) : (
         <ul className="diag-feed">
           {d.entries.map((e, i) => (

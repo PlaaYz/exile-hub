@@ -1,17 +1,20 @@
 // Price check on a key (like Awakened PoE Trade): copy the item under the mouse with the game's own
-// advanced copy (Ctrl+Alt+C, one key press = one copy, owner-approved 2026-11-09), remember the game
-// window so the price popup can hand the focus back, and tell where the mouse is.
+// advanced copy (Ctrl+Alt+C, one key press = one copy, owner-approved 2026-11-09) and read it once,
+// remember the game window so the price popup can hand the focus back, and tell where the mouse is.
 use std::sync::atomic::{AtomicIsize, Ordering};
+#[cfg(windows)]
+use std::{thread, time::Duration};
 
 /// The game window that was in front at the last copy (0 = none).
 static GAME_HWND: AtomicIsize = AtomicIsize::new(0);
 
 #[tauri::command]
-pub async fn copy_item() -> Result<(), String> {
+pub async fn copy_item() -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(|| {
         #[cfg(windows)]
         {
             use crate::chat::{is_game, win};
+            use crate::clipboard::{read_text, sequence};
             use windows_sys::Win32::UI::{
                 Input::KeyboardAndMouse::{VK_C, VK_CONTROL, VK_MENU},
                 WindowsAndMessaging::GetForegroundWindow,
@@ -29,10 +32,18 @@ pub async fn copy_item() -> Result<(), String> {
                 win::key(VK_MENU, true),
                 win::key(VK_CONTROL, true),
             ];
+            let before = sequence();
             if !win::send(&inputs) {
                 return Err("o Windows bloqueou o envio de teclas".to_string());
             }
-            Ok(())
+            // wait for the game's copy (the counter moves; the content is not looked at), then read it once
+            for _ in 0..80 {
+                thread::sleep(Duration::from_millis(25));
+                if sequence() != before {
+                    return read_text().ok_or_else(|| "não consegui ler o item copiado".to_string());
+                }
+            }
+            Err("nada foi copiado (o mouse estava sobre um item?)".to_string())
         }
         #[cfg(not(windows))]
         Err("só no Windows".to_string())

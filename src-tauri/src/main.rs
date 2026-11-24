@@ -1,5 +1,5 @@
 // Exile Hub on Tauri. The app logic (TypeScript, src/app + src/core) runs in the dashboard webview;
-// this side gives it what a webview cannot do: read Client.txt, user files, the clipboard watch, chat
+// this side gives it what a webview cannot do: read Client.txt, user files, the item copy, chat
 // commands, show windows without stealing focus.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -163,10 +163,7 @@ fn main() {
             game::copy_item,
             game::focus_game,
             game::cursor_pos,
-            clipboard::clipboard_watch,
-            clipboard::clipboard_unwatch,
             chat::send_chat,
-            chat::bring_game_front,
             files::app_info,
             files::read_data,
             files::read_user_file,

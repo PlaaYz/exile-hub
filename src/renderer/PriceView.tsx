@@ -1,9 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import { tr } from "../shared/i18n";
 import type { ItemComparison } from "../core/itemCompare";
-import type { PriceFilters, PriceModFilter, PriceRange, PriceRecent, PriceView, SellerStatus, TradeStatus } from "../shared/types";
-
-const CURRENCY_SHORT: Record<string, string> = { chaos: "c", divine: "div", exalted: "ex" };
+import type { PriceRecent, PriceView } from "../shared/types";
 
 export function fmtChaos(chaos: number, chaosPerDivine: number | null): string {
   if (chaosPerDivine && chaos >= chaosPerDivine) {
@@ -12,22 +9,6 @@ export function fmtChaos(chaos: number, chaosPerDivine: number | null): string {
   }
   if (chaos > 0 && chaos < 0.1) return "<0.1 c";
   return `${chaos >= 10 ? Math.round(chaos) : chaos.toFixed(1)} c`;
-}
-
-/** "~3 c", but "<0.1 c" already says it is approximate. */
-const approx = (text: string, sign: string) => (text.startsWith("<") ? text : sign + text);
-
-function fmtAmount(amount: number, currency: string): string {
-  return `${amount} ${CURRENCY_SHORT[currency] ?? currency}`;
-}
-
-function ago(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const min = Math.max(0, Math.round((Date.now() - t) / 60000));
-  if (min < 60) return `${min} min`;
-  const h = Math.round(min / 60);
-  return h < 48 ? `${h} h` : `${Math.round(h / 24)} d`;
 }
 
 export function itemTitle(p: PriceView): string {
@@ -66,14 +47,13 @@ function TrendBadge({ t }: { t: { change: number; points: number[] } }) {
 export function PriceSummary({ p }: { p: PriceView }) {
   const cpd = p.chaosPerDivine;
   const stack = p.item.stackSize && p.item.stackSize > 1 ? p.item.stackSize : null;
-  // poe.ninja has no prices for rares / magic items: don't show an empty line for them
-  const showNinja = !(p.ninjaStatus === "n/a" && /^(Rare|Magic)$/.test(p.item.rarity));
+  const rareish = /^(Rare|Magic)$/.test(p.item.rarity);
   return (
     <div className="price-summary">
-      {showNinja && <div className="price-line">
+      <div className="price-line">
         <span className="price-src">poe.ninja</span>
         {p.ninjaStatus === "loading" && <span className="muted">{tr("consultando…", "checking…")}</span>}
-        {p.ninjaStatus === "n/a" && <span className="muted">{tr("sem referência", "no reference")}</span>}
+        {p.ninjaStatus === "n/a" && <span className="muted">{rareish ? tr("não tem preço para raros e mágicos", "has no prices for rares and magic items") : tr("sem referência", "no reference")}</span>}
         {p.ninjaStatus === "error" && <span className="warn-text">{tr("erro", "error")}: {p.ninjaError}</span>}
         {p.ninjaStatus === "done" && p.ninja && (
           <span>
@@ -83,282 +63,8 @@ export function PriceSummary({ p }: { p: PriceView }) {
             {p.ninja.lowConfidence && <span className="warn-text"> · {tr("poucos anúncios, desconfie", "few listings, be careful")}</span>}
           </span>
         )}
-      </div>}
-      {p.tradeStatus !== "n/a" && (
-        <div className="price-line">
-          <span className="price-src">trade</span>
-          {p.tradeStatus === "loading" && <span className="muted">{tr("buscando…", "searching…")}</span>}
-          {p.tradeStatus === "error" && <span className="warn-text">{p.tradeError}</span>}
-          {p.tradeStatus === "done" && p.trade && (
-            p.trade.total === 0 ? (
-              <span className="muted">{tr("nenhum anúncio parecido", "no similar listings")}</span>
-            ) : (
-              <span>
-                {p.trade.medianChaos !== null ? <b>{approx(fmtChaos(p.trade.medianChaos, cpd), "~")}</b> : null}
-                <span className="muted">
-                  {" "}
-                  · {tr("mais barato", "cheapest")} {fmtAmount(p.trade.listings[0].amount, p.trade.listings[0].currency)} · {p.trade.total}{" "}
-                  {tr("anúncios", "listings")}
-                </span>
-              </span>
-            )
-          )}
-        </div>
-      )}
+      </div>
     </div>
-  );
-}
-
-const numIn = (v: string): number | null => (v.trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
-
-const kindLabel = (k: string) =>
-  ({
-    pseudo: tr("total", "total"),
-    implicit: tr("implícito", "implicit"),
-    crafted: tr("craftado", "crafted"),
-    fractured: tr("fraturado", "fractured"),
-    enchant: tr("encantamento", "enchant"),
-  })[k] ?? k;
-
-/** One number filter row: on/off, label, current value, min, max. */
-function RangeRow({
-  label,
-  r,
-  current,
-  onChange,
-}: {
-  label: string;
-  r: PriceRange;
-  current?: string;
-  onChange: (r: PriceRange) => void;
-}) {
-  return (
-    <label className="mod">
-      <input type="checkbox" checked={r.enabled} onChange={(e) => onChange({ ...r, enabled: e.target.checked })} />
-      <span className="mod-text">
-        {label}
-        {current ? <span className="muted"> ({current})</span> : null}
-      </span>
-      <input className="mod-min" type="number" placeholder={tr("mín", "min")} value={r.min ?? ""} onChange={(e) => onChange({ ...r, enabled: true, min: numIn(e.target.value) })} />
-      <input className="mod-min" type="number" placeholder={tr("máx", "max")} value={r.max ?? ""} onChange={(e) => onChange({ ...r, enabled: true, max: numIn(e.target.value) })} />
-    </label>
-  );
-}
-
-/** The trade search as the player wants it: filters and mods, then "Buscar". */
-/** The search runs by itself this long after the last change (quick changes in a row = one search: GGG's limits). */
-const kAutoSearchMs = 1000;
-
-function SearchEditor({ p }: { p: PriceView }) {
-  const [mods, setModsState] = useState<PriceModFilter[]>(p.mods);
-  const [f, setFState] = useState<PriceFilters>(p.filters);
-  // what the timer sends: the newest edits, not the ones of the render that started it
-  const latest = useRef({ mods: p.mods, f: p.filters });
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // state is re-sent every second as a new object: only reset local edits when the content changes, and
-  // never while an edit is waiting to be searched (an older search's echo would undo it)
-  const key = `${p.seq}|${JSON.stringify(p.mods)}|${JSON.stringify(p.filters)}`;
-  useEffect(() => {
-    if (timer.current) return;
-    setModsState(p.mods);
-    setFState(p.filters);
-    latest.current = { mods: p.mods, f: p.filters };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  // another item (or closing the panel) drops a search still waiting for this one
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = null;
-    },
-    [p.seq],
-  );
-  if (p.tradeStatus === "n/a") return null;
-
-  const schedule = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      const { mods: ms, f: fs } = latest.current;
-      void window.hub.priceResearch({ seq: p.seq, mods: ms.map((m) => ({ statId: m.statId, enabled: m.enabled, min: m.min, max: m.max ?? null })), filters: fs });
-    }, kAutoSearchMs);
-  };
-  const setMods = (fn: (ms: PriceModFilter[]) => PriceModFilter[]) => {
-    const next = fn(latest.current.mods);
-    latest.current = { ...latest.current, mods: next };
-    setModsState(next);
-    schedule();
-  };
-  const setF = (v: PriceFilters | ((x: PriceFilters) => PriceFilters)) => {
-    const next = typeof v === "function" ? v(latest.current.f) : v;
-    latest.current = { ...latest.current, f: next };
-    setFState(next);
-    schedule();
-  };
-  const setMod = (i: number, patch: Partial<PriceModFilter>) => setMods((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)));
-  const setRange = (k: keyof PriceFilters, r: PriceRange) => setF((x) => ({ ...x, [k]: r }));
-  const d = p.calc.dps;
-  const def = p.calc.def;
-  const rareish = p.item.rarity === "Rare" || p.item.rarity === "Magic";
-  const ranges: [keyof PriceFilters, string, string | undefined][] = [
-    ["pdps", tr("DPS físico", "Physical DPS"), d ? `${d.pdps}, Q20 ${d.pdpsQ20}` : undefined],
-    ["edps", tr("DPS elemental", "Elemental DPS"), d ? String(d.edps) : undefined],
-    ["dps", "DPS total", d ? `${d.dps}, Q20 ${d.dpsQ20}` : undefined],
-    ["armour", tr("Armadura", "Armour"), def?.armour ? `${def.armour}, Q20 ${def.armourQ20}` : undefined],
-    ["evasion", tr("Evasão", "Evasion"), def?.evasion ? `${def.evasion}, Q20 ${def.evasionQ20}` : undefined],
-    ["es", "Energy Shield", def?.es ? `${def.es}, Q20 ${def.esQ20}` : undefined],
-    ["ward", "Ward", def?.ward ? String(def.ward) : undefined],
-    ["itemLevel", "Item level", p.item.itemLevel !== null ? String(p.item.itemLevel) : undefined],
-    ["links", "Links", p.item.links ? String(p.item.links) : undefined],
-    ["quality", tr("Qualidade", "Quality"), p.item.quality ? `${p.item.quality}%` : undefined],
-    ["gemLevel", tr("Nível da gema", "Gem level"), p.item.gemLevel !== null ? String(p.item.gemLevel) : undefined],
-    ["mapTier", tr("Tier do mapa", "Map tier"), undefined],
-  ];
-
-  return (
-    <>
-      <h3>{tr("Busca no trade", "Trade search")}</h3>
-      <div className="search-flags">
-        <label className="small">
-          {tr("venda:", "sale:")}{" "}
-          <select value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value as TradeStatus }))}>
-            {TRADE_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {tradeStatusLabel(s)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {rareish && (
-          <label className="check small">
-            <input type="checkbox" checked={f.baseType} onChange={(e) => setF((x) => ({ ...x, baseType: e.target.checked }))} />
-            {tr("só esta base", "this base only")} ({p.item.baseType})
-          </label>
-        )}
-        <label className="small">
-          {tr("corrompido", "corrupted")}{" "}
-          <select value={f.corrupted} onChange={(e) => setF((x) => ({ ...x, corrupted: e.target.value as PriceFilters["corrupted"] }))}>
-            <option value="any">{tr("tanto faz", "either")}</option>
-            <option value="no">{tr("não", "no")}</option>
-            <option value="yes">{tr("sim", "yes")}</option>
-          </select>
-        </label>
-        {f.influences.map((inf, i) => (
-          <label key={inf.name} className="check small">
-            <input
-              type="checkbox"
-              checked={inf.enabled}
-              onChange={(e) => setF((x) => ({ ...x, influences: x.influences.map((y, j) => (j === i ? { ...y, enabled: e.target.checked } : y)) }))}
-            />
-            {inf.name}
-          </label>
-        ))}
-      </div>
-      <div className="mods">
-        {ranges.map(([k, label, current]) => {
-          const r = f[k] as PriceRange | null;
-          return r ? <RangeRow key={k} label={label} r={r} current={current} onChange={(x) => setRange(k, x)} /> : null;
-        })}
-        {mods.map((m, i) => (
-          <label className={`mod${m.kind === "pseudo" ? " pseudo" : ""}`} key={m.statId}>
-            <input type="checkbox" checked={m.enabled} onChange={(e) => setMod(i, { enabled: e.target.checked })} />
-            <span className={`mod-text kind-${m.kind}`}>
-              {m.text}
-              {m.kind !== "explicit" ? <span className="muted"> ({kindLabel(m.kind)})</span> : null}
-            </span>
-            <input className="mod-min" type="number" placeholder={tr("mín", "min")} value={m.min ?? ""} onChange={(e) => setMod(i, { enabled: true, min: numIn(e.target.value) })} />
-            <input className="mod-min" type="number" placeholder={tr("máx", "max")} value={m.max ?? ""} onChange={(e) => setMod(i, { enabled: true, max: numIn(e.target.value) })} />
-          </label>
-        ))}
-        {p.unmatched.length > 0 && <div className="muted small">{tr("Não reconhecidos (fora da busca):", "Not recognised (left out of the search):")} {p.unmatched.join(" · ")}</div>}
-      </div>
-    </>
-  );
-}
-
-/** One click = the listing's whisper typed in the game's chat (the game comes to the front). */
-function WhisperButton({ text }: { text: string }) {
-  const [state, setState] = useState<"idle" | "busy" | "sent" | string>("idle");
-  const send = async () => {
-    setState("busy");
-    const err = await window.hub.priceWhisper(text).catch((e: unknown) => String(e));
-    setState(err ?? "sent");
-  };
-  const failed = state !== "idle" && state !== "busy" && state !== "sent";
-  return (
-    <button
-      className={`whisper${failed ? " bad" : ""}`}
-      disabled={state === "busy"}
-      onClick={() => void send()}
-      title={failed ? state : tr(`Mandar whisper no jogo:
-${text}`, `Whisper in game:
-${text}`)}
-    >
-      {state === "sent" ? tr("enviado ✓", "sent ✓") : failed ? tr("falhou", "failed") : "whisper"}
-    </button>
-  );
-}
-
-const statusLabel = (s: SellerStatus) =>
-  ({ online: "online", afk: tr("ausente", "away"), offline: "offline", instant: tr("compra instantânea", "instant buyout") })[s];
-
-/** The trade site's sale types, in its order (the search always starts at instant buyout). */
-const TRADE_STATUSES: TradeStatus[] = ["available", "securable", "onlineleague", "online", "any"];
-const tradeStatusLabel = (s: TradeStatus) =>
-  ({
-    available: tr("Compra instantânea e pessoalmente", "Instant buyout and in person"),
-    securable: tr("Compra instantânea", "Instant buyout"),
-    onlineleague: tr("Pessoalmente (online na liga)", "In person (online in league)"),
-    online: tr("Pessoalmente (online)", "In person (online)"),
-    any: tr("Qualquer", "Any"),
-  })[s];
-
-/** Bulk exchange offers: price per unit, how many per trade, stock, seller. */
-function BulkTable({ p }: { p: PriceView }) {
-  if (p.bulkStatus === "n/a") return null;
-  const cpd = p.chaosPerDivine;
-  return (
-    <>
-      <h3>{tr("Troca em massa (bulk)", "Bulk exchange")}</h3>
-      {p.bulkStatus === "loading" && <div className="muted small">{tr("buscando ofertas…", "looking for offers…")}</div>}
-      {p.bulkStatus === "error" && <div className="warn-text small">{p.bulkError}</div>}
-      {p.bulk && p.bulk.offers.length === 0 && <div className="muted small">{tr("ninguém vendendo agora", "nobody selling right now")}</div>}
-      {p.bulk && p.bulk.offers.length > 0 && (
-        <table className="listings">
-          <tbody>
-            {p.bulk.offers.map((o, i) => {
-              // far below poe.ninja: usually a bait listing (1 in stock, never answers)
-              const bait = !!p.ninja && o.chaosPerUnit !== null && o.chaosPerUnit < p.ninja.chaos * 0.6;
-              return (
-              <tr key={i} className={bait ? "bait" : ""}>
-                <td title={bait ? tr("muito abaixo do poe.ninja: provavelmente isca", "far below poe.ninja: probably bait") : ""}>
-                  <b>{o.chaosPerUnit !== null ? fmtChaos(o.chaosPerUnit, cpd) : "?"}</b>
-                  <span className="muted"> /{tr("un", "ea")}</span>
-                  {bait && <span className="warn-text small"> {tr("suspeito", "suspicious")}</span>}
-                </td>
-                <td className="muted">
-                  {fmtAmount(o.pay.amount, o.pay.currency)} → {o.get.amount}
-                </td>
-                <td className="muted">{tr("estoque", "stock")} {o.get.stock}</td>
-                <td>
-                  <span className={`seller ${o.status}`} title={`${o.seller} · ${statusLabel(o.status)}`}>
-                    {o.character ?? o.seller}
-                  </span>
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-      {p.bulk && (
-        <div className="muted small">
-          {p.bulk.total} {tr("ofertas no total", "offers in total")} ·{" "}
-          <a href={p.bulk.url} onClick={(e) => (e.preventDefault(), void window.hub.priceOpenTrade())}>
-            {tr("abrir no site", "open on the site")}
-          </a>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -414,9 +120,6 @@ export function TierSummary({ p }: { p: PriceView }) {
 function ModTiers({ p }: { p: PriceView }) {
   const mods = p.item.mods.filter((m) => m.kind !== "enchant" || m.tier !== undefined);
   if (!p.item.affixes) {
-    if (p.item.rarity === "Rare" || p.item.rarity === "Magic") {
-      return <p className="muted small">{tr("Copie com", "Copy with")} <b>Ctrl+Alt+C</b> {tr("para ver o tier de cada mod e se há espaço para craftar.", "to see each mod's tier and whether there is room to craft.")}</p>;
-    }
     return null;
   }
   return (
@@ -553,23 +256,6 @@ export const slotLabel = (s: string) =>
     "Ring 2": tr("Anel 2", "Ring 2"),
   })[s] ?? s;
 
-/** Few results: what the same search finds with every minimum 20% lower. */
-function SimilarBlock({ p }: { p: PriceView }) {
-  const s = p.similar;
-  if (!s || !p.trade) return null;
-  return (
-    <div className="similar small">
-      <b>{tr("Poucos anúncios iguais.", "Few identical listings.")}</b> {tr("Itens parecidos (mínimos 20% menores):", "Similar items (minimums 20% lower):")} {s.total} {tr("anúncios", "listings")}
-      {s.medianChaos !== null ? (
-        <>
-          , {tr("mediana", "median")} <b>{fmtChaos(s.medianChaos, p.chaosPerDivine)}</b>
-        </>
-      ) : null}
-      {s.listings.length > 0 && <span className="muted"> · {s.listings.map((l) => fmtAmount(l.amount, l.currency)).join(", ")}</span>}
-    </div>
-  );
-}
-
 /** The last checked items: click to check one again without copying it in the game. */
 export function RecentChecks({ recent, current }: { recent: PriceRecent[]; current: number | null }) {
   if (recent.length < 2) return null;
@@ -593,29 +279,14 @@ export function PricePanelBody({ p, recent = [] }: { p: PriceView | null; recent
     return (
       <>
         <p className="muted">
-          {tr("No jogo, passe o mouse sobre um item e aperte", "In game, hover an item and press")} <b>Ctrl+D</b>{" "}
-          {tr("(abre o preço ao lado do item). O Ctrl+C manda o item para a aba Equipamento, para comparar com o que você usa.", "(opens the price next to the item). Ctrl+C sends the item to the Equipment tab, to compare with what you wear.")}
+          {tr("No jogo, passe o mouse sobre um item e aperte", "In game, hover an item and press")} <b>Ctrl+D</b>:{" "}
+          {tr("o preço abre ao lado do item, e a aba Equipamento compara com o que você usa.", "the price opens next to the item, and the Equipment tab compares it with what you wear.")}
         </p>
         <RecentChecks recent={recent} current={null} />
       </>
     );
   }
   const cpd = p.chaosPerDivine;
-  // rare / magic: the trade search is the price, the rest folds below the listings; uniques, gems and
-  // currency keep their poe.ninja price on top
-  const rareish = p.item.rarity === "Rare" || p.item.rarity === "Magic";
-  const details = (
-    <>
-      <CalcLine p={p} />
-      <ModTiers p={p} />
-      {p.ninja && (
-        <div className="muted small">
-          {tr("referência:", "reference:")} {p.ninja.label}
-          {p.ninja.listings !== null ? ` (${p.ninja.listings} ${tr("anúncios", "listings")})` : ""}
-        </div>
-      )}
-    </>
-  );
   return (
     <>
       <div className="price-item">{itemTitle(p)}</div>
@@ -624,42 +295,14 @@ export function PricePanelBody({ p, recent = [] }: { p: PriceView | null; recent
         {p.item.itemLevel !== null ? ` · ilvl ${p.item.itemLevel}` : ""} · {tr("liga", "league")} {p.league}
         {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""}
       </div>
-      {!rareish && <PriceSummary p={p} />}
-      {!rareish && details}
-      <SearchEditor p={p} />
-      {rareish && <PriceSummary p={p} />}
-      <SimilarBlock p={p} />
-      <BulkTable p={p} />
-      {p.trade && p.trade.listings.length > 0 && (
-        <table className="listings">
-          <tbody>
-            {p.trade.listings.map((l, i) => (
-              <tr key={i}>
-                <td>{fmtAmount(l.amount, l.currency)}</td>
-                <td className="muted">{l.chaos !== null && l.currency !== "chaos" ? approx(fmtChaos(l.chaos, null), "≈ ") : ""}</td>
-                <td>
-                  <span className={`seller ${l.status}`} title={`${l.seller} · ${statusLabel(l.status)}`}>
-                    {l.character ?? l.seller}
-                  </span>
-                  {l.whisper && <WhisperButton text={l.whisper} />}
-                </td>
-                <td className="muted">{tr(`há ${ago(l.indexed)}`, `${ago(l.indexed)} ago`)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {p.trade && (
-        <div className="row buttons">
-          <button onClick={() => void window.hub.priceOpenTrade()}>{tr("Abrir no site do trade", "Open on the trade site")}</button>
-          {p.trade.more > 0 && <button onClick={() => void window.hub.priceMore()}>{tr("Mais resultados", "More results")} ({p.trade.more})</button>}
+      <PriceSummary p={p} />
+      <CalcLine p={p} />
+      <ModTiers p={p} />
+      {p.ninja && (
+        <div className="muted small">
+          {tr("referência:", "reference:")} {p.ninja.label}
+          {p.ninja.listings !== null ? ` (${p.ninja.listings} ${tr("anúncios", "listings")})` : ""}
         </div>
-      )}
-      {rareish && (
-        <details className="price-more">
-          <summary className="muted small">{tr("Detalhes do item", "Item details")}</summary>
-          {details}
-        </details>
       )}
       <RecentChecks recent={recent} current={p.at} />
     </>

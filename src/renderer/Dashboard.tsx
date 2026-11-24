@@ -30,10 +30,9 @@ const ALL_PANELS: { id: Panel; label: () => string }[] = [
   { id: "settings", label: () => tr("Configurações", "Settings") },
   { id: "diag", label: () => tr("Diagnóstico", "Diagnostics") },
 ];
-const buildSource = (s: "manual" | "clipboard" | "saved") =>
+const buildSource = (s: "manual" | "saved") =>
   ({
     manual: tr("colado aqui", "pasted here"),
-    clipboard: tr("pego do clipboard", "taken from the clipboard"),
     saved: tr("restaurado da última sessão", "restored from the last session"),
   })[s];
 /**
@@ -468,7 +467,7 @@ function SettingsPanel({ state }: { state: AppState }) {
             </button>
           )}
           <span className="muted small">
-            {tr("com o mouse sobre o item: o app copia (Ctrl+Alt+C, com os tiers) e abre o preço ao lado; Esc fecha", "with the mouse over the item: the app copies it (Ctrl+Alt+C, with tiers) and opens the price next to it; Esc closes")}
+            {tr("com o mouse sobre o item: o app copia (Ctrl+Alt+C, com os tiers), lê a área de transferência uma vez e abre o preço ao lado; Esc fecha. O texto do item fica na área de transferência.", "with the mouse over the item: the app copies it (Ctrl+Alt+C, with tiers), reads the clipboard once and opens the price next to it; Esc closes. The item text stays on the clipboard.")}
           </span>
         </div>
       )}
@@ -645,7 +644,7 @@ function Welcome({ state }: { state: AppState }) {
           <tbody>
             <tr>
               <td><b>Ctrl+D</b></td>
-              <td>{tr("com o mouse sobre um item: preço ao lado do item (sem esta tecla, o Ctrl+C dá o preço)", "with the mouse over an item: its price next to it (without this key, Ctrl+C prices)")}</td>
+              <td>{tr("com o mouse sobre um item: preço ao lado do item", "with the mouse over an item: its price next to it")}</td>
             </tr>
             <tr>
               <td><b>F9</b></td>
@@ -665,8 +664,8 @@ function Welcome({ state }: { state: AppState }) {
         <h3>{tr("3. Seu build (opcional)", "3. Your build (optional)")}</h3>
         <p className="small">
           {tr(
-            "Copie o código ou o link (pobb.in, pastebin) do Path of Building: o app importa sozinho, mostra as gemas e a árvore e compara itens do price check com o que você usa.",
-            "Copy the code or the link (pobb.in, pastebin) in Path of Building: the app imports it on its own, shows the gems and the tree and compares price-checked items with what you wear.",
+            "Copie o código ou o link (pobb.in, pastebin) do Path of Building e cole na aba Build: o app mostra as gemas e a árvore.",
+            "Copy the code or the link (pobb.in, pastebin) in Path of Building and paste it on the Build tab: the app shows the gems and the tree.",
           )}
         </p>
 

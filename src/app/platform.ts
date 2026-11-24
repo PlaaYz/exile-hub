@@ -2,7 +2,7 @@
 // same code runs on Electron (src/main/electronPlatform.ts) and on Tauri (src/tauri/tauriPlatform.ts).
 // Everything here is async: in Tauri these calls cross into Rust.
 import type { DiagKind } from "../core/diag";
-import type { TradeFetch } from "../core/trade";
+import type { FetchFn } from "../core/ninja";
 import type { AppState, DisplayInfo } from "../shared/types";
 
 export interface LogFollower {
@@ -53,8 +53,8 @@ export interface Platform {
   readonly appVersion: string;
   readonly packaged: boolean;
   readonly userAgent: string;
-  /** HTTP for the app (trade, poe.ninja, GitHub raw): no CORS limits */
-  readonly fetch: TradeFetch;
+  /** HTTP for the app (poe.ninja, GitHub raw): no CORS limits */
+  readonly fetch: FetchFn;
   /** a text download (PoB codes from pobb.in / pastebin); throws on HTTP errors */
   fetchText(url: string, timeoutMs: number): Promise<string>;
 
@@ -79,12 +79,6 @@ export interface Platform {
   followLog(path: string, onLine: (line: string) => void, onError: (e: Error) => void): LogFollower;
 
   // ---- clipboard / links -------------------------------------------------------------------
-  readClipboard(): Promise<string>;
-  /**
-   * Calls onText with the clipboard text each time something is copied (not the current text).
-   * Optional: without it the app polls readClipboard().
-   */
-  watchClipboard?(onText: (text: string) => void): () => void;
   writeClipboard(text: string): Promise<void>;
   openExternal(url: string): void;
 
@@ -93,10 +87,8 @@ export interface Platform {
   setCommandKeys?(keys: string[], onPress: (key: string) => void): Promise<void>;
   /** Types one line in the game's chat (Enter, text, Enter); fails unless the game window is in front. */
   sendChat?(text: string): Promise<void>;
-  /** Brings the game window to the front; false if it is not running or Windows refused. */
-  focusGame?(): Promise<boolean>;
-  /** Copies the item under the mouse with the game's advanced copy (Ctrl+Alt+C); game in front only. */
-  copyItem?(): Promise<void>;
+  /** Copies the item under the mouse (Ctrl+Alt+C; game in front only) and returns its text, read once. */
+  copyItem?(): Promise<string>;
 
   // ---- windows ---------------------------------------------------------------------------------
   readonly shell: Shell;

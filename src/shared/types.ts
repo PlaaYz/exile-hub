@@ -106,85 +106,6 @@ export interface PobBuild {
 
 export type FetchStatus = "idle" | "loading" | "done" | "error" | "n/a";
 
-export interface PriceModFilter {
-  text: string;
-  /** explicit, implicit, crafted, fractured, enchant... or "pseudo" (a total the trade site computes) */
-  kind: string;
-  statId: string;
-  value: number | null;
-  min: number | null;
-  max?: number | null;
-  enabled: boolean;
-}
-
-/** A number filter of the search: on/off, min and max (null = open). */
-export interface PriceRange {
-  enabled: boolean;
-  min: number | null;
-  max: number | null;
-}
-
-/**
- * The trade site's sale type filter: instant buyout (merchant tabs), instant buyout or in person,
- * in person with the seller online in the league / online anywhere, or any.
- */
-export type TradeStatus = "securable" | "available" | "onlineleague" | "online" | "any";
-
-/** Everything about the trade search besides the mods; null = does not apply to this item. */
-/** online / away / offline; "instant" = instant buyout listing (no seller needed) */
-export type SellerStatus = "online" | "afk" | "offline" | "instant";
-
-export interface PriceFilters {
-  /** sale type / seller status (the search always starts at instant buyout) */
-  status: TradeStatus;
-  /** rares/magic: only this base type (else the whole category, e.g. any helmet) */
-  baseType: boolean;
-  itemLevel: PriceRange | null;
-  quality: PriceRange | null;
-  links: PriceRange | null;
-  gemLevel: PriceRange | null;
-  mapTier: PriceRange | null;
-  corrupted: "any" | "yes" | "no";
-  influences: { name: string; enabled: boolean }[];
-  pdps: PriceRange | null;
-  edps: PriceRange | null;
-  dps: PriceRange | null;
-  armour: PriceRange | null;
-  evasion: PriceRange | null;
-  es: PriceRange | null;
-  ward: PriceRange | null;
-}
-
-/** What the player changed in the search (popup / panel). */
-export interface PriceSearchPatch {
-  /** the item this was made for (PriceView.seq): ignored once another item replaced it */
-  seq: number;
-  mods: { statId: string; enabled: boolean; min: number | null; max: number | null }[];
-  filters: PriceFilters;
-}
-
-export interface PriceListing {
-  amount: number;
-  currency: string;
-  chaos: number | null;
-  indexed: string;
-  seller: string;
-  character: string | null;
-  status: SellerStatus;
-  /** the trade site's whisper for this listing (not for instant buyout) */
-  whisper?: string;
-}
-
-/** One bulk exchange offer, converted to chaos per unit. */
-export interface PriceBulkOffer {
-  chaosPerUnit: number | null;
-  pay: { currency: string; amount: number };
-  get: { amount: number; stock: number };
-  seller: string;
-  character: string | null;
-  status: SellerStatus;
-}
-
 export interface PriceView {
   seq: number;
   at: number;
@@ -215,19 +136,7 @@ export interface PriceView {
     /** % change over 7 days and the daily points (poe.ninja) */
     trend: { change: number; points: number[] } | null;
   } | null;
-  tradeStatus: FetchStatus;
-  tradeError: string | null;
-  /** `more` = results not fetched yet ("mais resultados") */
-  trade: { total: number; url: string; listings: PriceListing[]; medianChaos: number | null; more: number } | null;
-  /** bulk exchange (currency, fragments, cards...): real offers, cheapest first */
-  bulkStatus: FetchStatus;
-  bulkError: string | null;
-  bulk: { total: number; url: string; offers: PriceBulkOffer[] } | null;
-  mods: PriceModFilter[];
-  /** mod lines that could not be mapped to a trade stat */
-  unmatched: string[];
   chaosPerDivine: number | null;
-  filters: PriceFilters;
   /** computed from the item: weapon DPS and defences, now and at 20% quality */
   calc: {
     dps: { pdps: number; edps: number; cdps: number; dps: number; pdpsQ20: number; dpsQ20: number } | null;
@@ -241,13 +150,8 @@ export interface PriceView {
       esQ20: number | null;
     } | null;
   };
-  /** against what the imported PoB build wears in that slot; null = no build or no matching slot */
+  /** against what is worn in that slot; null = nothing registered there */
   compare: ItemComparison[] | null;
-  /**
-   * Few results: the same search with every minimum 20% lower ("similar items"), to still give a
-   * price idea. null = not needed (or not run yet).
-   */
-  similar: { total: number; url: string; medianChaos: number | null; listings: PriceListing[] } | null;
 }
 
 /** A recently checked item (price history: check it again without copying it). */
@@ -267,7 +171,7 @@ export interface AppConfig {
   dashboardDisplayId: number | null;
   dashboardFullscreen: boolean;
   overlayEnabled: boolean;
-  /** watch the clipboard for items copied in game (Ctrl+C) and price them */
+  /** the price key (below) is on */
   priceCheckEnabled: boolean;
   /** key that copies the item under the mouse (Ctrl+Alt+C) and opens the price popup; null = off */
   priceCheckKey: string | null;
@@ -365,7 +269,7 @@ export interface GearView {
   register: boolean;
   /** registered items and PoB items for the other slots */
   items: GearItemView[];
-  /** the last item copied with Ctrl+C, against what is worn in its slot */
+  /** the last item checked with the price key, against what is worn in its slot */
   copied: { item: GearItemView; compare: ItemComparison[] | null } | null;
 }
 
@@ -382,7 +286,7 @@ export interface AppState {
   timers: TimerSnapshot;
   build: PobBuild | null;
   /** boss runs found in Client.txt, by FARM_BOSSES id; minutes = measured time per run */
-  /** bumps when farm prices from the trade site arrive (the farm tab asks for prices again) */
+  /** bumps when the league changes (the farm tab asks for prices again) */
   farmPricesVersion: number;
   farmRuns: Record<
     string,
@@ -414,7 +318,7 @@ export interface AppState {
   trades: TradeCard[];
   /** the account's characters seen leveling up in the log, most recent first (to pick who is playing) */
   knownCharacters: { name: string; className: string; level: number }[];
-  /** equipment registered from the game (Ctrl+C on each item) for "compare with my item" */
+  /** equipment registered from the game (price key on each item) for "compare with my item" */
   gear: GearView;
   /** chat commands on keys: supported by this build, keys registered now, last whisperer */
   chat: { supported: boolean; active: boolean; lastWhisper: string | null };
@@ -426,7 +330,8 @@ export interface AppState {
     gameRunning: boolean;
     gameFocused: boolean;
     overlayVisible: boolean;
-    clipboardWatch: boolean;
+    /** key that checks an item (null = off) */
+    priceKey: string | null;
     version: string;
   };
   /** map runs found in Client.txt (whole log at start, then live) */
@@ -449,8 +354,8 @@ export interface AppState {
       startId: number | null;
     } | null;
   } | null;
-  /** where the current build came from: pasted, picked up from the clipboard, or restored */
-  buildInfo: { source: "manual" | "clipboard" | "saved"; at: number } | null;
+  /** where the current build came from: pasted or restored */
+  buildInfo: { source: "manual" | "saved"; at: number } | null;
   overlayInteractive: boolean;
   price: PriceView | null;
   /** last items price checked, newest first (open one again from the list) */

@@ -25,11 +25,6 @@ const LS = "exile-hub.mapSearch.v1";
 interface Prefs {
   exclude: string[];
   minQuant: number | null;
-  minPack?: number | null;
-  tierMin?: number | null;
-  tierMax?: number | null;
-  rarity?: "any" | "rare" | "magic" | "normal";
-  corrupted?: "any" | "yes" | "no";
   links?: LinkPrefs;
 }
 
@@ -87,38 +82,6 @@ function CopyBox({ s, title }: { s: SearchString; title: string }) {
   );
 }
 
-function TradeButton({ prefs }: { prefs: Prefs }) {
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
-  const open = async () => {
-    setBusy(true);
-    setMsg(null);
-    const r = await window.hub.openMapTrade({
-      exclude: prefs.exclude,
-      minQuantity: prefs.minQuant,
-      minPackSize: prefs.minPack ?? null,
-      tierMin: prefs.tierMin ?? null,
-      tierMax: prefs.tierMax ?? null,
-      rarity: prefs.rarity ?? "any",
-      corrupted: prefs.corrupted ?? "any",
-    });
-    setBusy(false);
-    if (!r.ok) return setMsg({ text: r.error ?? tr("não foi possível abrir o trade", "could not open the trade site"), warn: true });
-    const opened = tr("trade aberto no navegador", "trade site opened in the browser");
-    const parts = [r.total !== undefined ? `${opened}: ${r.total} ${tr("mapas à venda", "maps for sale")}` : opened];
-    if (r.missing.length) parts.push(`${tr("sem filtro no trade para", "no trade filter for")}: ${r.missing.join(", ")}`);
-    setMsg({ text: parts.join(" · "), warn: r.missing.length > 0 });
-  };
-  return (
-    <div className="row">
-      <button className="primary" disabled={busy} onClick={() => void open()}>
-        {busy ? tr("Abrindo…", "Opening…") : tr("Comprar no trade com estes filtros", "Buy on the trade site with these filters")}
-      </button>
-      {msg && <span className={`small ${msg.warn ? "warn-text" : "muted"}`}>{msg.text}</span>}
-    </div>
-  );
-}
-
 export function SearchPanelBody({ state }: { state: AppState }) {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   useEffect(() => {
@@ -148,27 +111,6 @@ export function SearchPanelBody({ state }: { state: AppState }) {
 
       <h3>{tr("Mapas", "Maps")}</h3>
       <div className="row">
-        <span className="muted small">Tier</span>
-        <input className="num narrow" type="number" min="1" max="17" placeholder={tr("mín", "min")} value={prefs.tierMin ?? ""}
-          onChange={(e) => setPrefs((p) => ({ ...p, tierMin: e.target.value === "" ? null : Number(e.target.value) }))} />
-        <input className="num narrow" type="number" min="1" max="17" placeholder={tr("máx", "max")} value={prefs.tierMax ?? ""}
-          onChange={(e) => setPrefs((p) => ({ ...p, tierMax: e.target.value === "" ? null : Number(e.target.value) }))} />
-        <span className="muted small">{tr("Pack size mín.", "Min pack size")}</span>
-        <input className="num narrow" type="number" min="0" placeholder="%" value={prefs.minPack ?? ""}
-          onChange={(e) => setPrefs((p) => ({ ...p, minPack: e.target.value === "" ? null : Number(e.target.value) }))} />
-        <select className="narrow-select" value={prefs.rarity ?? "any"} onChange={(e) => setPrefs((p) => ({ ...p, rarity: e.target.value as Prefs["rarity"] }))}>
-          <option value="any">{tr("qualquer raridade", "any rarity")}</option>
-          <option value="rare">{tr("raro", "rare")}</option>
-          <option value="magic">{tr("mágico", "magic")}</option>
-          <option value="normal">normal</option>
-        </select>
-        <select className="narrow-select" value={prefs.corrupted ?? "any"} onChange={(e) => setPrefs((p) => ({ ...p, corrupted: e.target.value as Prefs["corrupted"] }))}>
-          <option value="any">{tr("corrompido ou não", "corrupted or not")}</option>
-          <option value="no">{tr("não corrompido", "not corrupted")}</option>
-          <option value="yes">{tr("só corrompido", "corrupted only")}</option>
-        </select>
-      </div>
-      <div className="row">
         <span className="muted small">{tr("Quantidade de itens mínima", "Min item quantity")}</span>
         <input
           className="num"
@@ -189,13 +131,6 @@ export function SearchPanelBody({ state }: { state: AppState }) {
         ))}
       </div>
       <CopyBox s={map} title={tr("Mapas sem os mods marcados (busca no seu baú)", "Maps without the ticked mods (stash search)")} />
-      <TradeButton prefs={prefs} />
-      <p className="muted small">
-        {tr(
-          'O botão abre o site oficial de trade com os mesmos filtros (tier, quantidade, pack size, raridade e "nenhum destes mods"), do mais barato para o mais caro. No trade não existe limite de 50 caracteres: todos os mods marcados entram.',
-          'The button opens the official trade site with the same filters (tier, quantity, pack size, rarity and "none of these mods"), cheapest first. The trade site has no 50-character limit: every ticked mod is included.',
-        )}
-      </p>
 
       <h3>{tr("Vendedor", "Vendor")}</h3>
       <div className="row">

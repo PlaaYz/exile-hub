@@ -1,18 +1,18 @@
 // The Platform the app (src/app) runs on inside Tauri: Rust commands for files and Client.txt
 // (src-tauri/src), Tauri plugins for HTTP, clipboard, dialogs and links.
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { fetch as httpFetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LogFollower, Platform } from "../app/platform";
 import { candidateLogPaths } from "../core/clientLog";
-import type { TradeFetch } from "../core/trade";
+import type { FetchFn } from "../core/ninja";
 import type { TauriShell } from "./tauriShell";
 
 const kHttpTimeoutMs = 15_000;
-/** Project contact for GGG (User-Agent). */
+/** Project contact (User-Agent). */
 const kContact = "exilehub.contato@gmail.com";
 
 export interface AppInfo {
@@ -33,12 +33,12 @@ export class TauriPlatform implements Platform {
   ) {
     this.appVersion = info.version;
     this.packaged = info.packaged;
-    // GGG asks third-party tools for a contact in the User-Agent (dedicated project address)
+    // a contact for the sites the app asks (dedicated project address)
     this.userAgent = `ExileHub/${info.version} (contact: ${kContact})`;
   }
 
-  readonly fetch: TradeFetch = (url, init) =>
-    httpFetch(url, { method: init?.method, headers: init?.headers, body: init?.body, signal: AbortSignal.timeout(kHttpTimeoutMs) });
+  readonly fetch: FetchFn = (url, init) =>
+    httpFetch(url, { headers: init?.headers, signal: AbortSignal.timeout(kHttpTimeoutMs) });
 
   async fetchText(url: string, timeoutMs: number): Promise<string> {
     const res = await httpFetch(url, { headers: { "User-Agent": this.userAgent }, signal: AbortSignal.timeout(timeoutMs) });
@@ -117,21 +117,6 @@ export class TauriPlatform implements Platform {
     };
   }
 
-  async readClipboard(): Promise<string> {
-    return readText();
-  }
-  watchClipboard(onText: (text: string) => void): () => void {
-    const ch = new Channel<string>();
-    let stopped = false;
-    ch.onmessage = (t) => {
-      if (!stopped) onText(t);
-    };
-    void invoke("clipboard_watch", { onText: ch });
-    return () => {
-      stopped = true;
-      void invoke("clipboard_unwatch");
-    };
-  }
   private commandKeys: string[] = [];
   private keyChain: Promise<void> = Promise.resolve();
   /**
@@ -156,10 +141,7 @@ export class TauriPlatform implements Platform {
   sendChat(text: string): Promise<void> {
     return invoke("send_chat", { text });
   }
-  focusGame(): Promise<boolean> {
-    return invoke("bring_game_front");
-  }
-  copyItem(): Promise<void> {
+  copyItem(): Promise<string> {
     return invoke("copy_item");
   }
   writeClipboard(text: string): Promise<void> {

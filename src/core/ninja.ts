@@ -262,6 +262,33 @@ export async function priceByName(ninja: NinjaClient, league: string, names: str
   return out;
 }
 
+/** A price this high with this few listings is a joke listing (hundreds of divines, a handful of sellers). */
+const kSuspectDivines = 50;
+const kSuspectListings = 20;
+
+export function isSuspect(p: NamePrice, chaosPerDivine: number | null): boolean {
+  // no listing count = the currency exchange (not listings): trusted
+  if (!chaosPerDivine || p.listings === null) return false;
+  return p.chaos >= kSuspectDivines * chaosPerDivine && p.listings < kSuspectListings;
+}
+
+/** The leagues poe.ninja has prices for. */
+export async function fetchLeagues(fetchFn: FetchFn, userAgent: string): Promise<string[]> {
+  const res = await fetchFn(`${BASE}/leagues`, { headers: { "User-Agent": userAgent } });
+  if (!res.ok) throw new Error(`leagues HTTP ${res.status}`);
+  return ((await res.json()) as { id: string }[]).map((l) => l.id);
+}
+
+/** The softcore challenge league (not Standard & co., not HC / Ruthless / SSF variants). */
+export function isChallengeLeague(league: string): boolean {
+  return !/^(Standard|Hardcore|Ruthless|Hardcore Ruthless)$/.test(league) && !/Hardcore|Ruthless|HC|SSF/.test(league);
+}
+
+/** The current challenge league, else the first one. */
+export function defaultLeague(leagues: string[]): string | null {
+  return leagues.find(isChallengeLeague) ?? leagues[0] ?? null;
+}
+
 function fromStash(line: StashLine, label: string): Omit<NinjaPrice, "divine"> {
   const listings = line.listingCount ?? null;
   return {

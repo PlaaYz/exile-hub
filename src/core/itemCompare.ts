@@ -1,5 +1,4 @@
-// "Compare with my item": what the player wears (items registered from the game with Ctrl+C, else
-// the imported Path of Building build) and the difference between one of them and the item being
+// "Compare with my item": what the player wears (items registered from the game with the price key) and the difference between one of them and the item being
 // price checked: the totals the trade site also uses (life, resistances, attributes...), the mod lines
 // and, when both items came from the game, weapon DPS and defences (PoB's raw item text has no
 // armour/damage values to compute them from).
@@ -12,7 +11,7 @@ export interface EquippedItem {
   /** PoB slot name ("Helmet", "Ring 1", "Weapon 1"...) */
   slot: string;
   item: ParsedItem;
-  /** copied from the game (Ctrl+C) instead of the PoB build */
+  /** copied from the game instead of the PoB build */
   fromGame?: boolean;
 }
 

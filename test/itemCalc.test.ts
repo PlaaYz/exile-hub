@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseItem } from "../src/core/item";
 import { defences, pseudoStats, weaponDps } from "../src/core/itemCalc";
-import { buildQuery, coveredByCalc, defaultFilters } from "../src/core/trade";
 
 const sep = "--------";
 const txt = (...p: string[]) => p.join("\n");
@@ -69,40 +68,5 @@ describe("item calculations", () => {
     expect(p["pseudo.pseudo_total_strength"]).toBe(40);
     // flat ES on armour is its property, not a pseudo total
     expect(p["pseudo.pseudo_total_energy_shield"]).toBeUndefined();
-  });
-
-  it("rare weapons search by pDPS, armour by its defences; the local lines are covered", () => {
-    const item = parseItem(axe)!;
-    const f = defaultFilters(item, weaponDps(item), defences(item));
-    expect(f.pdps).toEqual({ enabled: true, min: 337, max: null });
-    expect(f.edps?.enabled).toBe(false);
-    expect(coveredByCalc("150% increased Physical Damage", f)).toBe(true);
-    expect(coveredByCalc("Adds 10 to 20 Fire Damage", f)).toBe(true);
-    expect(coveredByCalc("+90 to maximum Life", f)).toBe(false);
-    const q = buildQuery(item, [], f) as any;
-    expect(q.query.filters.weapon_filters.filters).toEqual({ pdps: { min: 337 } });
-
-    const c = parseItem(chest)!;
-    const fc = defaultFilters(c, weaponDps(c), defences(c));
-    expect(fc.armour).toEqual({ enabled: true, min: 900, max: null });
-    expect(fc.es).toEqual({ enabled: true, min: 180, max: null });
-    expect(coveredByCalc("100% increased Armour and Energy Shield", fc)).toBe(true);
-  });
-
-  it("searches start at instant buyout", () => {
-    const item = parseItem(chest)!;
-    const f = defaultFilters(item, null, defences(item));
-    expect(f.status).toBe("securable");
-    expect((buildQuery(item, [], f) as any).query.status).toEqual({ option: "securable" });
-  });
-
-  it("filters the player turns on/off reach the query", () => {
-    const item = parseItem(chest)!;
-    const f = { ...defaultFilters(item, null, defences(item)), status: "any" as const, baseType: true, itemLevel: { enabled: true, min: 84, max: null } };
-    const q = buildQuery(item, [], f) as any;
-    expect(q.query.status).toEqual({ option: "any" });
-    expect(q.query.type).toBe("Astral Plate");
-    expect(q.query.filters.misc_filters.filters.ilvl).toEqual({ min: 84 });
-    expect(q.query.filters.type_filters.filters.category).toBeUndefined();
   });
 });

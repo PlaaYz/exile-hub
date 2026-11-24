@@ -1,4 +1,4 @@
-import type { AppConfig, AppState, ChallengesView, DisplayInfo, PriceSearchPatch, TradeAction, TreeLayout } from "./types";
+import type { AppConfig, AppState, ChallengesView, DisplayInfo, TradeAction, TreeLayout } from "./types";
 
 // What the windows can ask the app (window.hub). On Tauri the dashboard calls the app directly and the
 // overlay goes through events (src/tauri/boot.ts).
@@ -6,15 +6,10 @@ import type { AppConfig, AppState, ChallengesView, DisplayInfo, PriceSearchPatch
 export interface FarmPricesResult {
   league: string | null;
   chaosPerDivine: number | null;
-  /**
-   * item name -> live price (poe.ninja, or the trade site for what poe.ninja lacks or prices
-   * absurdly); items with no price at all are absent
-   */
-  prices: Record<string, { chaos: number; lowConfidence: boolean; variants: number; source: "ninja" | "trade"; listings: number | null }>;
-  /** poe.ninja prices ignored as joke listings (no trade price either): the item counts as 0 */
+  /** item name -> live poe.ninja price; items with no price are absent */
+  prices: Record<string, { chaos: number; lowConfidence: boolean; variants: number }>;
+  /** poe.ninja prices ignored as joke listings: the item counts as 0 */
   suspect: string[];
-  /** items still being looked up on the trade site (the tab asks again when it finishes) */
-  tradePending: number;
   error: string | null;
 }
 
@@ -38,15 +33,8 @@ export interface HubApi {
   moveDashboard(displayId: number, fullscreen: boolean): Promise<void>;
   toggleOverlay(): Promise<void>;
   toggleOverlayInteractive(): Promise<void>;
-  /** re-run the trade search with these mods and filters */
-  priceResearch(patch: PriceSearchPatch): Promise<void>;
-  priceOpenTrade(): Promise<void>;
-  /** the next 10 trade listings of the current search */
-  priceMore(): Promise<void>;
   /** check one of state.priceRecent again (fresh prices, no copying in the game) */
   priceRecheck(id: number): Promise<void>;
-  /** sends a listing's whisper in the game's chat (brings the game to the front); an error text or null */
-  priceWhisper(text: string): Promise<string | null>;
   /** shows another stage of the imported build (index in build.stages) */
   setBuildStage(stage: number): Promise<void>;
   /** copy the diagnostic report and open a new GitHub issue to paste it in */
@@ -55,7 +43,7 @@ export interface HubApi {
   openDonate(): Promise<void>;
   /** puts a short text on the clipboard (a gem name to paste in the vendor's search) */
   copyText(text: string): Promise<void>;
-  /** "register my equipment" on/off: while on, items copied in game are kept as what you wear */
+  /** "register my equipment" on/off: while on, items copied with the price key are kept as what you wear */
   setGearRegister(on: boolean): Promise<void>;
   /** closes the session summary window */
   closeSessionSummary(): Promise<void>;
@@ -76,13 +64,4 @@ export interface HubApi {
   /** tick a challenge (part = index of a sub-objective, or null for the whole challenge) */
   setChallenge(id: string, done: boolean, part: number | null): Promise<ChallengesView>;
   installUpdate(): Promise<void>;
-  openMapTrade(o: {
-    exclude: string[];
-    minQuantity: number | null;
-    minPackSize: number | null;
-    tierMin: number | null;
-    tierMax: number | null;
-    rarity: "any" | "rare" | "magic" | "normal";
-    corrupted: "any" | "yes" | "no";
-  }): Promise<{ ok: boolean; total?: number; missing: string[]; error?: string }>;
 }

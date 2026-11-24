@@ -106,7 +106,6 @@ function ItemRow({
   onPrice: (v: number | undefined) => void;
 }) {
   const notes: string[] = [];
-  if (!l.priceManual && livePrice?.source === "trade") notes.push(tr(`preço do trade (${livePrice.listings ?? "?"} anúncios)`, `trade site price (${livePrice.listings ?? "?"} listings)`));
   if (!l.priceManual && livePrice?.variants && livePrice.variants > 1) notes.push(tr(`${livePrice.variants} variantes (mediana)`, `${livePrice.variants} variants (median)`));
   if (l.lowConfidence) notes.push(tr("poucos anúncios", "few listings"));
   if (suspect && l.price === null) notes.push(tr("preço do poe.ninja absurdo, ignorado", "absurd poe.ninja price, ignored"));
@@ -200,7 +199,7 @@ export function FarmPanelBody({
       setLoading(false);
     }
   };
-  // again when the trade site's prices for what poe.ninja lacks arrive
+  // again when the league changes
   useEffect(() => {
     void refresh();
   }, [pricesVersion]);
@@ -258,8 +257,7 @@ export function FarmPanelBody({
       <div className="row">
         <span className="muted small">
           {tr("liga", "league")} {data.league ?? "?"}
-          {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""} · {tr("preços do poe.ninja e do trade", "poe.ninja and trade site prices")}
-          {data.tradePending > 0 ? tr(` · buscando ${data.tradePending} preço(s) no trade…`, ` · looking up ${data.tradePending} price(s) on the trade site…`) : ""}
+          {cpd ? ` · 1 div = ${Math.round(cpd)} c` : ""} · {tr("preços do poe.ninja", "poe.ninja prices")}
         </span>
         <button disabled={loading} onClick={() => void refresh()}>
           {loading ? tr("Atualizando…", "Updating…") : tr("Atualizar preços", "Update prices")}

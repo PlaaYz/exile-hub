@@ -5,7 +5,7 @@ import { Frags, StepView } from "./StepView";
 import { MapHint } from "./MapsView";
 
 const kOverlayMaxSteps = 9;
-const kPriceCardMs = 25_000; // how long a price stays on the overlay after Ctrl+C
+const kPriceCardMs = 25_000; // how long a price stays on the overlay after Ctrl+D
 
 export function OverlayApp() {
   const hubState = useHubState();
@@ -35,7 +35,7 @@ export function OverlayApp() {
       )}
       {state.gear.register && (
         <div className="ov-warn">
-          {tr("Registrando equipamento: Ctrl+C em cada item equipado", "Registering equipment: Ctrl+C on each equipped item")} ({state.gear.items.filter((g) => g.fromGame).length}/10)
+          {tr("Registrando equipamento: Ctrl+D em cada item equipado", "Registering equipment: Ctrl+D on each equipped item")} ({state.gear.items.filter((g) => g.fromGame).length}/10)
         </div>
       )}
       <MapHint maps={state.maps} />

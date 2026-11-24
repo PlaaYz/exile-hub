@@ -171,16 +171,6 @@ export function gemLevelTable(
 }
 
 /** Turns pastebin / pobb.in links into raw URLs; anything else is treated as a PoB code. */
-/**
- * Clipboard text worth trying as a build: a pobb.in / pastebin link, or a long run of url-safe
- * base64 (a raw PoB export code). The import itself decides; failures are ignored by the caller.
- */
-export function looksLikePob(text: string): boolean {
-  const s = text.trim();
-  if (pobSourceUrl(s)) return true;
-  return s.length >= 200 && s.length <= 2_000_000 && /^[A-Za-z0-9_\-+/=]+$/.test(s);
-}
-
 export function pobSourceUrl(input: string): string | null {
   const s = input.trim();
   let m = /^https?:\/\/pastebin\.com\/(?:raw\/)?([A-Za-z0-9]+)\/?$/.exec(s);

@@ -1,6 +1,6 @@
 // Equipamento tab: what the player wears, laid out like the game's character screen (item art from
-// poe.ninja), and the last item copied with Ctrl+C
-// compared with it. Items come from "register my equipment" (Ctrl+C on each worn item) or the PoB build.
+// poe.ninja), and the last item checked with Ctrl+D
+// compared with it. Items come from "register my equipment" (Ctrl+D on each worn item).
 import { useState } from "react";
 import { tr } from "../shared/i18n";
 import type { AppState, GearItemView } from "../shared/types";
@@ -79,8 +79,8 @@ export function GearPanelBody({ state }: { state: AppState }) {
         {on && (
           <p className="small" style={{ margin: "6px 0" }}>
             {tr(
-              "No jogo: abra a tela do personagem (I) e dê Ctrl+C em cada item equipado. O primeiro anel vira Anel 1 e o segundo Anel 2; a segunda arma de uma mão vira a segunda mão.",
-              "In game: open the character screen (I) and press Ctrl+C on each equipped item. The first ring is Ring 1 and the second Ring 2; a second one-handed weapon goes to the off hand.",
+              "No jogo: abra a tela do personagem (I) e aperte Ctrl+D em cada item equipado (durante o registro, a tecla não abre o preço). O primeiro anel vira Anel 1 e o segundo Anel 2; a segunda arma de uma mão vira a segunda mão.",
+              "In game: open the character screen (I) and press Ctrl+D on each equipped item (while registering, the key does not open the price). The first ring is Ring 1 and the second Ring 2; a second one-handed weapon goes to the off hand.",
             )}
           </p>
         )}
@@ -115,7 +115,7 @@ export function GearPanelBody({ state }: { state: AppState }) {
       ) : (
         gear.items.length > 0 && <p className="muted small">{tr("Clique num item para ver os mods dele.", "Click an item to see its mods.")}</p>
       )}
-      <h3>{tr("Item copiado (Ctrl+C)", "Copied item (Ctrl+C)")}</h3>
+      <h3>{tr("Item conferido (Ctrl+D)", "Checked item (Ctrl+D)")}</h3>
       {c ? (
         <>
           <div className="gear-copied">
@@ -133,8 +133,8 @@ export function GearPanelBody({ state }: { state: AppState }) {
       ) : (
         <p className="muted small">
           {tr(
-            "No jogo, passe o mouse sobre um item e aperte Ctrl+C: ele aparece aqui comparado com o que você usa. Para o preço, use Ctrl+D.",
-            "In game, hover an item and press Ctrl+C: it shows here against what you wear. For its price, press Ctrl+D.",
+            "No jogo, passe o mouse sobre um item e aperte Ctrl+D: ele aparece aqui comparado com o que você usa.",
+            "In game, hover an item and press Ctrl+D: it shows here against what you wear.",
           )}
         </p>
       )}
